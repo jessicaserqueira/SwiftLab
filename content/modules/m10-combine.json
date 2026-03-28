@@ -1,0 +1,52 @@
+{
+  "id": "m10-combine",
+  "title": "Combine",
+  "level": "pleno",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "publishers-subscribers",
+      "title": "Publishers, Subscribers e Operators",
+      "estimatedMinutes": 30,
+      "objective": "Você vai ler código Combine (framework reativo da Apple) com Publisher (fonte de eventos), Subscriber (quem escuta) e operators (funções que transformam o fluxo), sabendo que apps novos costumam preferir async/await e Observation.",
+      "prerequisites": ["Concorrência — async básico"],
+      "blocks": [
+        { "type": "text", "text": "Combine descreve fluxos de valores ao longo do tempo (stream). Publisher emite valores e pode terminar com sucesso ou erro; Subscriber assina e recebe. Operators como map (transforma), filter (filtra) e debounce (espera pausa na digitação) alteram o fluxo antes de chegar na UI." },
+        { "type": "callout", "variant": "info", "title": "Quando ainda estudar Combine", "body": "Você ainda vê URLSession.DataTaskPublisher (rede no estilo Combine), NotificationCenter.Publisher (eventos do sistema) e ObservableObject + @Published (estado reativo antigo). Para telas novas, compare com async/await e @Observable." },
+        { "type": "code", "language": "swift", "code": "cancellable = pub\n    .receive(on: DispatchQueue.main)\n    .sink { completion in } receiveValue: { value in }" },
+        { "type": "checklist", "items": ["Sei explicar Publisher vs AsyncSequence em uma frase", "Guardo AnyCancellable (token que mantém a assinatura viva) em propriedade", "Não adiciono Combine só por hábito se o app já é 100% async"] }
+      ],
+      "commonMistakes": ["Não guardar AnyCancellable e a assinatura morrer na hora", "receive(on:) na ordem errada e atualizar UI na thread errada"],
+      "tradeoffs": "Combine é forte em streams longos; um request único costuma ficar mais claro com async let ou await.",
+      "miniChallenge": "Reescreva um debounce de busca em Combine usando Task.sleep com checagem de cancelamento.",
+      "glossary": [
+        { "term": "Publisher", "definition": "Tipo que pode emitir sequência de valores e conclusão ou falha." },
+        { "term": "AnyCancellable", "definition": "Token que mantém assinatura ativa até cancelar ou destruir." }
+      ],
+      "sources": [
+        { "label": "Apple — Combine", "url": "https://developer.apple.com/documentation/combine" },
+        { "label": "Hacking with Swift — Combine", "url": "https://www.hackingwithswift.com/quick-start/swiftui/introduction-to-combine" }
+      ]
+    },
+    {
+      "id": "async-sequence-bridge",
+      "title": "Ponte para AsyncSequence e migração mental",
+      "estimatedMinutes": 22,
+      "objective": "Você vai reconhecer AsyncSequence (sequência que você consome com for await) em APIs novas e decidir quando não precisa de Publisher.",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "AsyncSequence é um protocolo Swift: você consome com for await como se fosse um loop, mas cada item pode demorar. Ao ler tutorial com Combine, pergunte: \"é um fluxo contínuo (vários eventos) ou uma operação única?\" — isso escolhe a ferramenta." },
+        { "type": "checklist", "items": ["Consigo dar um exemplo em que Publisher ainda é razoável", "Antes de copiar código, busco na doc se existe variante async"] }
+      ],
+      "commonMistakes": ["Misturar Combine e async no mesmo fluxo sem uma fronteira clara (camada de conversão)"],
+      "tradeoffs": "Pontes AsyncPublisher existem mas aumentam complexidade — use com critério.",
+      "miniChallenge": "Liste três APIs do seu app: marque se cada uma é evento único ou stream.",
+      "glossary": [
+        { "term": "AsyncSequence", "definition": "Protocolo para sequências assíncronas consumíveis com for await." }
+      ],
+      "sources": [
+        { "label": "Apple — AsyncSequence", "url": "https://developer.apple.com/documentation/swift/asyncsequence" }
+      ]
+    }
+  ]
+}

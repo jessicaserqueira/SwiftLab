@@ -1,0 +1,53 @@
+{
+  "id": "m13-debug-performance",
+  "title": "Debugging e performance",
+  "level": "pleno-plus",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "previews-instruments",
+      "title": "Previews, breakpoints e Instruments",
+      "estimatedMinutes": 30,
+      "objective": "Você vai usar o debugger do Xcode (pausar execução e inspecionar variáveis), View Debugger (árvore visual de views) e Instruments (ferramenta de medição de CPU/memória) antes de \"achar\" onde otimizar.",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "Breakpoint (ponto de parada) pausa o app na linha. po no console inspeciona objeto. Com async, use a pilha async (async stack) do Xcode. View Debugger mostra hierarquia SwiftUI/UIKit. Instruments tem Time Profiler (onde o CPU gastou tempo), Allocations (memória) e modelos específicos quando disponíveis." },
+        { "type": "callout", "variant": "warn", "title": "Medir primeiro", "body": "Sem trace (gravação de medição), otimização vira chute. Grave poucos segundos, ache hot path (trecho mais caro), mude uma coisa, compare." },
+        { "type": "checklist", "items": ["Sei pausar em exceção Objective-C se precisar", "Abro View Debugger quando layout foge do esperado", "Sei gravar um trace curto no Instruments"] }
+      ],
+      "commonMistakes": ["print dentro de body em build de produção", "Otimizar List sem prova de que ela é o gargalo"],
+      "tradeoffs": "Aprender Instruments leva tempo; paga em bugs de memória e travamentos.",
+      "miniChallenge": "Cause atualização em loop e veja no Time Profiler qual função aparece no topo.",
+      "glossary": [
+        { "term": "Instruments", "definition": "Suite de ferramentas de profiling da Apple integrada ao Xcode." }
+      ],
+      "sources": [
+        { "label": "Apple — Debugging with Xcode", "url": "https://developer.apple.com/documentation/xcode/debugging" },
+        { "label": "Apple — Improving your app's performance", "url": "https://developer.apple.com/documentation/xcode/improving-your-app-s-performance" }
+      ]
+    },
+    {
+      "id": "swiftui-performance",
+      "title": "Performance em SwiftUI",
+      "estimatedMinutes": 26,
+      "objective": "Você vai aplicar ideias práticas: identidade estável em ForEach (lista), não fazer trabalho pesado dentro de body, usar listas preguiçosas quando fizer sentido.",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "SwiftUI faz diff (compara árvore antiga com nova) para mudar o mínimo. ForEach precisa de id estável (Identifiable ou \\.id). Objetos caros não devem nascer dentro de body a cada render — use .task ou cache. List e Lazy stacks ajudam com muitos itens." },
+        { "type": "list", "ordered": false, "items": ["equatable() / EquatableView quando só poucos campos importam para redesenhar", "Lazy stacks em scroll longo", "Imagens: tamanho certo e cache (não decodificar gigante toda hora)"] },
+        { "type": "checklist", "items": ["Revise ForEach que usa índice como id (muda quando a lista muda)", "Fetch de rede pesado saiu do body"] }
+      ],
+      "commonMistakes": ["id que muda todo render → lista pisca e perde estado", "Binding que recria objeto pesado a cada tecla"],
+      "tradeoffs": "Micro-otimização sem métrica pode piorar leitura do código.",
+      "miniChallenge": "Lista com 1000 itens: compare UUID fixo vs UUID novo por linha e observe diferença.",
+      "glossary": [
+        { "term": "Diff", "definition": "Comparação entre árvores de view para aplicar mudanças mínimas." }
+      ],
+      "sources": [
+        { "label": "Apple — Diagnosing performance issues", "url": "https://developer.apple.com/documentation/xcode/diagnosing-performance-issues" },
+        { "label": "Apple — SwiftUI (overview)", "url": "https://developer.apple.com/documentation/swiftui" },
+        { "label": "Hacking with Swift — SwiftUI performance tips", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-improve-swiftui-performance" }
+      ]
+    }
+  ]
+}

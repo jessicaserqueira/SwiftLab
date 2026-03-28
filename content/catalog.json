@@ -1,0 +1,21 @@
+{
+  "title": "SwiftLab",
+  "subtitle": "Trilha iOS · SwiftUI · estudo progressivo",
+  "modules": [
+    { "id": "m01-swift-essentials", "file": "modules/m01-swift-essentials.json", "title": "Swift Essentials", "order": 1 },
+    { "id": "m02-app-swiftui", "file": "modules/m02-app-swiftui.json", "title": "Estrutura de um app SwiftUI", "order": 2 },
+    { "id": "m03-views-composition", "file": "modules/m03-views-composition.json", "title": "Views e composição", "order": 3 },
+    { "id": "m04-layout", "file": "modules/m04-layout.json", "title": "Layout", "order": 4 },
+    { "id": "m15-design-system", "file": "modules/m15-design-system.json", "title": "Design system e por baixo dos panos", "order": 5 },
+    { "id": "m05-state-data-flow", "file": "modules/m05-state-data-flow.json", "title": "State e data flow", "order": 6 },
+    { "id": "m06-navigation", "file": "modules/m06-navigation.json", "title": "Navegação", "order": 7 },
+    { "id": "m07-architecture", "file": "modules/m07-architecture.json", "title": "Arquitetura", "order": 8 },
+    { "id": "m08-swiftdata", "file": "modules/m08-swiftdata.json", "title": "Persistência com SwiftData", "order": 9 },
+    { "id": "m09-concurrency", "file": "modules/m09-concurrency.json", "title": "Concorrência", "order": 10 },
+    { "id": "m10-combine", "file": "modules/m10-combine.json", "title": "Combine", "order": 11 },
+    { "id": "m11-testing", "file": "modules/m11-testing.json", "title": "Testes", "order": 12 },
+    { "id": "m12-accessibility", "file": "modules/m12-accessibility.json", "title": "Acessibilidade", "order": 13 },
+    { "id": "m13-debug-performance", "file": "modules/m13-debug-performance.json", "title": "Debugging e performance", "order": 14 },
+    { "id": "m14-career", "file": "modules/m14-career.json", "title": "Carreira iOS", "order": 15 }
+  ]
+}

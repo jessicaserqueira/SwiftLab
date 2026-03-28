@@ -1,0 +1,56 @@
+{
+  "id": "m03-views-composition",
+  "title": "Views e composição",
+  "level": "junior",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "view-protocol-modifiers",
+      "title": "Protocolo View e modificadores",
+      "estimatedMinutes": 28,
+      "objective": "Você vai ver que View (protocolo da tela SwiftUI) descreve um pedaço de interface, e que modificadores (funções como .padding) devolvem uma nova descrição encadeada, não alteram a view \"no lugar\".",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "View é um protocolo com um tipo interno associado chamado Body (o que essa view retorna). Na prática você escreve var body: some View (\"algum tipo que é View\", escondido pelo compilador) com uma composição de outras Views." },
+        { "type": "code", "language": "swift", "code": "struct TitleView: View {\n    var body: some View {\n        Text(\"SwiftLab\")\n            .font(.title)\n            .foregroundStyle(.orange)\n    }\n}" },
+        { "type": "heading", "level": 3, "text": "Ordem dos modificadores" },
+        { "type": "text", "text": "A ordem importa: .padding depois de .background muda o visual em relação a .background depois de .padding (porque cada passo envolve a view anterior). Se o layout estranhar, troque a ordem e compare." },
+        { "type": "callout", "variant": "info", "title": "some View", "body": "some View esconde o nome exato do tipo retornado (opaque return type, retorno opaco). Assim o compilador aceita cadeias longas de modificadores sem você escrever o tipo gigante." },
+        { "type": "checklist", "items": ["Sei que cada modificador devolve outra View (nova descrição)", "Testo ordem quando o layout surpreende", "Extraio subviews (Views menores) quando body fica longo"] }
+      ],
+      "commonMistakes": ["Achar que modificadores mudam a struct original (mutação in-place)", "Deixar body enorme sem dividir em structs menores"],
+      "tradeoffs": "Muitas subviews pequenas melhoram leitura; níveis demais sem plano de estado (quem guarda os dados) complicam passar informação.",
+      "miniChallenge": "Extraia o cabeçalho de uma tela para HeaderView e passe só as strings necessárias (parâmetros).",
+      "glossary": [
+        { "term": "Modifier", "definition": "Função que envolve uma View para mudar aparência ou comportamento, retornando outra View." }
+      ],
+      "sources": [
+        { "label": "Apple — View", "url": "https://developer.apple.com/documentation/swiftui/view" },
+        { "label": "Hacking with Swift — View composition", "url": "https://www.hackingwithswift.com/quick-start/swiftui/what-is-view-composition" }
+      ]
+    },
+    {
+      "id": "viewbuilder",
+      "title": "ViewBuilder e conteúdo condicional",
+      "estimatedMinutes": 22,
+      "objective": "Você vai ler e escrever blocos com @ViewBuilder (macro que agrupa várias Views em um único resultado) usando if/else.",
+      "prerequisites": ["View e modificadores (seção anterior)"],
+      "blocks": [
+        { "type": "text", "text": "@ViewBuilder é um result builder (recurso do Swift que junta várias linhas em um valor). Ele permite colocar várias Views no mesmo bloco como lista implícita, com if/else em muitos lugares." },
+        { "type": "code", "language": "swift", "code": "Group {\n    if isLoggedIn {\n        Text(\"Olá\")\n    } else {\n        Button(\"Entrar\") { }\n    }\n}" },
+        { "type": "callout", "variant": "warn", "title": "Ramificações", "body": "Cada ramo do if/else precisa ser um tipo de View compatível com o que o compilador espera; erros de tipo aqui são normais no começo — leia a mensagem vermelha com calma." },
+        { "type": "checklist", "items": ["Uso Group (container neutro) ou @ViewBuilder quando preciso misturar tipos", "Evito AnyView (apaga tipos e pode custar performance) salvo caso raro"] }
+      ],
+      "commonMistakes": ["Usar AnyView só para calar o compilador", "if sem else onde o SwiftUI espera os dois lados estáveis"],
+      "tradeoffs": "Group não escolhe eixo de layout; VStack/HStack sim. Escolha o container certo (vertical vs horizontal).",
+      "miniChallenge": "Faça um empty state: se a lista estiver vazia mostre imagem + texto; senão mostre List (lista nativa).",
+      "glossary": [
+        { "term": "Result builder", "definition": "Mecanismo do Swift que transforma uma sequência de expressões em um valor combinado (usado em ViewBuilder)." }
+      ],
+      "sources": [
+        { "label": "Apple — ViewBuilder", "url": "https://developer.apple.com/documentation/swiftui/viewbuilder" },
+        { "label": "Hacking with Swift — Conditional views", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-use-if-else-in-swiftui" }
+      ]
+    }
+  ]
+}

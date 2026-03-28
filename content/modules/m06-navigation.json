@@ -1,0 +1,55 @@
+{
+  "id": "m06-navigation",
+  "title": "Navegação",
+  "level": "pleno-minus",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "navigationstack",
+      "title": "NavigationStack e caminho (path)",
+      "estimatedMinutes": 32,
+      "objective": "Você vai usar NavigationStack (pilha de telas com barra no topo), amarrar o path (lista de destinos visitados) a dados e mapear cada tipo de destino para uma tela.",
+      "prerequisites": ["State e data flow — fundamentos"],
+      "blocks": [
+        { "type": "text", "text": "NavigationStack mostra uma pilha: tela inicial, depois detalhes empilhados, com botão Voltar. Você pode ligar essa pilha a um array (ou NavigationPath) de valores — navegação programática (código empurra tela) e deep link (link abre tela certa) ficam mais claros." },
+        { "type": "code", "language": "swift", "code": "NavigationStack {\n    List(items) { item in\n        NavigationLink(value: item) {\n            Text(item.title)\n        }\n    }\n    .navigationDestination(for: Item.self) { item in\n        DetailView(item: item)\n    }\n}" },
+        { "type": "callout", "variant": "warn", "title": "Tipos Hashable", "body": "Valores que entram no path costumam precisar ser Hashable (podem ir em Set e como chave) e estáveis. Se misturar structs e enums, alinhe com o que a API espera — senão o compilador reclama." },
+        { "type": "checklist", "items": ["Uso .navigationDestination(for:) para dizer \"tipo X abre qual View\"", "Entendo NavigationLink(value:) (empurra um valor na pilha)", "Testo voltar e, se fizer deep link, abrir URL de teste"] }
+      ],
+      "commonMistakes": ["Colocar destino gigante inline dentro de NavigationLink sem extrair View", "Manter path e o que está na tela dessincronizados"],
+      "tradeoffs": "Path tipado é poderoso; muitos tipos de tela diferentes podem pedir um enum Route (lista fechada de casos).",
+      "miniChallenge": "Lista → detalhe com NavigationStack e enum Route com dois casos (duas telas diferentes).",
+      "glossary": [
+        { "term": "NavigationPath", "definition": "Tipo que representa pilha de destinos; pode ser tipado ou homogêneo." }
+      ],
+      "sources": [
+        { "label": "Apple — NavigationStack", "url": "https://developer.apple.com/documentation/swiftui/navigationstack" },
+        { "label": "Hacking with Swift — NavigationStack", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-use-navigationstack" }
+      ]
+    },
+    {
+      "id": "sheets-and-links",
+      "title": "Sheets, fullScreenCover e Links",
+      "estimatedMinutes": 26,
+      "objective": "Você vai apresentar modais (telas que sobrepõem a atual) com .sheet e abrir URLs com Link (botão que abre Safari ou Mail).",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": ".sheet(isPresented:content:) mostra outra View por cima (em iPhone costuma subir de baixo). Há variante com item opcional: quando o optional deixa de ser nil, o sheet aparece (útil para editar um item selecionado)." },
+        { "type": "code", "language": "swift", "code": ".sheet(isPresented: $showSettings) {\n    SettingsView()\n}" },
+        { "type": "heading", "level": 3, "text": "Link e openURL" },
+        { "type": "text", "text": "Link (View do SwiftUI) abre URLs https ou mailto. Se precisar de lógica antes de abrir, use o ambiente openURL (closure que o sistema chama) ou APIs UIKit onde a doc permitir." },
+        { "type": "checklist", "items": ["Evito sheet em cima de sheet sem necessidade (confunde usuário)", "Testo fechar (dismiss) e o Binding isPresented voltar para false"] }
+      ],
+      "commonMistakes": ["Esquecer de limpar o estado que abre o sheet depois de fechar", "Achar que sheet ocupa a mesma fração da tela em iPhone e iPad"],
+      "tradeoffs": "fullScreenCover cobre a tela inteira (mais intrusivo); sheet é melhor para formulários secundários.",
+      "miniChallenge": "Sheet com campo editável ligado por @Binding ao pai; ao Salvar, feche e atualize a lista no pai.",
+      "glossary": [
+        { "term": "Modal", "definition": "Apresentação que cobre ou bloqueia a tela de baixo até o usuário concluir ou fechar." }
+      ],
+      "sources": [
+        { "label": "Apple — sheet(isPresented:onDismiss:content:)", "url": "https://developer.apple.com/documentation/swiftui/view/sheet(ispresented:ondismiss:content:)" },
+        { "label": "Apple — Link", "url": "https://developer.apple.com/documentation/swiftui/link" }
+      ]
+    }
+  ]
+}

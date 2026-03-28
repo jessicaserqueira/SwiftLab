@@ -1,0 +1,374 @@
+{
+  "bySection": {
+    "m01-swift-essentials/optionals-and-types-for-ui": [
+      {
+        "title": "Nil coalescing",
+        "prompt": "O que será impresso?\n\nlet apelido: String? = nil\nprint(apelido ?? \"visitante\")",
+        "hints": [
+          "?? só usa o lado direito quando o optional é nil."
+        ],
+        "solution": "Imprime: visitante\n\nO operador ?? (nil coalescing) devolve \"visitante\" porque apelido é nil."
+      },
+      {
+        "title": "Optional encadeado",
+        "prompt": "Se nomeCompleto for nil, quantas vezes \"Olá\" pode ser montado sem crash?\n\nlet nomeCompleto: String? = nil\nlet saudacao = nomeCompleto.map { \"Olá, \\($0)\" }",
+        "hints": [
+          "map em optional vazio não executa o closure."
+        ],
+        "solution": "saudacao será nil (tipo String?). Não há crash: map não roda o closure quando o optional é nil."
+      }
+    ],
+    "m01-swift-essentials/protocols-and-generics-bridge": [
+      {
+        "title": "Identifiable e id",
+        "prompt": "Este struct viola a ideia de Identifiable para lista estável?\n\nstruct Item: Identifiable {\n    var id = UUID()\n    let titulo: String\n}",
+        "hints": [
+          "Novo UUID() a cada inicialização muda o id."
+        ],
+        "solution": "Sim. Cada vez que você cria Item, id é novo → ForEach pode tratar como outro item. Melhor: id estável (ex.: vindo do servidor) ou init que recebe id."
+      },
+      {
+        "title": "Protocolo como tipo",
+        "prompt": "Em Swift, pode escrever `let p: Protocol = StructQueConforma()` quando Protocol tem init? (pense: existencial)",
+        "hints": [
+          "Protocolos com Self ou associated types têm limitações."
+        ],
+        "solution": "Depende do protocolo. Protocolos \"existenciais\" simples funcionam; com requisitos especiais o compilador pede tipo concreto ou any Protocol (Swift 5.7+). O importante: saber que \"protocol como tipo\" nem sempre é livre."
+      }
+    ],
+    "m02-app-swiftui/app-entry-scene-window": [
+      {
+        "title": "Ponto de entrada",
+        "prompt": "Por que não pode haver dois @main no mesmo target?",
+        "hints": [
+          "O sistema precisa de um único início de programa."
+        ],
+        "solution": "O atributo @main indica qual tipo o sistema executa primeiro. Dois @main deixariam ambíguo onde o app começa."
+      },
+      {
+        "title": "App e Scene",
+        "prompt": "WindowGroup é um tipo de quê, no template SwiftUI?",
+        "hints": [
+          "App define cenas (Scene)."
+        ],
+        "solution": "WindowGroup conforma Scene: descreve janelas com a mesma raiz de conteúdo."
+      }
+    ],
+    "m02-app-swiftui/lifecycle-basics": [
+      {
+        "title": "body de novo",
+        "prompt": "Se @State var n muda, o que acontece com body?",
+        "hints": [
+          "Estado → SwiftUI invalida e recalcula."
+        ],
+        "solution": "body é avaliado de novo para refletir o novo valor de n (e outras dependências)."
+      },
+      {
+        "title": "onAppear",
+        "prompt": "onAppear garante que o código roda exatamente uma vez no tempo de vida do app?",
+        "hints": [
+          "A view pode sair e voltar."
+        ],
+        "solution": "Não. onAppear roda quando a view entra na hierarquia visível; pode repetir se você navegar e voltar."
+      }
+    ],
+    "m02-app-swiftui/preview-and-structure": [
+      {
+        "title": "Preview sem dados",
+        "prompt": "Por que Preview pode falhar se ContentView() precisa de @EnvironmentObject?",
+        "hints": [
+          "Preview não injeta tudo automaticamente."
+        ],
+        "solution": "Falta o objeto no ambiente. Solução: .environmentObject(mock) no #Preview ou wrapper de preview."
+      }
+    ],
+    "m03-views-composition/view-protocol-modifiers": [
+      {
+        "title": "Ordem do modificador",
+        "prompt": "Qual ocupa mais espaço visual: padding depois background ou background depois padding no mesmo retângulo?",
+        "hints": [
+          "O último modificador envolve o resultado anterior."
+        ],
+        "solution": "Background depois do padding pinta só a área do conteúdo já com padding interno; a ordem muda o retângulo colorido. Teste no Xcode — não decore, observe."
+      }
+    ],
+    "m03-views-composition/viewbuilder": [
+      {
+        "title": "if sem else",
+        "prompt": "Em alguns contextos ViewBuilder, if sem else exige que ambos os lados existam. Por quê?",
+        "hints": [
+          "O tipo de retorno do builder precisa ser inferível."
+        ],
+        "solution": "O compilador precisa combinar os tipos das ramificações em um único tipo opaco some View; sem else, às vezes falta um ramo compatível."
+      }
+    ],
+    "m04-layout/stacks-grids": [
+      {
+        "title": "Spacer",
+        "prompt": "Spacer() empurra vizinhos. O que acontece se o pai não tiver altura definida em um VStack só com Text + Spacer?",
+        "hints": [
+          "Layout precisa de proposta de tamanho."
+        ],
+        "solution": "Pode haver ambiguidade ou o Spacer absorver o que o pai oferecer; em scroll views o comportamento muda. Regra prática: garanta cadeia de tamanho ou use minLength."
+      }
+    ],
+    "m04-layout/sizing-and-limits": [
+      {
+        "title": "infinity",
+        "prompt": "maxWidth: .infinity pede largura máxima ao pai. O que o pai precisa ter?",
+        "hints": [
+          "Proposta finita ou eixo definido."
+        ],
+        "solution": "O pai precisa oferecer largura (ou o eixo precisa estar resolvido). Caso contrário você pode ver avisos de layout ou comportamento inesperado."
+      }
+    ],
+    "m05-state-data-flow/state-binding-intro": [
+      {
+        "title": "Contador",
+        "prompt": "Sem rodar no Xcode: o botão aumenta count?\n\nstruct V: View {\n    @State private var count = 0\n    var body: some View {\n        Button(\"+\") { count += 1 }\n    }\n}",
+        "hints": [
+          "@State mutável na closure do Button é permitido."
+        ],
+        "solution": "Sim. count é @State; a closure captura a mutação e SwiftUI atualiza a view."
+      },
+      {
+        "title": "Binding",
+        "prompt": "Filho com @Binding var texto — o pai passa TextField(\"\", text: ???). O que vai no text:?",
+        "hints": [
+          "$ cria Binding a partir de @State."
+        ],
+        "solution": "$textoDoPai (ou $stateProperty) — o prefixo $ converte @State em Binding."
+      }
+    ],
+    "m05-state-data-flow/observable-and-migration": [
+      {
+        "title": "Onde criar o modelo",
+        "prompt": "Por que não fazer `@Observable class M {}` e depois `let m = M()` dentro de body toda vez?",
+        "hints": [
+          "body roda várias vezes."
+        ],
+        "solution": "Recriaria o modelo a cada render, perdendo estado. Instancie em @State na raiz ou injete via environment conforme o padrão da Apple."
+      }
+    ],
+    "m05-state-data-flow/environment-object": [
+      {
+        "title": "Ambiente ausente",
+        "prompt": "Se uma View usa @Environment(\\.minhaChave) mas ninguém definiu .environment(\\.minhaChave, …) acima, o que ocorre?",
+        "hints": [
+          "Valor default ou crash depende da API."
+        ],
+        "solution": "Depende: algumas chaves têm default; customizadas podem precisar default no EnvironmentValues. Sempre teste Preview e app."
+      }
+    ],
+    "m06-navigation/navigationstack": [
+      {
+        "title": "Destino",
+        "prompt": "Para que serve .navigationDestination(for: T.self) { … }?",
+        "hints": [
+          "Mapeia valor → tela na pilha."
+        ],
+        "solution": "Quando um NavigationLink empurra um valor do tipo T, o closure constrói a view de detalhe correspondente."
+      }
+    ],
+    "m06-navigation/sheets-and-links": [
+      {
+        "title": "Fechar sheet",
+        "prompt": "sheet(isPresented: $mostrar) — ao fechar o sheet, o que deve acontecer com mostrar?",
+        "hints": [
+          "Binding controla visibilidade."
+        ],
+        "solution": "O sistema define mostrar como false ao dismiss; você também pode setar false no botão Concluir."
+      }
+    ],
+    "m07-architecture/managing-model-data": [
+      {
+        "title": "View gorda",
+        "prompt": "Nomeie um problema de colocar 200 linhas de parsing JSON dentro de body.",
+        "hints": [
+          "body reroda; lógica misturada com UI."
+        ],
+        "solution": "Performance e leitura ruins; difícil testar. Extraia para função async ou serviço e injete resultado no modelo."
+      }
+    ],
+    "m07-architecture/composition-vs-templates": [
+      {
+        "title": "Acoplamento",
+        "prompt": "Módulo A importa B e B importa A. Por que SPM/tooling reclama?",
+        "hints": [
+          "Dependência circular."
+        ],
+        "solution": "Import circular impede ordem de compilação clara. Quebre com protocolo em módulo terceiro ou reorganize camadas."
+      }
+    ],
+    "m08-swiftdata/modelcontainer-schema": [
+      {
+        "title": "@Model e struct",
+        "prompt": "Por que @Model é aplicado a class e não a struct típica de valor?",
+        "hints": [
+          "Identidade e persistência de referência."
+        ],
+        "solution": "SwiftData trabalha com objetos gerenciados por contexto; o modelo persistente é referenciado e rastreado — uso de class alinhado à doc."
+      }
+    ],
+    "m08-swiftdata/fetch-save": [
+      {
+        "title": "Salvar",
+        "prompt": "Depois de modelContext.insert(novo), quando as mudanças vão para o disco?",
+        "hints": [
+          "save() persiste."
+        ],
+        "solution": "Quando você chama try modelContext.save() (ou autosave conforme configuração). Leia a doc atual para batching."
+      }
+    ],
+    "m09-concurrency/async-await-intro": [
+      {
+        "title": "await",
+        "prompt": "O que await faz em relação à thread?",
+        "hints": [
+          "Suspender ≠ bloquear ocupado."
+        ],
+        "solution": "Marca ponto onde a função async pode suspender esperando trabalho assíncrono sem busy-wait; a thread pode fazer outras coisas."
+      }
+    ],
+    "m09-concurrency/mainactor-task": [
+      {
+        "title": "MainActor",
+        "prompt": "Por que atualizar UI de @State em tipo não-MainActor pode gerar warning ou bug?",
+        "hints": [
+          "UI na main thread."
+        ],
+        "solution": "Interface deve ser tocada na main actor; @MainActor ou MainActor.assumed garante isolamento conforme regras do compilador."
+      }
+    ],
+    "m10-combine/publishers-subscribers": [
+      {
+        "title": "Cancelar",
+        "prompt": "Por que guardar AnyCancellable ao assinar um Publisher com sink?",
+        "hints": [
+          "Sem retenção, a assinatura morre."
+        ],
+        "solution": "sink retorna token cancelável; se não armazenar, o objeto pode ser desalocado e o stream para."
+      }
+    ],
+    "m10-combine/async-sequence-bridge": [
+      {
+        "title": "Escolha",
+        "prompt": "Um único request HTTP com resposta única — Combine ou async/await?",
+        "hints": [
+          "Linearidade."
+        ],
+        "solution": "Na maioria dos casos async/await é mais simples; Combine brilha em streams contínuos."
+      }
+    ],
+    "m11-testing/xctest-units": [
+      {
+        "title": "Asserção",
+        "prompt": "XCTAssertEqual(2 + 2, 5) — o teste passa?",
+        "hints": [
+          "4 ≠ 5"
+        ],
+        "solution": "Não; o teste falha e o relatório mostra a diferença."
+      }
+    ],
+    "m11-testing/ui-testing-basics": [
+      {
+        "title": "Query",
+        "prompt": "app.buttons[\"OK\"].tap() — o que acontece se o botão estiver com título localizado diferente?",
+        "hints": [
+          "String exata."
+        ],
+        "solution": "Pode falhar. Por isso accessibilityIdentifier estável é melhor que depender só do texto visível."
+      }
+    ],
+    "m12-accessibility/labels-hints": [
+      {
+        "title": "Label vs hint",
+        "prompt": "VoiceOver: label diz o quê e hint diz o quê?",
+        "hints": [
+          "Nome vs consequência da ação."
+        ],
+        "solution": "Label identifica o elemento; hint descreve o que acontece ao ativar (se não for óbvio)."
+      }
+    ],
+    "m12-accessibility/dynamic-type": [
+      {
+        "title": "Texto grande",
+        "prompt": "Por que .font(.body) costuma ser melhor que .font(.system(size: 14)) para apps acessíveis?",
+        "hints": [
+          "Dynamic Type."
+        ],
+        "solution": ".body escala com a preferência do usuário; tamanho fixo ignora Dynamic Type."
+      }
+    ],
+    "m13-debug-performance/previews-instruments": [
+      {
+        "title": "Medir",
+        "prompt": "Por que \"otimizar\" sem Instruments pode ser perda de tempo?",
+        "hints": [
+          "Hipótese vs evidência."
+        ],
+        "solution": "Você pode mudar código que não era gargalo; o profiler mostra onde o CPU/memória realmente gastam."
+      }
+    ],
+    "m13-debug-performance/swiftui-performance": [
+      {
+        "title": "ForEach id",
+        "prompt": "ForEach(items, id: \\.self) com struct Item: Hashable onde o hash muda a cada render — problema?",
+        "hints": [
+          "Identidade instável."
+        ],
+        "solution": "SwiftUI pode recriar linhas, perder animação e estado de foco. Prefira id estável (ex.: id do modelo)."
+      }
+    ],
+    "m14-career/learning-and-hig": [
+      {
+        "title": "Fonte primária",
+        "prompt": "Em dúvida de comportamento de API, qual fonte deve prevalecer sobre tutorial de blog?",
+        "hints": [
+          "Autoridade."
+        ],
+        "solution": "Documentação oficial da Apple para aquela versão de OS/SDK; blogs complementam."
+      }
+    ],
+    "m14-career/code-review-portfolio": [
+      {
+        "title": "PR pequeno",
+        "prompt": "Duas vantagens de PR com menos de 400 linhas.",
+        "hints": [
+          "Revisão e risco."
+        ],
+        "solution": "Revisão mais rápida e menos risco de conflito; mais fácil reverter se algo quebrar."
+      }
+    ],
+    "m15-design-system/design-system-hig": [
+      {
+        "title": "Token",
+        "prompt": "Em uma frase: por que \"corPrimaria\" como nome é melhor que #FF6B00 espalhado em 20 arquivos?",
+        "hints": [
+          "Mudança única."
+        ],
+        "solution": "Token centraliza: trocar o valor em um lugar atualiza todo o app de forma coerente."
+      }
+    ],
+    "m15-design-system/visual-language": [
+      {
+        "title": "SF Symbol",
+        "prompt": "Image(systemName: \"heart.fill\") — precisa de asset no Asset Catalog?",
+        "hints": [
+          "Sistema."
+        ],
+        "solution": "Não para símbolos do catálogo SF Symbols; o sistema fornece. Nomes inválidos falham em runtime ou mostram placeholder."
+      }
+    ],
+    "m15-design-system/swiftui-como-funciona": [
+      {
+        "title": "UIKit bridge",
+        "prompt": "Quando usar UIViewRepresentable em vez de reescrever tudo em SwiftUI?",
+        "hints": [
+          "Componente UIKit maduro ou requisito pontual."
+        ],
+        "solution": "Quando precisa de UIView existente (mapas, players, views legadas) sem reimplementar do zero."
+      }
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "m08-swiftdata",
+  "title": "Persistência com SwiftData",
+  "level": "pleno",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "modelcontainer-schema",
+      "title": "ModelContainer, @Model e esquema",
+      "estimatedMinutes": 36,
+      "objective": "Você vai marcar classes com @Model (persistíveis pelo SwiftData), configurar ModelContainer (onde e com qual esquema salvar) no App e saber que migração (mudar formato dos dados salvos) é tema à parte.",
+      "prerequisites": ["Arquitetura — modelo de dados"],
+      "blocks": [
+        { "type": "text", "text": "SwiftData (framework da Apple) transforma classes Swift com @Model em linhas no disco. ModelContainer é o objeto que diz quais modelos existem e onde ficam os arquivos; você anexa na árvore com modelContainer(for:…) no ponto de entrada do app." },
+        { "type": "code", "language": "swift", "code": "import SwiftData\n\n@Model\nfinal class Note {\n    var title: String\n    var body: String\n    init(title: String, body: String) {\n        self.title = title\n        self.body = body\n    }\n}" },
+        { "type": "callout", "variant": "warn", "title": "Thread e MainActor", "body": "UI e SwiftData têm regras de thread (qual fila executa o código). Alinhe com a doc atual — o módulo Concorrência resume MainActor (fila principal da interface)." },
+        { "type": "checklist", "items": ["Sei colocar ModelContainer no @main App", "Entendo @Model (persistência) vs struct de tela", "Sei obter ModelContext (objeto que insere/deleta/salva) no environment"] }
+      ],
+      "commonMistakes": ["Dois containers diferentes com o mesmo modelo sem motivo", "Mudar propriedades @Model sem plano de migração e surpreender usuário com erro"],
+      "tradeoffs": "SwiftData reduz código repetitivo frente ao Core Data clássico; esquemas muito complexos ainda pedem leitura de performance e migração.",
+      "miniChallenge": "App mínimo: lista de notas salvas, botão inserir, swipe deletar.",
+      "glossary": [
+        { "term": "ModelContext", "definition": "Objeto que rastreia mudanças e salva/busca objetos @Model." },
+        { "term": "ModelContainer", "definition": "Configura armazenamento e esquema SwiftData para o app." }
+      ],
+      "sources": [
+        { "label": "Apple — SwiftData", "url": "https://developer.apple.com/documentation/swiftdata" },
+        { "label": "Apple — Adopting SwiftData", "url": "https://developer.apple.com/documentation/swiftdata/adopting-swiftdata-for-persistence" },
+        { "label": "Hacking with Swift — SwiftData", "url": "https://www.hackingwithswift.com/quick-start/swiftdata" }
+      ]
+    },
+    {
+      "id": "fetch-save",
+      "title": "Fetch, @Query e salvar mudanças",
+      "estimatedMinutes": 30,
+      "objective": "Você vai listar dados com @Query (leitura reativa) e alterar com ModelContext (insert, delete, save) conforme a doc de threading.",
+      "prerequisites": ["ModelContainer (seção anterior)"],
+      "blocks": [
+        { "type": "text", "text": "@Query é um property wrapper que mantém a View atualizada quando o resultado da busca (fetch) muda. Para escrita use ModelContext: insert (incluir objeto), delete (remover), save (persistir mudanças) — sempre seguindo a documentação atual sobre em qual executor rodar." },
+        { "type": "code", "language": "swift", "code": "@Query(sort: \\Note.title) private var notes: [Note]" },
+        { "type": "checklist", "items": ["Sei ordenar e filtrar com sort / predicate básicos", "Sei quando chamar save()", "Uso container inMemory (RAM só) em Preview para não sujar disco"] }
+      ],
+      "commonMistakes": ["Buscar milhões de linhas na thread errada", "Esquecer save quando o fluxo exige persistir na hora"],
+      "tradeoffs": "@Query é prático na View; às vezes um view model sem SwiftUI facilita teste unitário.",
+      "miniChallenge": "Barra de busca: @Query com predicate que depende de @State — cuide para não refetch excessivo.",
+      "glossary": [
+        { "term": "@Query", "definition": "Property wrapper SwiftData que fornece resultados reativos de fetch na View." }
+      ],
+      "sources": [
+        { "label": "Apple — Query()", "url": "https://developer.apple.com/documentation/swiftdata/query()" },
+        { "label": "Apple — ModelContext", "url": "https://developer.apple.com/documentation/swiftdata/modelcontext" }
+      ]
+    }
+  ]
+}

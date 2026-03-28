@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>SwiftLab — Trilha Swift & SwiftUI</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f97316">
+  <meta name="description" content="Documentação interativa de estudo: Swift, SwiftUI, SwiftData, concorrência, testes e carreira iOS. Material educacional independente; fontes oficiais Apple e Hacking with Swift quando indicado.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SwiftLab">
+  <link rel="apple-touch-icon" href="icons/icon-152.png">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Highlight.js: realce compatível com identificadores de fenced Markdown (ex.: ```swift) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+  <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menu">☰</button>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <h1 class="brand">SwiftLab</h1>
+      <p class="brand-sub">Swift · SwiftUI · trilha progressiva</p>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Progresso</span><span id="progressPercent">0%</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav" aria-label="Módulos"></nav>
+    <div class="sidebar-foot">
+      <button type="button" class="btn-theme" id="themeBtn"><span id="themeIcon">☽</span> <span id="themeLabel">Modo claro</span></button>
+    </div>
+  </aside>
+
+  <div class="main-wrap">
+    <header class="topbar">
+      <div class="search-wrap">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" id="searchInput" placeholder="Buscar seções e glossário…" autocomplete="off" aria-label="Buscar">
+        <div class="search-results" id="searchResults" hidden></div>
+      </div>
+      <div class="topbar-actions">
+        <button type="button" class="btn-ghost" id="btnGlossary" title="Glossário">📖 Glossário</button>
+        <button type="button" class="btn-ghost" id="btnFlashcards" title="Flashcards da seção">🗂 Flashcards</button>
+        <button type="button" class="btn-ghost" id="btnQuiz" title="Quiz da seção">✓ Quiz</button>
+        <button type="button" class="btn-ghost" id="btnLogic" title="Exercícios de lógica Swift desta seção">⌘ Lógica</button>
+      </div>
+    </header>
+
+    <main class="content" id="mainContent">
+      <div class="welcome" id="welcome">
+        <p class="badge">Material de estudo</p>
+        <h2>Bem-vinda ao SwiftLab</h2>
+        <p class="lead">Escolha um módulo no menu à esquerda. Cada seção tem objetivo claro, blocos curtos, checklist, flashcards, quiz, exercícios de lógica em Swift (botão Lógica) e links para a documentação oficial da Apple (e Hacking with Swift como apoio).</p>
+        <p class="note">Este projeto não é afiliado à Apple Inc. Resumos são didáticos; sempre confira a doc oficial para APIs e comportamento exatos.</p>
+      </div>
+      <article class="section-article hdn" id="sectionArticle"></article>
+    </main>
+  </div>
+
+  <!-- Modais -->
+  <div class="modal" id="modalGlossary" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h3>Glossário global</h3>
+        <button type="button" class="modal-close" data-close="modalGlossary" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="search" class="modal-search" id="glossaryFilter" placeholder="Filtrar termos…">
+        <dl class="glossary-dl" id="glossaryList"></dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="modalFlashcards" aria-hidden="true">
+    <div class="modal-panel modal-wide">
+      <div class="modal-head">
+        <h3>Flashcards</h3>
+        <button type="button" class="modal-close" data-close="modalFlashcards" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="fc-hint" id="fcHint"></p>
+        <div class="flashcard" id="flashcard">
+          <p class="fc-label">Pergunta</p>
+          <p class="fc-q" id="fcQuestion"></p>
+          <p class="fc-a hdn" id="fcAnswer"></p>
+          <button type="button" class="btn-primary" id="fcReveal">Mostrar resposta</button>
+          <div class="fc-actions hdn" id="fcActions">
+            <button type="button" class="btn-secondary" id="fcHard">Revisar</button>
+            <button type="button" class="btn-primary" id="fcNext">Próximo</button>
+          </div>
+        </div>
+        <p class="fc-empty hdn" id="fcEmpty">Não há flashcards para esta seção.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="modalLogic" aria-hidden="true">
+    <div class="modal-panel modal-wide">
+      <div class="modal-head">
+        <h3>Exercícios de lógica (Swift)</h3>
+        <button type="button" class="modal-close" data-close="modalLogic" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="fc-hint" id="logicHint"></p>
+        <div id="logicList" class="logic-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="modalQuiz" aria-hidden="true">
+    <div class="modal-panel modal-wide">
+      <div class="modal-head">
+        <h3>Quiz rápido</h3>
+        <button type="button" class="modal-close" data-close="modalQuiz" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="fc-hint" id="quizHint"></p>
+        <div class="quiz-box hdn" id="quizBox">
+          <p class="quiz-q" id="quizQuestion"></p>
+          <div class="quiz-opts" id="quizOptions"></div>
+          <p class="quiz-exp hdn" id="quizExplanation"></p>
+          <button type="button" class="btn-primary" id="quizNext">Próxima</button>
+        </div>
+        <p class="fc-empty hdn" id="quizEmpty">Não há quiz para esta seção.</p>
+        <p class="quiz-score hdn" id="quizScore"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

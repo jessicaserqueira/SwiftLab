@@ -1,0 +1,334 @@
+{
+  "bySection": {
+    "m01-swift-essentials/optionals-and-types-for-ui": [
+      {
+        "q": "O que é nil em Swift?",
+        "a": "Ausência de valor em um Optional — não é zero nem string vazia."
+      },
+      {
+        "q": "Explique Optional chaining (?.) em uma frase.",
+        "a": "Encadeia chamadas que param se algum passo for nil."
+      }
+    ],
+    "m01-swift-essentials/protocols-and-generics-bridge": [
+      {
+        "q": "O que Identifiable exige?",
+        "a": "Uma propriedade id que identifique unicamente o item (ex.: UUID estável)."
+      },
+      {
+        "q": "Para que serve some View?",
+        "a": "Esconde o tipo concreto retornado pelo body (opaque return type)."
+      }
+    ],
+    "m02-app-swiftui/app-entry-scene-window": [
+      {
+        "q": "O que marca o ponto de entrada do app SwiftUI?",
+        "a": "O atributo @main na struct que conforma App."
+      },
+      {
+        "q": "O que é WindowGroup?",
+        "a": "Scene que agrupa janelas com a mesma raiz de conteúdo."
+      }
+    ],
+    "m02-app-swiftui/lifecycle-basics": [
+      {
+        "q": "O que onAppear indica?",
+        "a": "A view entrou na hierarquia visível — pode rodar mais de uma vez."
+      },
+      {
+        "q": "body pode rodar quantas vezes?",
+        "a": "Muitas — sempre que estado relevante muda."
+      }
+    ],
+    "m02-app-swiftui/preview-and-structure": [
+      {
+        "q": "Para que serve #Preview?",
+        "a": "Renderizar uma View isolada no canvas do Xcode."
+      },
+      {
+        "q": "Organização por feature significa?",
+        "a": "Agrupar arquivos da mesma funcionalidade coesa."
+      }
+    ],
+    "m03-views-composition/view-protocol-modifiers": [
+      {
+        "q": "Modificadores alteram a view no lugar?",
+        "a": "Não — retornam uma nova descrição de view encadeada."
+      },
+      {
+        "q": "Ordem de modificadores importa?",
+        "a": "Sim — afeta layout e aparência."
+      }
+    ],
+    "m03-views-composition/viewbuilder": [
+      {
+        "q": "O que é ViewBuilder?",
+        "a": "Result builder que agrupa várias views em um bloco."
+      },
+      {
+        "q": "Quando usar Group em ViewBuilder?",
+        "a": "Quando precisa combinar ramos sem container de layout próprio."
+      }
+    ],
+    "m04-layout/stacks-grids": [
+      {
+        "q": "Quando preferir LazyVStack?",
+        "a": "Listas longas em ScrollView — cria filhos sob demanda."
+      },
+      {
+        "q": "Spacer com minLength: 0?",
+        "a": "Permite encolher a zero quando o pai limita espaço."
+      }
+    ],
+    "m04-layout/sizing-and-limits": [
+      {
+        "q": "O que maxWidth: .infinity faz?",
+        "a": "Pedir para ocupar toda a largura oferecida pelo pai."
+      },
+      {
+        "q": "O que é safe area?",
+        "a": "Área livre de entalhe e indicadores do sistema."
+      }
+    ],
+    "m05-state-data-flow/state-binding-intro": [
+      {
+        "q": "Diferença entre @State e @Binding?",
+        "a": "@State é dono local; @Binding referencia valor de outro dono."
+      },
+      {
+        "q": "O prefixo $ em @State faz o quê?",
+        "a": "Produz um Binding para o valor."
+      }
+    ],
+    "m05-state-data-flow/observable-and-migration": [
+      {
+        "q": "O que @Observable rastreia?",
+        "a": "Mudanças em propriedades do modelo para atualizar views."
+      },
+      {
+        "q": "ObservableObject ainda existe?",
+        "a": "Sim — legado Combine; Observation é linha nova da Apple."
+      }
+    ],
+    "m05-state-data-flow/environment-object": [
+      {
+        "q": "Para que serve environment na árvore?",
+        "a": "Injetar valores (modelos, serviços) sem passar parâmetro em cada nível."
+      },
+      {
+        "q": "@Environment lê o quê?",
+        "a": "Valores injetados na árvore de views."
+      }
+    ],
+    "m06-navigation/navigationstack": [
+      {
+        "q": "O que é navigationDestination(for:)?",
+        "a": "Mapear um tipo de valor para a view de detalhe na pilha."
+      },
+      {
+        "q": "NavigationLink(value:) precisa de quê?",
+        "a": "navigationDestination compatível com o tipo do value."
+      }
+    ],
+    "m06-navigation/sheets-and-links": [
+      {
+        "q": "Como apresentar modal em SwiftUI?",
+        "a": "Modificador .sheet(isPresented:) ou item-based sheet."
+      },
+      {
+        "q": "Link vs Button?",
+        "a": "Link abre URL; Button executa ação arbitrária."
+      }
+    ],
+    "m07-architecture/managing-model-data": [
+      {
+        "q": "Onde deve morar regra de negócio pesada?",
+        "a": "Em modelos/serviços testáveis, não só na View."
+      },
+      {
+        "q": "View deve conter lógica de rede?",
+        "a": "Melhor em serviço/modelo; View orquestra."
+      }
+    ],
+    "m07-architecture/composition-vs-templates": [
+      {
+        "q": "O que é acoplamento alto?",
+        "a": "Mudar um módulo força muitas mudanças em outros."
+      },
+      {
+        "q": "Módulo SPM ajuda em quê?",
+        "a": "Isolamento e tempo de build incremental."
+      }
+    ],
+    "m08-swiftdata/modelcontainer-schema": [
+      {
+        "q": "O que é @Model?",
+        "a": "Marca classe Swift persistida pelo SwiftData."
+      },
+      {
+        "q": "ModelContainer configura o quê?",
+        "a": "Esquema e armazenamento SwiftData."
+      }
+    ],
+    "m08-swiftdata/fetch-save": [
+      {
+        "q": "O que é @Query?",
+        "a": "Property wrapper que fornece resultados de fetch reativos."
+      },
+      {
+        "q": "ModelContext.save() quando?",
+        "a": "Quando quiser persistir mudanças pendentes (fluxo documentado)."
+      }
+    ],
+    "m09-concurrency/async-await-intro": [
+      {
+        "q": "O que faz await?",
+        "a": "Espera o resultado de operação assíncrona sem bloquear a thread indevidamente."
+      },
+      {
+        "q": "Task {} vs .task {}",
+        "a": ".task liga cancelamento ao ciclo de vida da view."
+      }
+    ],
+    "m09-concurrency/mainactor-task": [
+      {
+        "q": "O que é MainActor?",
+        "a": "Actor global associado à thread principal da UI."
+      },
+      {
+        "q": "actor vs class?",
+        "a": "actor serializa acesso; class não, salvo regras adicionais."
+      }
+    ],
+    "m10-combine/publishers-subscribers": [
+      {
+        "q": "O que é Publisher?",
+        "a": "Tipo Combine que emite valores ao longo do tempo."
+      },
+      {
+        "q": "AnyCancellable guarda o quê?",
+        "a": "Assinatura Combine até cancelar."
+      }
+    ],
+    "m10-combine/async-sequence-bridge": [
+      {
+        "q": "AsyncSequence vs Publisher em uma frase?",
+        "a": "Ambos modelam sequências; APIs novas tendem a async/await."
+      },
+      {
+        "q": "for await lê o quê?",
+        "a": "Valores de AsyncSequence."
+      }
+    ],
+    "m11-testing/xctest-units": [
+      {
+        "q": "O que é SUT?",
+        "a": "System under test — componente sob teste."
+      },
+      {
+        "q": "XCTAssertEqual compara o quê?",
+        "a": "Igualdade esperada vs resultado."
+      }
+    ],
+    "m11-testing/ui-testing-basics": [
+      {
+        "q": "Por que accessibilityIdentifier ajuda testes?",
+        "a": "Queries XCUITest ficam estáveis além do texto visível."
+      },
+      {
+        "q": "XCUIApplication().launch() faz o quê?",
+        "a": "Inicia o app alvo do UI test."
+      }
+    ],
+    "m12-accessibility/labels-hints": [
+      {
+        "q": "Label vs Hint?",
+        "a": "Label diz o que é; hint diz o que acontece ao ativar."
+      },
+      {
+        "q": "accessibilityHidden em imagem decorativa?",
+        "a": "Remove do VoiceOver."
+      }
+    ],
+    "m12-accessibility/dynamic-type": [
+      {
+        "q": "O que é Dynamic Type?",
+        "a": "Texto do sistema que escala com preferência do usuário."
+      },
+      {
+        "q": "Por que .body em vez de .caption fixo?",
+        "a": "Respeita hierarquia tipográfica dinâmica."
+      }
+    ],
+    "m13-debug-performance/previews-instruments": [
+      {
+        "q": "Por que medir antes de otimizar?",
+        "a": "Evita mudanças inúteis e mostra gargalo real."
+      },
+      {
+        "q": "Time Profiler mostra o quê?",
+        "a": "Onde o CPU gastou tempo."
+      }
+    ],
+    "m13-debug-performance/swiftui-performance": [
+      {
+        "q": "Por que id estável em ForEach?",
+        "a": "Identidade ajuda SwiftUI a diffar com menos trabalho."
+      },
+      {
+        "q": "id instável em lista causa?",
+        "a": "Recriação excessiva e possível perda de estado visual."
+      }
+    ],
+    "m14-career/learning-and-hig": [
+      {
+        "q": "O que é HIG?",
+        "a": "Human Interface Guidelines — guia oficial de UX Apple."
+      },
+      {
+        "q": "Release notes do Xcode servem para?",
+        "a": "Ver APIs novas e mudanças de ferramenta."
+      }
+    ],
+    "m14-career/code-review-portfolio": [
+      {
+        "q": "PR pequeno ajuda em quê?",
+        "a": "Revisão mais rápida, menos risco, melhor feedback."
+      },
+      {
+        "q": "README de portfólio deve ter?",
+        "a": "Problema, solução, como rodar, decisões técnicas."
+      }
+    ],
+    "m15-design-system/design-system-hig": [
+      {
+        "q": "O que é design system em uma frase?",
+        "a": "Kit de regras e componentes que mantém o app visualmente e comportamentalmente coerente."
+      },
+      {
+        "q": "Para que serve o HIG?",
+        "a": "Guia oficial Apple de UX: padrões que usuários esperam nas plataformas."
+      }
+    ],
+    "m15-design-system/visual-language": [
+      {
+        "q": "O que são SF Symbols?",
+        "a": "Ícones vetoriais do sistema, usados com Image(systemName:) / Label."
+      },
+      {
+        "q": "Por que preferir .primary em vez de cinza fixo?",
+        "a": "Cores semânticas reagem a tema claro/escuro e acessibilidade."
+      }
+    ],
+    "m15-design-system/swiftui-como-funciona": [
+      {
+        "q": "Por que body pode executar muitas vezes?",
+        "a": "SwiftUI reavalia a descrição quando o estado relevante muda."
+      },
+      {
+        "q": "O que é UIHostingController?",
+        "a": "Controlador UIKit que exibe conteúdo SwiftUI."
+      }
+    ]
+  }
+}

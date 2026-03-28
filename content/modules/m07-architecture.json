@@ -1,0 +1,52 @@
+{
+  "id": "m07-architecture",
+  "title": "Arquitetura",
+  "level": "pleno",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "managing-model-data",
+      "title": "Gerenciar dados de modelo (guia Apple)",
+      "estimatedMinutes": 35,
+      "objective": "Você vai separar View (só interface e reação a estado) de modelo (dados + regras + persistência), usando tipos observáveis e injeção — alinhado ao guia oficial da Apple.",
+      "prerequisites": ["State, Observation, Environment (módulos anteriores)"],
+      "blocks": [
+        { "type": "text", "text": "A Apple descreve assim: Views são declarativas (você descreve o que mostrar) e recriadas com frequência; modelos vivem mais tempo e carregam/salvam dados. O artigo \"Managing model data in your app\" junta isso com SwiftData (persistência) e Observation (mudanças rastreadas)." },
+        { "type": "callout", "variant": "info", "title": "MVVM e outros nomes", "body": "MVVM (Model-View-ViewModel) é um rótulo comum na comunidade. O que importa é fronteira clara: View reage a estado; modelo encapsula regras e IO (entrada/saída: rede, disco)." },
+        { "type": "list", "ordered": true, "items": ["Separe estado de UI (abrir sheet) de estado de domínio (lista de pedidos)", "Mova regras para tipos que você consegue testar sem simulador", "Injete serviços (rede, banco) em vez de singleton global escondido"] },
+        { "type": "checklist", "items": ["Consigo testar modelo sem montar SwiftUI", "View não faz parse JSON enorme sozinha", "Sei dizer em voz alta onde está a fonte da verdade"] }
+      ],
+      "commonMistakes": ["God View (uma View gigante com tudo)", "Copiar os mesmos dados em duas camadas sem motivo"],
+      "tradeoffs": "Mais arquivos exige navegar mais no Xcode; em app médio/grande compensa em testes e manutenção.",
+      "miniChallenge": "Extraia de uma View um UserLoader (busca JSON) que alimenta um modelo @Observable.",
+      "glossary": [
+        { "term": "Domain model", "definition": "Representação dos conceitos do problema (usuário, pedido) com regras associadas." }
+      ],
+      "sources": [
+        { "label": "Apple — Managing model data in your app", "url": "https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app" },
+        { "label": "Apple — Data essentials", "url": "https://developer.apple.com/documentation/swiftui/data-and-storage" }
+      ]
+    },
+    {
+      "id": "composition-vs-templates",
+      "title": "Composição, módulos e dependências",
+      "estimatedMinutes": 28,
+      "objective": "Você vai organizar pastas por feature (funcionalidade) ou por camada e reduzir acoplamento (mudança num lugar não quebra tudo).",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "Composição significa juntar telas grandes a partir de Views e modelos pequenos. Evite copiar \"arquitetura de blog\" sem entender o problema do seu app (cada time e app tem ritmo diferente)." },
+        { "type": "callout", "variant": "tip", "title": "Fronteiras", "body": "Uma feature pode ter pasta própria: Views + Model + serviços só dela. Só mova para \"compartilhado\" o que outra feature realmente precisa." },
+        { "type": "checklist", "items": ["Escolho pastas por feature OU por camada e mantenho o padrão", "Evito import circular (A importa B e B importa A em módulos SPM)"] }
+      ],
+      "commonMistakes": ["Criar pasta UseCase vazia só porque viu em vídeo", "Shared virar depósito de tudo que sobra"],
+      "tradeoffs": "Pacotes SPM (Swift Package Manager) isolam código e podem acelerar build incremental; app minúsculo pode viver num target só.",
+      "miniChallenge": "No papel: três caixas UI, Domínio, Infra — setas mostrando quem pode chamar quem.",
+      "glossary": [
+        { "term": "Acoplamento", "definition": "Quanto uma mudança num módulo obriga mudança em outro." }
+      ],
+      "sources": [
+        { "label": "Apple — Adding package dependencies", "url": "https://developer.apple.com/documentation/xcode/adding-package-dependencies-to-your-app" }
+      ]
+    }
+  ]
+}

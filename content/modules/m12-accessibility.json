@@ -1,0 +1,54 @@
+{
+  "id": "m12-accessibility",
+  "title": "Acessibilidade",
+  "level": "pleno-plus",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "labels-hints",
+      "title": "Label, Hint, Value e traits",
+      "estimatedMinutes": 28,
+      "objective": "Você vai configurar VoiceOver (leitor de tela da Apple) para ler seus controles com label (nome curto), hint (o que acontece ao ativar), value (estado atual) e traits (papel: botão, cabeçalho…).",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "accessibilityLabel é o nome que o VoiceOver fala primeiro. accessibilityHint explica a ação (ex.: \"abre configurações\"). accessibilityValue mostra estado (ex.: \"50%\"). accessibilityTraits marcam papel: .isButton, .isHeader, .isSelected." },
+        { "type": "callout", "variant": "tip", "title": "SwiftUI", "body": "Use .accessibilityLabel, .accessibilityHint, .accessibilityAddTraits e, quando vários elementos são um só controle lógico, accessibilityElement(children: .combine)." },
+        { "type": "checklist", "items": ["Testei com VoiceOver ligado no iPhone real", "Não repito hint igual ao label sem necessidade", "Imagem só decorativa fica hidden da acessibilidade"] }
+      ],
+      "commonMistakes": ["Ícone clicável sem label → VoiceOver diz só \"botão\"", "Hint enorme repetindo o label"],
+      "tradeoffs": "Muitos elementos focáveis cansam quem navega com gesto; agrupe quando for um só controle mental.",
+      "miniChallenge": "Card com avatar + nome: combine em um único elemento com label \"Foto de Fulano, Fulano\".",
+      "glossary": [
+        { "term": "VoiceOver", "definition": "Leitor de tela integrado da Apple." },
+        { "term": "Trait", "definition": "Metadado de papel ou estado do elemento acessível." }
+      ],
+      "sources": [
+        { "label": "Apple — Accessibility", "url": "https://developer.apple.com/documentation/accessibility" },
+        { "label": "Apple — SwiftUI accessibility modifiers", "url": "https://developer.apple.com/documentation/swiftui/view-accessibility" },
+        { "label": "Hacking with Swift — Accessibility", "url": "https://www.hackingwithswift.com/quick-start/swiftui/swiftui-accessibility-guide" }
+      ]
+    },
+    {
+      "id": "dynamic-type",
+      "title": "Dynamic Type e contraste",
+      "estimatedMinutes": 24,
+      "objective": "Você vai respeitar Dynamic Type (texto do sistema que cresce nas Ajustes) e contraste (diferença legível entre texto e fundo).",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "Dynamic Type é o recurso do iOS que aumenta ou diminui fontes em todo o sistema. Prefira estilos semânticos (.body, .headline) em vez de tamanho fixo em pontos. Evite altura fixa que corte texto quando o usuário usa tamanho grande." },
+        { "type": "list", "ordered": false, "items": ["Teste no maior tamanho de texto (Ajustes → Tamanho do texto)", "Contraste: verifique WCAG (padrão de acessibilidade de cor) quando possível", "Se animar, ofereça caminho com reduce motion (menos movimento)"] },
+        { "type": "checklist", "items": ["Troque font(.system(size:)) fixo por estilo dinâmico onde der", "Revise telas com texto grande ativado"] }
+      ],
+      "commonMistakes": ["frame(height: 40) em Text multilinha", "Animação forte sem respeitar prefersReducedMotion"],
+      "tradeoffs": "Layout flexível dá mais trabalho de QA; aumenta quem consegue usar o app.",
+      "miniChallenge": "Ligue o maior Text Size e navegue 5 minutos — anote o que quebra.",
+      "glossary": [
+        { "term": "Dynamic Type", "definition": "Sistema de tipografia escalável do iOS conforme preferência do usuário." }
+      ],
+      "sources": [
+        { "label": "Apple — Human Interface Guidelines — Accessibility", "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility" },
+        { "label": "Apple — SwiftUI dynamicTypeSize", "url": "https://developer.apple.com/documentation/swiftui/environmentvalues/dynamictypesize" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "m01-swift-essentials",
+  "title": "Swift Essentials",
+  "level": "junior-plus",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "optionals-and-types-for-ui",
+      "title": "Optionals e tipos que aparecem em SwiftUI",
+      "estimatedMinutes": 25,
+      "objective": "Você vai reconhecer optionals (valores que podem existir ou podem faltar), nil (significa \"não tem valor\"), e unwrap seguro (abrir o optional sem arriscar crash) para mostrar dados na tela com segurança.",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "heading", "level": 3, "text": "Optional em uma frase" },
+        { "type": "text", "text": "Optional (tipo que pode ter valor ou estar \"vazio\") aparece como T? em Swift. Significa: pode existir um valor do tipo T ou pode não existir nada — aí usamos nil (ausência de valor, diferente de zero). SwiftUI (framework de interface da Apple) e APIs do sistema frequentemente devolvem optionals: por exemplo texto opcional, URL opcional." },
+        { "type": "callout", "variant": "tip", "title": "Lembre", "body": "nil não é zero: é ausência de valor. Trate isso antes de passar para a UI (interface do usuário, o que aparece na tela)." },
+        { "type": "heading", "level": 3, "text": "Formas seguras de unwrap (abrir o optional)" },
+        { "type": "list", "ordered": false, "items": ["if let — cria uma constante só se houver valor dentro do optional", "guard let — sai cedo da função se não houver valor (útil para não aninhar if)", "Nil coalescing (operador ??) — escolhe um valor padrão quando o optional for nil", "Optional chaining (operador ?.) — encadeia chamadas; se algum passo for nil, o resultado vira nil sem crash"] },
+        { "type": "code", "language": "swift", "code": "struct ProfileView: View {\n    let nickname: String?\n\n    var body: some View {\n        Text(nickname ?? \"Sem apelido\")\n    }\n}" },
+        { "type": "heading", "level": 3, "text": "Struct e valor" },
+        { "type": "text", "text": "struct (tipo definido com a palavra-chave struct) em Swift costuma ser tipo por valor (ao passar para outro lugar, copia-se o conteúdo). Muitos modelos simples de UI são structs. Isso ajuda a pensar em imutabilidade (dados que não mudam por padrão) e em quando você precisa de class (tipo por referência, compartilhado) ou de estado mutável com @Observable (macro que avisa o SwiftUI quando algo mudou)." },
+        { "type": "checklist", "items": ["Consigo explicar nil com minhas palavras", "Uso if let ou ?? sem force unwrap (! forçado, que pode derrubar o app) sem necessidade", "Entendo que String? (optional) é diferente de String (sempre tem texto)"] }
+      ],
+      "commonMistakes": ["Usar ! (force unwrap, abre optional sem checar) em dados que vêm de rede ou do usuário", "Confundir optional com número 0 ou string vazia \"\""],
+      "tradeoffs": "Muitos if let um dentro do outro deixam o código difícil de ler; às vezes map (transforma optional) ou flatMap (encadeia optionals) ou um guard let no início deixam o fluxo mais linear.",
+      "miniChallenge": "Crie uma struct User com displayName: String? (nome que pode faltar) e uma View (tela SwiftUI) que mostre o nome ou \"Anônimo\" sem usar !.",
+      "glossary": [
+        { "term": "Optional", "definition": "Tipo que encapsula um valor ou ausência (nil)." },
+        { "term": "Unwrap", "definition": "Extrair o valor de um optional de forma segura ou forçada." }
+      ],
+      "sources": [
+        { "label": "Apple — The Basics (Swift)", "url": "https://docs.swift.org/swift-book/documentation/the-swift-programming-language/thebasics/" },
+        { "label": "Hacking with Swift — Optionals", "url": "https://www.hackingwithswift.com/quick-start/beginners/how-to-unwrap-optionals" }
+      ]
+    },
+    {
+      "id": "protocols-and-generics-bridge",
+      "title": "Protocols e generics (ponte para SwiftUI)",
+      "estimatedMinutes": 25,
+      "objective": "Você vai entender protocol (lista de requisitos que um tipo pode cumprir) e generics (tipos \"modelo\" como Array<Element>) o suficiente para ler código de View (tela SwiftUI), Identifiable (exige id único) e listas.",
+      "prerequisites": ["Swift Essentials — Optionals (seção anterior deste módulo)"],
+      "blocks": [
+        { "type": "heading", "level": 3, "text": "Protocol (contrato)" },
+        { "type": "text", "text": "protocol é um contrato: lista propriedades e métodos que um tipo pode implementar. SwiftUI usa muitos protocolos: View (tudo que tem body e pode ir na tela), Identifiable (precisa de propriedade id para listas), Hashable (permite usar o valor em conjuntos e dicionários), entre outros." },
+        { "type": "code", "language": "swift", "code": "struct Book: Identifiable {\n    let id: UUID\n    let title: String\n}\n\n// ForEach (lista de views) exige Identifiable ou id explícito \\.id" },
+        { "type": "heading", "level": 3, "text": "Generics (visão de uso)" },
+        { "type": "text", "text": "Generics (parâmetros de tipo como <T>) permitem escrever código que serve para vários tipos concretos sem perder checagem de tipos. Você não precisa teoria profunda no início — basta reconhecer <T> em tipos como Array (lista ordenada), Optional e em APIs do SwiftUI." },
+        { "type": "callout", "variant": "warn", "title": "Não force padrões avançados cedo", "body": "Protocol-oriented design (estilo de desenhar app em cima de protocolos) profundo pode esperar. Foque em cumprir contratos simples (Identifiable, Equatable — comparar com ==) que a documentação da Apple pede." },
+        { "type": "checklist", "items": ["Sei o que Identifiable exige (uma propriedade id estável)", "Consigo ler erros de tipo do compilador (mensagens vermelhas do Xcode) ligados a generics", "Entendo protocol como \"contrato\" entre o tipo e quem usa o tipo"] }
+      ],
+      "commonMistakes": ["Implementar Identifiable com id que muda a cada vez que a tela redesenha", "Ignorar Hashable ou Equatable quando List (lista) precisa de diff estável (comparar itens sem confusão)"],
+      "tradeoffs": "Tipos genéricos dão flexibilidade e podem deixar mensagens de erro mais longas; comece com tipos concretos (String, Int, seu struct) e evolua.",
+      "miniChallenge": "Modele 3 itens com id UUID (identificador único) fixo e liste em ForEach; mude id a cada init e observe lista estranha.",
+      "glossary": [
+        { "term": "Identifiable", "definition": "Protocolo com propriedade id usada para identificar itens em listas e animações." },
+        { "term": "Generic", "definition": "Parâmetro de tipo (ex.: T) que permite reutilizar código para vários tipos concretos." }
+      ],
+      "sources": [
+        { "label": "Apple — Protocols", "url": "https://docs.swift.org/swift-book/documentation/the-swift-programming-language/protocols/" },
+        { "label": "Apple — Generics", "url": "https://docs.swift.org/swift-book/documentation/the-swift-programming-language/generics/" },
+        { "label": "Hacking with Swift — Protocols", "url": "https://www.hackingwithswift.com/quick-start/beginners/what-is-a-protocol" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "id": "m14-career",
+  "title": "Carreira iOS",
+  "level": "transversal",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "learning-and-hig",
+      "title": "Aprendizado contínuo e HIG",
+      "estimatedMinutes": 22,
+      "objective": "Você vai montar um hábito: codar → ler documentação oficial do que usou → revisar HIG (Human Interface Guidelines, guia de UX da Apple) → repetir.",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "Especialização vem de ciclo curto: você constrói uma feature, abre a página da API na developer.apple.com, depois lê o trecho do HIG relacionado (layout, feedback, acessibilidade). Release notes (notas de versão) do iOS e do Xcode listam APIs novas e APIs antigas marcadas como obsoletas." },
+        { "type": "list", "ordered": true, "items": ["Um projeto pequeno por mês (escopo fechado)", "Depois de cada feature, leia a doc das APIs que tocou", "Anote trade-offs (vantagens e custos) num README pessoal"] },
+        { "type": "checklist", "items": ["Acompanho canal oficial Apple Developer (vídeo ou news)", "Li pelo menos um capítulo do HIG por trimestre", "Explico em voz alta uma feature que implementei"] }
+      ],
+      "commonMistakes": ["Só vídeo/tutorial sem abrir doc primária", "Ignorar estados vazios e acessibilidade no desenho"],
+      "tradeoffs": "Documentação oficial é densa; use exemplos mínimos no Xcode para ancorar.",
+      "miniChallenge": "Escolha uma API usada esta semana e leia a página inteira na Apple.",
+      "glossary": [
+        { "term": "HIG", "definition": "Human Interface Guidelines — diretrizes de design e comportamento da Apple." }
+      ],
+      "sources": [
+        { "label": "Apple — Human Interface Guidelines", "url": "https://developer.apple.com/design/human-interface-guidelines" },
+        { "label": "Apple — SwiftUI updates", "url": "https://developer.apple.com/documentation/updates/swiftui" }
+      ]
+    },
+    {
+      "id": "code-review-portfolio",
+      "title": "Revisão de código, comunicação e portfólio",
+      "estimatedMinutes": 26,
+      "objective": "Você vai praticar PR (Pull Request, pedido de revisão no Git), dar feedback curto e claro, e manter portfólio com README (arquivo que explica o projeto) honesto.",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "Em time, PR pequeno (poucas linhas, um objetivo) revisa mais rápido e seguro. Na descrição: por que mudou, prints ou vídeo curto, passos para testar. No GitHub pessoal: licença de bibliotecas de terceiros e parágrafo \"por que SwiftData / por que NavigationStack\"." },
+        { "type": "callout", "variant": "tip", "title": "Entrevistas", "body": "Prepare histórias STAR (Situação, Tarefa, Ação, Resultado): um bug difícil, um trade-off de arquitetura, um review que você deu ou recebeu." },
+        { "type": "checklist", "items": ["Tenho um app no GitHub com README e screenshot", "Consigo explicar um PR em até 3 minutos", "Peço review antes de merge (integrar na branch principal)"] }
+      ],
+      "commonMistakes": ["Portfólio só com tutorial copiado sem mudança sua", "Um commit gigante que ninguém consegue revisar"],
+      "tradeoffs": "Polir portfólio compete com tempo de estudo — use blocos curtos semanais.",
+      "miniChallenge": "Reescreva o README: problema, solução, como rodar, o que aprendeu.",
+      "glossary": [
+        { "term": "PR (Pull Request)", "definition": "Proposta de merge com diff e discussão antes de integrar ao principal." }
+      ],
+      "sources": [
+        { "label": "GitHub Docs — About pull requests", "url": "https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "id": "m05-state-data-flow",
+  "title": "State e data flow",
+  "level": "junior-plus",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "state-binding-intro",
+      "title": "@State e @Binding (fonte da verdade local)",
+      "estimatedMinutes": 35,
+      "objective": "Você vai usar @State (estado guardado pela própria View) e @Binding (atalho de leitura e gravação para o estado do pai) sem duplicar a fonte da verdade (único lugar oficial do valor).",
+      "prerequisites": ["Views e composição"],
+      "blocks": [
+        { "type": "heading", "level": 3, "text": "Fonte da verdade" },
+        { "type": "text", "text": "Fonte da verdade é o único lugar onde o valor \"oficial\" mora. SwiftUI redesenha a tela quando essa fonte muda. @State é um property wrapper (sintaxe @ que adiciona comportamento) que guarda estado interno da View — bom para coisas só daquela tela (toggle ligado/desligado, texto digitado)." },
+        { "type": "code", "language": "swift", "code": "struct CounterView: View {\n    @State private var count = 0\n\n    var body: some View {\n        VStack {\n            Text(\"\\(count)\")\n            Button(\"+1\") { count += 1 }\n        }\n    }\n}" },
+        { "type": "heading", "level": 3, "text": "@Binding" },
+        { "type": "text", "text": "Binding é uma ponte de leitura e escrita para um valor que pertence a outro dono (por exemplo @State no pai, ou uma propriedade de um modelo @Observable). O filho não é dono — só edita o mesmo valor." },
+        { "type": "code", "language": "swift", "code": "struct Editor: View {\n    @Binding var text: String\n    var body: some View {\n        TextField(\"Nome\", text: $text)\n    }\n}\n\n// Pai: Editor(text: $draftName)" },
+        { "type": "callout", "variant": "warn", "title": "$ e Binding", "body": "O prefixo $ em @State gera Binding (ponte). Se você passar cópia em vez de Binding, o filho muda só a cópia e o pai não vê — bug clássico." },
+        { "type": "list", "ordered": false, "items": ["@State: dono local da View", "@Binding: ponte para o dono externo", "Evite @State para dado global do app — suba para modelo observável (Observation)"] },
+        { "type": "checklist", "items": ["Sei quando usar State vs Binding", "Não crio duas @State espelhadas para o mesmo conceito", "Uso private em @State quando só aquela View precisa enxergar"] }
+      ],
+      "commonMistakes": ["Passar String copiada onde TextField pedia Binding", "Guardar modelo inteiro de negócio só em @State em app grande"],
+      "tradeoffs": "@State é simples; telas grandes pedem modelos compartilhados (próximas seções).",
+      "miniChallenge": "Pai com @State var isOn e filho Toggle que recebe só Binding — sem @State no filho.",
+      "glossary": [
+        { "term": "Binding", "definition": "Referência de leitura/escrita a um valor cuja fonte da verdade está em outro lugar." },
+        { "term": "@State", "definition": "Property wrapper que armazena estado na própria View e notifica SwiftUI para atualizar." }
+      ],
+      "sources": [
+        { "label": "Apple — State", "url": "https://developer.apple.com/documentation/swiftui/state" },
+        { "label": "Apple — Binding", "url": "https://developer.apple.com/documentation/swiftui/binding" },
+        { "label": "Hacking with Swift — @State", "url": "https://www.hackingwithswift.com/quick-start/swiftui/what-is-the-state-property-wrapper" }
+      ]
+    },
+    {
+      "id": "observable-and-migration",
+      "title": "@Observable e modelos (Observation)",
+      "estimatedMinutes": 40,
+      "objective": "Você vai encapsular estado de app em classes @Observable (framework Observation da Apple) e saber que ObservableObject (protocolo antigo com Combine) ainda aparece em código legado (projeto antigo).",
+      "prerequisites": ["@State e @Binding"],
+      "blocks": [
+        { "type": "text", "text": "Com Observation você marca uma class com @Observable. Propriedades que a View lê dentro de body viram dependências: quando mudam, SwiftUI atualiza só o que precisa. Injeção via .environment (passar valor na árvore) ou guardar em @State na raiz da feature são padrões comuns." },
+        { "type": "callout", "variant": "info", "title": "ObservableObject (legado)", "body": "Combine (framework reativo) + ObservableObject + @Published ainda aparece em tutoriais velhos. Para app novo, a Apple orienta Observation com @Observable em SwiftUI." },
+        { "type": "code", "language": "swift", "code": "import Observation\n\n@Observable\nfinal class Session {\n    var username: String = \"\"\n}\n\n// Na raiz da feature:\n// @State private var session = Session()\n// .environment(session)" },
+        { "type": "heading", "level": 3, "text": "Quando sobe do @State" },
+        { "type": "list", "ordered": true, "items": ["Várias telas ou filhos precisam do mesmo modelo", "Existe lógica de negócio ou persistência (salvar dados)", "Você quer testar o modelo sem subir SwiftUI"] },
+        { "type": "checklist", "items": ["Sei criar modelo @Observable e ligar na árvore", "Entendo que ObservableObject é caminho antigo ainda visto no mercado", "Evito copiar o mesmo campo na View e no modelo ao mesmo tempo"] }
+      ],
+      "commonMistakes": ["Instanciar @Observable novo dentro de body a cada render", "Esquecer .environment e achar que o filho \"vai achar\" o modelo sozinho"],
+      "tradeoffs": "class observável compartilha bem; struct imutável ainda é ótima para dados puros — use os dois com critério.",
+      "miniChallenge": "SettingsStore @Observable com var theme; injete e leia em duas Views diferentes.",
+      "glossary": [
+        { "term": "@Observable", "definition": "Macro/atributo que torna propriedades da classe rastreáveis para atualização de SwiftUI." },
+        { "term": "ObservableObject", "definition": "Protocolo baseado em Combine para publicar mudanças (padrão anterior comum)." }
+      ],
+      "sources": [
+        { "label": "Apple — Observation", "url": "https://developer.apple.com/documentation/observation" },
+        { "label": "Apple — Managing model data in your app", "url": "https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app" },
+        { "label": "Hacking with Swift — Observation", "url": "https://www.hackingwithswift.com/quick-start/swiftui/what-is-the-observation-framework" }
+      ]
+    },
+    {
+      "id": "environment-object",
+      "title": "Environment e injeção de dependências leve",
+      "estimatedMinutes": 28,
+      "objective": "Você vai usar Environment (valores que descem a árvore de Views) para tema, serviços ou modelos sem passar parâmetro em cada init.",
+      "prerequisites": ["Modelos observáveis (seção anterior)"],
+      "blocks": [
+        { "type": "text", "text": "O modificador .environment(_:_:) e o tipo EnvironmentValues (tabela de chaves padrão do SwiftUI) injetam valores visíveis para a subárvore (todos os filhos abaixo). Filhos leem com @Environment quando usam chaves do sistema ou tipos que você registrou." },
+        { "type": "callout", "variant": "tip", "title": "Explícito vs mágico", "body": "Environment evita prop drilling (passar o mesmo parâmetro em 10 níveis), mas esconde de onde veio o valor — documente o que cada tela precisa." },
+        { "type": "code", "language": "swift", "code": "ChildView()\n    .environment(theme)" },
+        { "type": "checklist", "items": ["Sei usar @Environment para chaves oficiais (corScheme, locale…)", "Não coloco \"tudo\" no environment sem necessidade"] }
+      ],
+      "commonMistakes": ["Ler valor obrigatório sem default e quebrar Preview", "Teste com environment diferente do app real sem perceber"],
+      "tradeoffs": "Menos parâmetros nas Views; depuração pode exigir rastrear quem chamou .environment.",
+      "miniChallenge": "Struct AppServices com relógio fake (protocolo Clock) injetada só na subtree de teste.",
+      "glossary": [
+        { "term": "Environment", "definition": "Valores propagados pela árvore de views, acessíveis com @Environment." }
+      ],
+      "sources": [
+        { "label": "Apple — environment(_:_:)", "url": "https://developer.apple.com/documentation/swiftui/view/environment(_:_:)" },
+        { "label": "Apple — EnvironmentValues", "url": "https://developer.apple.com/documentation/swiftui/environmentvalues" }
+      ]
+    }
+  ]
+}

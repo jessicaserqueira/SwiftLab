@@ -1,0 +1,370 @@
+{
+  "bySection": {
+    "m01-swift-essentials/optionals-and-types-for-ui": [
+      {
+        "question": "Optional String nunca pode ser nil?",
+        "options": [
+          "Verdadeiro",
+          "Falso"
+        ],
+        "correctIndex": 1,
+        "explanation": "String? pode ser nil; String não pode."
+      }
+    ],
+    "m01-swift-essentials/protocols-and-generics-bridge": [
+      {
+        "question": "Identifiable exige id estável na vida do item na lista?",
+        "options": [
+          "Sim, em geral",
+          "Não importa"
+        ],
+        "correctIndex": 0,
+        "explanation": "id instável quebra diff e animações."
+      }
+    ],
+    "m02-app-swiftui/app-entry-scene-window": [
+      {
+        "question": "Vários @main no mesmo target é válido?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Deve haver um único ponto @main."
+      }
+    ],
+    "m02-app-swiftui/lifecycle-basics": [
+      {
+        "question": "body deve conter trabalho de rede pesado?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Prefira .task ou camadas assíncronas."
+      }
+    ],
+    "m02-app-swiftui/preview-and-structure": [
+      {
+        "question": "Preview substitui testes automatizados?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Preview ajuda design; testes validam comportamento."
+      }
+    ],
+    "m03-views-composition/view-protocol-modifiers": [
+      {
+        "question": "some View expõe o tipo exato do body?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Opaque type esconde o tipo concreto."
+      }
+    ],
+    "m03-views-composition/viewbuilder": [
+      {
+        "question": "AnyView é a primeira solução para erros de tipo?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Evite AnyView; prefira Group/@ViewBuilder."
+      }
+    ],
+    "m04-layout/stacks-grids": [
+      {
+        "question": "LazyVStack cria todos os filhos de uma vez?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Lazy cria sob demanda na medida do necessário."
+      }
+    ],
+    "m04-layout/sizing-and-limits": [
+      {
+        "question": "GeometryReader deve ser usado em todo layout?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Use quando stacks/frames não bastarem."
+      }
+    ],
+    "m05-state-data-flow/state-binding-intro": [
+      {
+        "question": "@Binding duplica a fonte da verdade?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Binding aponta para fonte existente."
+      }
+    ],
+    "m05-state-data-flow/observable-and-migration": [
+      {
+        "question": "@Observable substitui toda UIKit?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "É sobre modelo Swift e SwiftUI; UIKit é outra camada."
+      }
+    ],
+    "m05-state-data-flow/environment-object": [
+      {
+        "question": "Environment valores são globais do processo?",
+        "options": [
+          "Sim para sempre",
+          "Propagados na subárvore"
+        ],
+        "correctIndex": 1,
+        "explanation": "Valem onde injetados."
+      }
+    ],
+    "m06-navigation/navigationstack": [
+      {
+        "question": "Path tipado pode misturar tipos sem wrapper?",
+        "options": [
+          "Depende do design",
+          "Sempre proibido"
+        ],
+        "correctIndex": 0,
+        "explanation": "Enums ou tipos homogêneos ajudam consistência."
+      }
+    ],
+    "m06-navigation/sheets-and-links": [
+      {
+        "question": "sheet e fullScreenCover são idênticos?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "fullScreen cobre a tela inteira; apresentação mais intrusiva."
+      }
+    ],
+    "m07-architecture/managing-model-data": [
+      {
+        "question": "Views devem ser a única fonte de regras?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Modelos testáveis carregam regras."
+      }
+    ],
+    "m07-architecture/composition-vs-templates": [
+      {
+        "question": "Pastas por feature e por camada são iguais?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "São estratégias diferentes; escolha consistente."
+      }
+    ],
+    "m08-swiftdata/modelcontainer-schema": [
+      {
+        "question": "SwiftData substitui necessidade de pensar em concorrência?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Ainda há regras de thread/MainActor."
+      }
+    ],
+    "m08-swiftdata/fetch-save": [
+      {
+        "question": "@Query substitui ModelContext?",
+        "options": [
+          "Sim totalmente",
+          "Não — writes usam context"
+        ],
+        "correctIndex": 1,
+        "explanation": "Leitura reativa vs mutações no context."
+      }
+    ],
+    "m09-concurrency/async-await-intro": [
+      {
+        "question": "Task herda cancelamento do pai?",
+        "options": [
+          "Em muitos casos hierárquicos, sim",
+          "Nunca"
+        ],
+        "correctIndex": 0,
+        "explanation": "Task filha pode cancelar junto; ver doc."
+      }
+    ],
+    "m09-concurrency/mainactor-task": [
+      {
+        "question": "Todo struct SwiftUI já é MainActor?",
+        "options": [
+          "Sempre automaticamente",
+          "Muitas APIs assumem MainActor para UI"
+        ],
+        "correctIndex": 1,
+        "explanation": "UI é main actor; leia assinaturas."
+      }
+    ],
+    "m10-combine/publishers-subscribers": [
+      {
+        "question": "Combine é obrigatório em apps SwiftUI novos?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Muitos fluxos usam async/await."
+      }
+    ],
+    "m10-combine/async-sequence-bridge": [
+      {
+        "question": "AsyncSequence só existe em Linux?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "É parte do Swift moderno nas plataformas Apple."
+      }
+    ],
+    "m11-testing/xctest-units": [
+      {
+        "question": "Testes devem depender da hora real sempre?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Injete relógio fake para determinismo."
+      }
+    ],
+    "m11-testing/ui-testing-basics": [
+      {
+        "question": "UI tests são normalmente mais rápidos que unitários?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "UI tests são mais lentos."
+      }
+    ],
+    "m12-accessibility/labels-hints": [
+      {
+        "question": "Esconder decoração visual de acessibilidade é válido?",
+        "options": [
+          "Às vezes, com hidden",
+          "Nunca"
+        ],
+        "correctIndex": 0,
+        "explanation": "Imagens puramente decorativas podem ser hidden."
+      }
+    ],
+    "m12-accessibility/dynamic-type": [
+      {
+        "question": "Font(.system(size: 12)) respeita Dynamic Type?",
+        "options": [
+          "Sempre",
+          "Nem sempre — prefira estilos semânticos"
+        ],
+        "correctIndex": 1,
+        "explanation": "Estilos semânticos escalam melhor."
+      }
+    ],
+    "m13-debug-performance/previews-instruments": [
+      {
+        "question": "print em body é boa prática contínua?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "Polui e pode mascarar problemas — use debugger."
+      }
+    ],
+    "m13-debug-performance/swiftui-performance": [
+      {
+        "question": "ForEach(0..<n, id: \\.self) com índice é sempre ideal?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "IDs estáveis de modelo são melhores que índice mutável."
+      }
+    ],
+    "m14-career/learning-and-hig": [
+      {
+        "question": "HIG substitui decisões de produto da sua equipe?",
+        "options": [
+          "Sempre",
+          "Serve de guia, não lei absoluta"
+        ],
+        "correctIndex": 1,
+        "explanation": "Adapte com contexto e testes com usuários."
+      }
+    ],
+    "m14-career/code-review-portfolio": [
+      {
+        "question": "Commits gigantes facilitam review?",
+        "options": [
+          "Sim",
+          "Não"
+        ],
+        "correctIndex": 1,
+        "explanation": "PRs menores revisam melhor."
+      }
+    ],
+    "m15-design-system/design-system-hig": [
+      {
+        "question": "HIG é opcional para app na App Store?",
+        "options": [
+          "Sim, Apple proíbe consultar",
+          "Não — é referência oficial forte de UX; ignorar pode confundir usuários",
+          "Só para apps pagos"
+        ],
+        "correctIndex": 1,
+        "explanation": "O HIG descreve expectativas de usuários Apple; não é lei literal de cada pixel, mas é a base oficial."
+      }
+    ],
+    "m15-design-system/visual-language": [
+      {
+        "question": "SF Symbols combinam com Dynamic Type?",
+        "options": [
+          "Não",
+          "Sim — são pensados para alinhar com texto e escalas do sistema",
+          "Só no watchOS"
+        ],
+        "correctIndex": 1,
+        "explanation": "A Apple documenta SF Symbols como integrados ao sistema de tipografia e aparência."
+      }
+    ],
+    "m15-design-system/swiftui-como-funciona": [
+      {
+        "question": "UIViewRepresentable serve para quê?",
+        "options": [
+          "Converter Swift em Objective-C",
+          "Embutir UIView (UIKit) dentro de uma hierarquia SwiftUI",
+          "Desenhar Metal manualmente"
+        ],
+        "correctIndex": 1,
+        "explanation": "É o protocolo SwiftUI para integrar views UIKit; o inverso comum é UIHostingController."
+      }
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "m11-testing",
+  "title": "Testes",
+  "level": "pleno",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "xctest-units",
+      "title": "XCTest e testes de modelo",
+      "estimatedMinutes": 32,
+      "objective": "Você vai criar um target de testes (segundo alvo no Xcode só para testes), escrever XCTest (framework de asserções) contra modelos puros e rodar sem abrir simulador para cada assert.",
+      "prerequisites": ["Arquitetura — modelo separado da View"],
+      "blocks": [
+        { "type": "text", "text": "Testes unitários (pedaços pequenos isolados) usam XCTest: subclasses XCTestCase ou, em toolchains novos, funções marcadas com @Test. Foque em funções puras (mesma entrada → mesma saída), modelos e serviços com dependências injetadas (passadas por parâmetro, não globais escondidos)." },
+        { "type": "code", "language": "swift", "code": "import XCTest\n@testable import MyApp\n\nfinal class UserTests: XCTestCase {\n    func testDisplayNameFallsBack() {\n        let u = User(displayName: nil)\n        XCTAssertEqual(u.effectiveName, \"Anônimo\")\n    }\n}" },
+        { "type": "callout", "variant": "tip", "title": "Determinismo", "body": "Troque relógio real, rede e random por protocolos ou doubles (implementações falsas) para o teste sempre prever o resultado." },
+        { "type": "checklist", "items": ["Tenho target de testes no Xcode", "Uso XCTAssert* para comparar resultado esperado", "Para código async, uso expectativa (XCTestExpectation) ou APIs modernas da toolchain"] }
+      ],
+      "commonMistakes": ["Testar View gigante em vez de extrair regra", "Singleton global que não dá para trocar em teste"],
+      "tradeoffs": "Mocks demais quebram a cada refactor; fakes simples costumam durar mais.",
+      "miniChallenge": "Extraia formatPrice(_:) pura e escreva 3 testes (positivo, zero, negativo se fizer sentido).",
+      "glossary": [
+        { "term": "XCTest", "definition": "Framework da Apple para testes automatizados." },
+        { "term": "SUT", "definition": "System under test — o pedaço que você está exercitando." }
+      ],
+      "sources": [
+        { "label": "Apple — XCTest", "url": "https://developer.apple.com/documentation/xctest" },
+        { "label": "Apple — Testing", "url": "https://developer.apple.com/documentation/xcode/testing" },
+        { "label": "Hacking with Swift — XCTest", "url": "https://www.hackingwithswift.com/read/39/overview/3" }
+      ]
+    },
+    {
+      "id": "ui-testing-basics",
+      "title": "XCUITest e acessibilidade como alavanca",
+      "estimatedMinutes": 28,
+      "objective": "Você vai escrever um fluxo XCUITest (teste que toca na interface real) usando accessibilityIdentifier (ID estável para o leitor de tela e para o teste).",
+      "prerequisites": ["Acessibilidade básica (módulo 12)"],
+      "blocks": [
+        { "type": "text", "text": "UI test automatiza toques como usuário. As queries (buscas de botão, texto…) usam a árvore de acessibilidade. Se você só usa texto visível que muda com idioma, o teste quebra fácil — por isso accessibilityIdentifier (string fixa só para identificar o controle)." },
+        { "type": "code", "language": "swift", "code": "let app = XCUIApplication()\napp.launch()\napp.buttons[\"saveButton\"].tap()" },
+        { "type": "checklist", "items": ["Defino accessibilityIdentifier nos botões críticos", "Evito sleep(2) fixo — uso expectation (espera até condição)"] }
+      ],
+      "commonMistakes": ["Query só por texto traduzido", "Teste que depende de Wi‑Fi real"],
+      "tradeoffs": "UI test é lento; cubra poucos caminhos críticos e deixe lógica pesada no unitário.",
+      "miniChallenge": "Um teste: launch → tap em botão com ID → XCTAssert elemento aparece.",
+      "glossary": [
+        { "term": "XCUITest", "definition": "Framework de testes de interface no Xcode." }
+      ],
+      "sources": [
+        { "label": "Apple — UI Testing", "url": "https://developer.apple.com/documentation/xctest/user_interface_tests" },
+        { "label": "Hacking with Swift — UI tests", "url": "https://www.hackingwithswift.com/read/71/overview/3" }
+      ]
+    }
+  ]
+}

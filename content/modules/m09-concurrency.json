@@ -1,0 +1,57 @@
+{
+  "id": "m09-concurrency",
+  "title": "Concorrência",
+  "level": "pleno",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "async-await-intro",
+      "title": "async/await e chamadas de rede na UI",
+      "estimatedMinutes": 34,
+      "objective": "Você vai escrever funções async (podem pausar sem travar), usar await (esperar resultado) em URLSession (API de rede) e atualizar estado de tela no lugar certo.",
+      "prerequisites": ["Swift básico", "SwiftUI state"],
+      "blocks": [
+        { "type": "text", "text": "async marca uma função que pode suspender (pausar de forma segura e liberar a thread). await é onde você espera outra operação async terminar. O compilador ajuda a não fazer trabalho pesado na main thread (fila principal onde a UI atualiza)." },
+        { "type": "code", "language": "swift", "code": "func load() async throws -> String {\n    let (data, _) = try await URLSession.shared.data(from: url)\n    return String(decoding: data, as: UTF8.self)\n}" },
+        { "type": "callout", "variant": "info", "title": ".task na View", "body": "O modificador .task { } inicia trabalho async ligado à View: quando ela some, o sistema pode cancelar a Task (comportamento documentado — leia a página oficial)." },
+        { "type": "checklist", "items": ["Uso Task { } ou .task para sair de callback síncrono e ir para async", "Trato erro com throws ou mostro estado de erro na UI", "Não uso Thread.sleep na main para \"esperar\""] }
+      ],
+      "commonMistakes": ["Atualizar @Observable/@State fora do MainActor quando a UI exige main", "Ignorar cancelamento (usuário saiu da tela e o fetch continua)"],
+      "tradeoffs": "async/await lê linear; fluxos de eventos contínuos podem usar AsyncSequence (sequência assíncrona).",
+      "miniChallenge": "Tela com .task: estado loading → sucesso ou mensagem de erro.",
+      "glossary": [
+        { "term": "Suspender", "definition": "Pausar a função async sem bloquear a thread por espera ocupada." }
+      ],
+      "sources": [
+        { "label": "Apple — Concurrency (Swift Book)", "url": "https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html" },
+        { "label": "Apple — task modifier", "url": "https://developer.apple.com/documentation/swiftui/view/task(priority:_:)" }
+      ]
+    },
+    {
+      "id": "mainactor-task",
+      "title": "@MainActor, actors e Task",
+      "estimatedMinutes": 36,
+      "objective": "Você vai garantir que mudanças de UI rodem no MainActor (actor global da thread principal) e usar actor (tipo que serializa acesso) para dados compartilhados.",
+      "prerequisites": ["async/await (seção anterior)"],
+      "blocks": [
+        { "type": "text", "text": "@MainActor força o código daquele tipo ou função a rodar na thread principal (onde SwiftUI espera tocar interface). Muitas APIs de UI já são MainActor implicitamente — leia a assinatura no Xcode (autocomplete)." },
+        { "type": "code", "language": "swift", "code": "@MainActor\nfinal class ViewModel {\n    var text = \"\"\n}" },
+        { "type": "heading", "level": 3, "text": "actor" },
+        { "type": "text", "text": "actor é um tipo que só permite uma chamada por vez ao seu estado interno — evita data race (duas threads escrevendo ao mesmo tempo). Não é a mesma coisa que MainActor: um actor pode rodar em background; MainActor é sempre a fila de UI." },
+        { "type": "callout", "variant": "warn", "title": "Task.detached", "body": "Task.detached cria trabalho desconectado da hierarquia — use só quando a doc ou medição pedir; na maioria dos apps Task normal basta." },
+        { "type": "checklist", "items": ["Sei quando anotar @MainActor em tipo próprio", "Entendo actor vs class normal", "Uso Task { await … } a partir de botão ou onAppear"] }
+      ],
+      "commonMistakes": ["await entre actors de forma que trave tudo (deadlock)", "Achar que DispatchQueue.main.async substitui modelar async/await"],
+      "tradeoffs": "MainActor simplifica a cabeça na UI; testes podem precisar de dublês (mocks) com mesmo isolamento.",
+      "miniChallenge": "Um actor Contador com método async que incrementa; View mostra o valor após await.",
+      "glossary": [
+        { "term": "MainActor", "definition": "Actor global ligado à thread principal para trabalho de interface." },
+        { "term": "Task", "definition": "Unidade de trabalho assíncrono que pode ser cancelada." }
+      ],
+      "sources": [
+        { "label": "Apple — MainActor", "url": "https://developer.apple.com/documentation/swift/mainactor" },
+        { "label": "Apple — Actors", "url": "https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html#ID645" }
+      ]
+    }
+  ]
+}

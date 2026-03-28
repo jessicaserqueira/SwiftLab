@@ -1,0 +1,55 @@
+{
+  "id": "m04-layout",
+  "title": "Layout",
+  "level": "junior",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "stacks-grids",
+      "title": "Stacks, Spacer e Lazy containers",
+      "estimatedMinutes": 26,
+      "objective": "Você vai montar layout (posição dos elementos) com HStack (linha horizontal), VStack (coluna vertical), ZStack (empilhado no fundo/frente), Spacer (espaço flexível) e containers lazy (que só criam o que aparece na tela).",
+      "prerequisites": [],
+      "blocks": [
+        { "type": "text", "text": "HStack organiza filhos na horizontal; VStack na vertical; ZStack empilha no eixo Z (frente e fundo). Spacer é uma View que \"empurra\" e distribui espaço livre entre os vizinhos." },
+        { "type": "code", "language": "swift", "code": "VStack(alignment: .leading, spacing: 8) {\n    Text(\"Título\")\n        .font(.headline)\n    Text(\"Subtítulo\")\n        .foregroundStyle(.secondary)\n    Spacer(minLength: 0)\n}" },
+        { "type": "heading", "level": 3, "text": "LazyVStack / LazyHStack" },
+        { "type": "text", "text": "LazyVStack e LazyHStack criam cada filho sob demanda quando ele entra na área visível — útil dentro de ScrollView (área rolável) com muitos itens. List (componente de lista da Apple) já faz algo parecido com virtualização em vários casos." },
+        { "type": "checklist", "items": ["Escolho H vs V conforme o eixo principal do design", "Uso Spacer(minLength: 0) quando quero permitir encolher a zero", "Penso em Lazy em listas muito longas roláveis"] }
+      ],
+      "commonMistakes": ["Spacer onde o pai não definiu tamanho e o layout vira \"infinito\" (SwiftUI reclama ou trava)", "Confundir alignment do stack com alinhamento de texto dentro de Text"],
+      "tradeoffs": "Layout declarativo é rápido de testar; casos difíceis podem pedir GeometryReader (lê tamanho do pai) — use na próxima seção só se precisar.",
+      "miniChallenge": "Card de perfil: avatar à esquerda, coluna de textos à direita, com HStack + VStack.",
+      "glossary": [
+        { "term": "Lazy stack", "definition": "Stack que constrói subviews conforme elas entram na área visível." }
+      ],
+      "sources": [
+        { "label": "Apple — VStack", "url": "https://developer.apple.com/documentation/swiftui/vstack" },
+        { "label": "Apple — LazyVStack", "url": "https://developer.apple.com/documentation/swiftui/lazyvstack" }
+      ]
+    },
+    {
+      "id": "sizing-and-limits",
+      "title": "Tamanho, frame e limites",
+      "estimatedMinutes": 24,
+      "objective": "Você vai usar .frame (modificador de tamanho e alinhamento), min/max, layoutPriority (quem ganha espaço em disputa) e entender proposta de tamanho (o pai oferece espaço, o filho responde).",
+      "prerequisites": ["Stacks (seção anterior)"],
+      "blocks": [
+        { "type": "text", "text": "SwiftUI negocia layout: a view pai propõe um retângulo; a filha diz quanto quer ocupar. .frame(idealWidth:min:max:) e variantes ajustam isso e o alinhamento dentro do espaço extra." },
+        { "type": "code", "language": "swift", "code": "Color.orange\n    .frame(maxWidth: .infinity, maxHeight: 200)\n    .clipShape(RoundedRectangle(cornerRadius: 12))" },
+        { "type": "callout", "variant": "tip", "title": "GeometryReader", "body": "GeometryReader (View que expõe o tamanho que o pai oferece) é poderoso mas pode complicar composição; tente stacks e frame primeiro." },
+        { "type": "checklist", "items": ["Testo com Dynamic Type (texto grande nas Ajustes)", "Uso maxWidth: .infinity quando quero largura total útil"] }
+      ],
+      "commonMistakes": ["GeometryReader em todo lugar \"por medo\"", "Ignorar safe area (área livre de entalhe) sem motivo de design"],
+      "tradeoffs": "maxWidth: .infinity ajuda botões largos; em Grid pode competir com vizinhos — ajuste layoutPriority.",
+      "miniChallenge": "Botão com largura total visível menos padding 24 em telas pequenas e grandes.",
+      "glossary": [
+        { "term": "Safe area", "definition": "Região onde conteúdo não fica sob entalhe, indicadores ou bordas do sistema." }
+      ],
+      "sources": [
+        { "label": "Apple — frame modifier", "url": "https://developer.apple.com/documentation/swiftui/view/frame(width:height:alignment:)" },
+        { "label": "Apple — Layout fundamentals", "url": "https://developer.apple.com/documentation/swiftui/layout-fundamentals" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "id": "m15-design-system",
+  "title": "Design system, HIG e por baixo dos panos",
+  "level": "junior-plus",
+  "lastReviewed": "2025-03-22",
+  "sections": [
+    {
+      "id": "design-system-hig",
+      "title": "O que é design system e o papel do HIG",
+      "estimatedMinutes": 28,
+      "objective": "Você vai entender design system (conjunto de regras, componentes e tokens que mantêm o app consistente), HIG (Human Interface Guidelines, guia oficial de UX da Apple) e por que isso vem antes de \"inventar estilo do zero\".",
+      "prerequisites": ["Layout (módulo anterior na trilha)"],
+      "blocks": [
+        { "type": "heading", "level": 3, "text": "Design system em uma frase" },
+        { "type": "text", "text": "Design system é o \"kit\" do produto: cores permitidas, tipos de botão, espaçamentos, ícones e padrões de texto. Em time, evita cada tela ficar com aparência diferente; sozinho, evita decisão cansativa a cada tela." },
+        { "type": "heading", "level": 3, "text": "HIG (guia da Apple)" },
+        { "type": "text", "text": "O HIG diz como usuários esperam se comportar apps nas plataformas Apple: navegação, feedback (resposta visual a uma ação), acessibilidade, gestos. Não é lei rígida em todo ponto, mas é a referência oficial quando você discute UX (experiência do usuário) com produto ou design." },
+        { "type": "callout", "variant": "tip", "title": "Tokens (fichas de design)", "body": "Token é um nome estável (ex.: \"cor de destaque\") que aponta para um valor concreto (hex, estilo SF Symbol). SwiftUI oferece cores e estilos semânticos (.primary, .secondary) que já reagem a tema claro/escuro — isso é próximo de token sem você montar tabela própria no início." },
+        { "type": "list", "ordered": true, "items": ["Leia o HIG do componente que vai usar (botão, lista, modal)", "Defina 2–3 regras suas: espaçamento base, canto de card, estilo de título", "Prefira componentes do sistema quando o HIG recomendar familiaridade"] },
+        { "type": "checklist", "items": ["Sei explicar design system com minhas palavras", "Abri o HIG pelo menos uma vez e localizei um tópico", "Entendo diferença entre copiar app bonito de dribbble e seguir padrão de plataforma"] }
+      ],
+      "commonMistakes": ["Ignorar HIG e surpreender usuário com gesto estranho", "Criar 40 cores nomeadas sem necessidade no MVP (produto mínimo)"],
+      "tradeoffs": "Sistema rígido acelera time grande; sozinho, comece mínimo e cresça quando repetir o mesmo ajuste três vezes.",
+      "miniChallenge": "Anote num papel: cor primária, estilo de botão principal e espaçamento entre seções — use só isso em uma tela nova.",
+      "glossary": [
+        { "term": "Design system", "definition": "Conjunto coordenado de regras visuais e de componentes reutilizáveis." },
+        { "term": "Token", "definition": "Nome simbólico para um valor de design (cor, raio, sombra)." }
+      ],
+      "sources": [
+        { "label": "Apple — Human Interface Guidelines", "url": "https://developer.apple.com/design/human-interface-guidelines" },
+        { "label": "Apple — SwiftUI (design e layout)", "url": "https://developer.apple.com/documentation/swiftui" }
+      ]
+    },
+    {
+      "id": "visual-language",
+      "title": "Linguagem visual: SF Symbols, tipo e cor",
+      "estimatedMinutes": 30,
+      "objective": "Você vai usar SF Symbols (biblioteca de ícones da Apple), tipografia semântica (estilos que respeitam Dynamic Type) e cores que se adaptam ao tema — alinhado ao que o sistema já oferece.",
+      "prerequisites": ["Design system e HIG (seção anterior)"],
+      "blocks": [
+        { "type": "text", "text": "SF Symbols são ícones vetoriais que combinam com o texto do sistema e ganham variantes (espessura, modo multicolor). Use Image(systemName:) (API SwiftUI) com o nome do símbolo — consulte o app SF Symbols no Mac para licenças e nomes." },
+        { "type": "code", "language": "swift", "code": "Label(\"Adicionar\", systemImage: \"plus.circle.fill\")\n    .font(.headline)\n    .foregroundStyle(.tint)" },
+        { "type": "heading", "level": 3, "text": "Cor e aparência" },
+        { "type": "text", "text": "foregroundStyle (.primary, .secondary, .tint) liga sua UI ao tema (claro/escuro) e ao accentColor do app. Evite hardcode de cinza \"bonito\" que some no modo escuro sem você perceber. Materials (Material.thin, etc.) são camadas com desfoque — úteis para barras flutuantes; use com parcimônio e leia o HIG sobre legibilidade." },
+        { "type": "callout", "variant": "warn", "title": "Acessibilidade é parte do design", "body": "Contraste (diferença legível entre texto e fundo) e tamanho de toque não são extras — entram no mesmo pacote que cor e ícone." },
+        { "type": "checklist", "items": ["Sei abrir o catálogo SF Symbols e copiar um nome válido", "Uso .body / .headline em vez de font(size:) fixo quando possível", "Testo tela em modo claro e escuro"] }
+      ],
+      "commonMistakes": ["Símbolo com nome errado que compila em um OS e muda em outro sem aviso claro", "Ícone colorido que perde significado só em escala de cinza para daltonismo"],
+      "tradeoffs": "Símbolos do sistema aceleram; marca muito específica pode precisar de assets próprios no Asset Catalog (pasta de imagens do Xcode).",
+      "miniChallenge": "Substitua três emojis ou imagens soltas por SF Symbols com Label.",
+      "glossary": [
+        { "term": "SF Symbols", "definition": "Biblioteca de ícones vetoriais integrada ao ecossistema Apple." },
+        { "term": "Asset Catalog", "definition": "Repositório no Xcode para imagens, cores nomeadas e variantes por aparência." }
+      ],
+      "sources": [
+        { "label": "Apple — SF Symbols", "url": "https://developer.apple.com/sf-symbols/" },
+        { "label": "Apple — HIG — Color", "url": "https://developer.apple.com/design/human-interface-guidelines/color" },
+        { "label": "Apple — SwiftUI — foregroundStyle", "url": "https://developer.apple.com/documentation/swiftui/view/foregroundstyle(_:)" }
+      ]
+    },
+    {
+      "id": "swiftui-como-funciona",
+      "title": "Por baixo dos panos: o que o SwiftUI faz (visão de alto nível)",
+      "estimatedMinutes": 32,
+      "objective": "Você vai entender, sem mitologia, o que significa o SwiftUI recalcular body (sua descrição de tela), por que identidade (id estável) importa, e como a UI pode conviver com UIKit (framework clássico) — sempre com base na documentação pública da Apple.",
+      "prerequisites": ["Views e composição", "State e data flow (recomendado)"],
+      "blocks": [
+        { "type": "text", "text": "SwiftUI é declarativo: você descreve a interface em função do estado atual. Quando o estado muda, o framework compara a nova descrição com a anterior e atualiza só o necessário na tela. A Apple documenta ideias como attribute graph (grafo de atributos) em materiais de alto nível — pense nisso como \"mapa de dependências\" entre dados e pedaços de UI, não precisa decorar implementação interna." },
+        { "type": "heading", "level": 3, "text": "Identidade e ForEach" },
+        { "type": "text", "text": "Cada View na árvore tem identidade estável quando possível. ForEach precisa saber qual item é qual — por isso Identifiable (protocolo com id) ou chave explícita. Id que muda toda hora força recriação e pode causar flicker (piscar) ou perda de foco." },
+        { "type": "heading", "level": 3, "text": "UIKit na mesma app" },
+        { "type": "text", "text": "SwiftUI roda em cima das mesmas camadas gráficas da plataforma. Para embutir SwiftUI em tela UIKit usa-se UIHostingController (controlador que hospeda uma hierarquia SwiftUI). O inverso usa UIViewRepresentable (embrulhar UIView em SwiftUI). Esses pontos de integração são oficiais; são a \"ponte\" entre os dois mundos." },
+        { "type": "callout", "variant": "info", "title": "Renderização (bem resumido)", "body": "O sistema operacional compõe a tela com motor gráfico (camadas, composição). Você não programa Metal (API de baixo nível da GPU) no dia a dia SwiftUI; o que importa é evitar trabalho desnecessário em body e medir com Instruments quando houver problema." },
+        { "type": "checklist", "items": ["Explico em uma frase por que body pode rodar muitas vezes", "Sei que ForEach + id estável evita surpresas", "Sei nomear UIHostingController e UIViewRepresentable como pontes UIKit"] }
+      ],
+      "commonMistakes": ["Achar que body roda uma vez como viewDidLoad", "Tratar documentação de engine interna como API estável — prefira páginas oficiais SwiftUI/UIKit"],
+      "tradeoffs": "Abstração do SwiftUI troca controle fino por velocidade; quando precisar de pixel-perfect legado, a ponte UIKit existe por motivo.",
+      "miniChallenge": "Leia a página Apple \"Improving the performance of your SwiftUI app\" (ou \"Diagnosing performance issues\") e marque uma dica que você ainda não aplicava.",
+      "glossary": [
+        { "term": "Attribute graph", "definition": "Conceito de alto nível: estrutura que relaciona dados e views; detalhes internos não são API pública." },
+        { "term": "UIHostingController", "definition": "UIViewController que exibe conteúdo SwiftUI dentro de fluxo UIKit." }
+      ],
+      "sources": [
+        { "label": "Apple — Managing model data in your app", "url": "https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app" },
+        { "label": "Apple — UIHostingController", "url": "https://developer.apple.com/documentation/swiftui/uihostingcontroller" },
+        { "label": "Apple — UIViewRepresentable", "url": "https://developer.apple.com/documentation/swiftui/uiviewrepresentable" },
+        { "label": "Apple — Diagnosing performance issues", "url": "https://developer.apple.com/documentation/xcode/diagnosing-performance-issues" },
+        { "label": "Hacking with Swift — UIKit interop", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-use-uikit-in-swiftui" }
+      ]
+    }
+  ]
+}
