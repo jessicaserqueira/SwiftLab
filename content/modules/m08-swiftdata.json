@@ -2,53 +2,147 @@
   "id": "m08-swiftdata",
   "title": "Persistência com SwiftData",
   "level": "pleno",
-  "lastReviewed": "2025-03-22",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "modelcontainer-schema",
-      "title": "ModelContainer, @Model e esquema",
-      "estimatedMinutes": 36,
-      "objective": "Você vai marcar classes com @Model (persistíveis pelo SwiftData), configurar ModelContainer (onde e com qual esquema salvar) no App e saber que migração (mudar formato dos dados salvos) é tema à parte.",
-      "prerequisites": ["Arquitetura — modelo de dados"],
+      "id": "swiftdata-model-and-container",
+      "title": "@Model, ModelContainer e @Query — persistindo dados com Swift",
+      "estimatedMinutes": 55,
+      "objective": "Você vai entender como o SwiftData usa macros para transformar suas classes em modelos persistidos, como configurar o container e o contexto, como buscar dados com @Query, e quando usar SwiftData em vez de alternativas como UserDefaults ou arquivos JSON.[^model][^query]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "SwiftData (framework da Apple) transforma classes Swift com @Model em linhas no disco. ModelContainer é o objeto que diz quais modelos existem e onde ficam os arquivos; você anexa na árvore com modelContainer(for:…) no ponto de entrada do app." },
-        { "type": "code", "language": "swift", "code": "import SwiftData\n\n@Model\nfinal class Note {\n    var title: String\n    var body: String\n    init(title: String, body: String) {\n        self.title = title\n        self.body = body\n    }\n}" },
-        { "type": "callout", "variant": "warn", "title": "Thread e MainActor", "body": "UI e SwiftData têm regras de thread (qual fila executa o código). Alinhe com a doc atual — o módulo Concorrência resume MainActor (fila principal da interface)." },
-        { "type": "checklist", "items": ["Sei colocar ModelContainer no @main App", "Entendo @Model (persistência) vs struct de tela", "Sei obter ModelContext (objeto que insere/deleta/salva) no environment"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Por que persistir dados — e quando usar cada solução"
+        },
+        {
+          "type": "text",
+          "text": "Dados em memória (@State, @Observable) somem quando o app fecha ou quando o sistema limpa memória. Para guardar informações entre sessões, você precisa de persistência.\n\n**UserDefaults** — para preferências simples e pequenas: tema, último filtro selecionado, onboarding visto. Não é banco de dados.\n\n**Arquivos/JSON** — para dados exportáveis ou configurações complexas, mas sem query.\n\n**SwiftData** (iOS 17+) — para dados estruturados, relacionais, consultáveis e que crescem com o uso. Listas de tarefas, histórico, catálogos. É o substituto moderno do Core Data — mesma engine SQLite, mas com API Swift.\n\n**CloudKit + SwiftData** — para sincronizar entre dispositivos do mesmo usuário."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "@Model — transformando uma classe em dado persistido"
+        },
+        {
+          "type": "text",
+          "text": "O macro `@Model` transforma uma classe Swift comum num modelo SwiftData. Ele adiciona automaticamente rastreamento de mudanças, relacionamentos, identificadores únicos e observabilidade.\n\nPrecisa ser uma `class`, não `struct` — o SwiftData precisa de semântica de referência para rastrear objetos específicos em múltiplos contextos."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "import SwiftData\n\n// @Model transforma a classe em modelo persistido:\n@Model\nclass Tarefa {\n    var titulo: String\n    var concluida: Bool\n    var dataCriacao: Date\n    var prazo: Date?\n    var notas: String?\n\n    // Relacionamento — uma tarefa tem muitas tags:\n    @Relationship(deleteRule: .cascade)\n    var tags: [Tag] = []\n\n    init(titulo: String, prazo: Date? = nil) {\n        self.titulo = titulo\n        self.concluida = false\n        self.dataCriacao = .now\n        self.prazo = prazo\n    }\n}\n\n@Model\nclass Tag {\n    var nome: String\n    var cor: String  // hex string\n\n    @Relationship(inverse: \\Tarefa.tags)\n    var tarefas: [Tarefa] = []\n\n    init(nome: String, cor: String) {\n        self.nome = nome\n        self.cor = cor\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "ModelContainer — o banco de dados do app"
+        },
+        {
+          "type": "text",
+          "text": "ModelContainer é o banco de dados em si — ele cria o arquivo SQLite, configura o schema e gerencia as conexões. Você cria um container uma vez no App e injeta na hierarquia com `.modelContainer(for:)`.\n\nO schema é inferido automaticamente das suas classes @Model. Se você mudar a classe (adicionar propriedade, renomear), o SwiftData tenta migrar automaticamente — para migrações complexas você precisa de um SchemaMigrationPlan."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "@main\nstruct MeuAppApp: App {\n    var body: some Scene {\n        WindowGroup {\n            ContentView()\n        }\n        // Injeta container com todos os modelos:\n        .modelContainer(for: [Tarefa.self, Tag.self])\n    }\n}\n\n// Container in-memory para Previews e testes:\nextension ModelContainer {\n    static var preview: ModelContainer {\n        let config = ModelConfiguration(isStoredInMemoryOnly: true)\n        let container = try! ModelContainer(for: Tarefa.self, configurations: config)\n\n        // Adiciona dados de exemplo:\n        let contexto = container.mainContext\n        contexto.insert(Tarefa(titulo: \"Revisar PR\"))\n        contexto.insert(Tarefa(titulo: \"Escrever testes\"))\n        return container\n    }\n}\n\n// Preview com dados:\n#Preview {\n    ContentView()\n        .modelContainer(.preview)\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "@Query — buscando dados reativos"
+        },
+        {
+          "type": "text",
+          "text": "`@Query` é o coração do SwiftData em Views — ele busca dados do banco e atualiza a View automaticamente quando os dados mudam. Funciona como um @State que vive no banco de dados: quando alguém insere, deleta ou atualiza um Tarefa, a View que tem @Query de Tarefa é recalculada.\n\nVocê pode configurar filtro (`#Predicate`), ordenação (`SortDescriptor`) e limite. Tudo isso é avaliado no banco, não em memória — eficiente mesmo com milhares de registros."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct TarefasView: View {\n    // Busca todas as tarefas ordenadas por dataCriacao:\n    @Query(sort: \\Tarefa.dataCriacao, order: .reverse)\n    private var tarefas: [Tarefa]\n\n    // Busca só as pendentes com filtro:\n    @Query(\n        filter: #Predicate<Tarefa> { !$0.concluida },\n        sort: \\Tarefa.prazo\n    )\n    private var pendentes: [Tarefa]\n\n    var body: some View {\n        List(tarefas) { tarefa in\n            TarefaRow(tarefa: tarefa)\n        }\n    }\n}\n\n// @Query com filtro dinâmico (iOS 17.4+):\nstruct TarefasFiltradas: View {\n    let busca: String\n\n    var query: Query<Tarefa, [Tarefa]> {\n        Query(filter: #Predicate<Tarefa> { tarefa in\n            busca.isEmpty ? true : tarefa.titulo.contains(busca)\n        })\n    }\n\n    var body: some View { ... }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "ModelContext — criando, editando e deletando"
+        },
+        {
+          "type": "text",
+          "text": "Enquanto @Query lê do banco, `ModelContext` é o que você usa para escrever. Você o acessa via `@Environment(\\.modelContext)` nas suas Views ou ViewModels.\n\nO contexto tem mudanças pendentes em memória que são persistidas quando você chama `save()` — ou automaticamente em determinados eventos. Se você quiser desfazer mudanças, é só não chamar save() antes de reinserir os dados originais."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct TarefasView: View {\n    @Environment(\\.modelContext) private var contexto\n    @Query private var tarefas: [Tarefa]\n\n    var body: some View {\n        List(tarefas) { tarefa in\n            TarefaRow(tarefa: tarefa)\n                .swipeActions {\n                    Button(\"Deletar\", role: .destructive) {\n                        contexto.delete(tarefa)  // remove do banco\n                    }\n                }\n        }\n        .toolbar {\n            Button(\"Nova\") {\n                let nova = Tarefa(titulo: \"Sem título\")\n                contexto.insert(nova)  // insere no banco\n            }\n        }\n    }\n}\n\n// Editar é automático — apenas mute a propriedade:\ntarefa.titulo = \"Novo título\"  // SwiftData rastreia a mudança\ntarefa.concluida = true\n// Não precisa chamar update() — @Model é observável"
+        },
+        {
+          "type": "trace",
+          "title": "Ciclo de vida de um dado no SwiftData",
+          "steps": [
+            {
+              "label": "Inserção",
+              "detail": "contexto.insert(tarefa) adiciona o objeto ao contexto.",
+              "output": "tarefa marcada como inserida — ainda em memória"
+            },
+            {
+              "label": "Persistência automática",
+              "detail": "SwiftData persiste em pontos determinísticos (app background, etc.).",
+              "output": "SQLite: INSERT INTO tarefa VALUES ..."
+            },
+            {
+              "label": "@Query reage",
+              "detail": "A View com @Query é notificada da mudança.",
+              "output": "body recalculado — lista atualizada na tela"
+            },
+            {
+              "label": "Mutação",
+              "detail": "tarefa.concluida = true — SwiftData rastreia o dirty state.",
+              "output": "SQLite: UPDATE tarefa SET concluida = 1 WHERE ..."
+            },
+            {
+              "label": "Deleção",
+              "detail": "contexto.delete(tarefa) remove o objeto.",
+              "output": "SQLite: DELETE FROM tarefa WHERE id = ..."
+            }
+          ]
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Uso @Model para classes que precisam de persistência entre sessões.",
+            "Configuro .modelContainer no App e uso container in-memory em Previews e testes.",
+            "Leio dados com @Query (automático, reativo) e escrevo com ModelContext.",
+            "Sei que editar uma propriedade de um @Model é suficiente — não preciso de update() manual."
+          ]
+        }
       ],
-      "commonMistakes": ["Dois containers diferentes com o mesmo modelo sem motivo", "Mudar propriedades @Model sem plano de migração e surpreender usuário com erro"],
-      "tradeoffs": "SwiftData reduz código repetitivo frente ao Core Data clássico; esquemas muito complexos ainda pedem leitura de performance e migração.",
-      "miniChallenge": "App mínimo: lista de notas salvas, botão inserir, swipe deletar.",
+      "commonMistakes": [
+        "Usar struct em vez de class com @Model — o macro requer semântica de referência.",
+        "Criar ModelContainer em cada View em vez de uma vez no App — cria múltiplos bancos.",
+        "Usar o container de produção em Previews — vai misturar dados reais com dados de teste."
+      ],
+      "tradeoffs": "SwiftData é simples para casos comuns mas tem limitações: sem suporte a queries de full-text search nativas, migrações complexas exigem configuração manual, e algumas features avançadas de Core Data não têm equivalente ainda.",
+      "miniChallenge": "Crie um app de notas com @Model Note com título, corpo e data. Use @Query para listar notas e ModelContext para criar e deletar. Confirme que os dados persistem ao fechar e reabrir o app no simulador.",
+      "notes": [
+        {
+          "id": "model",
+          "text": "@Model é um macro Swift que transforma uma classe num modelo SwiftData — adiciona rastreamento de mudanças, identificador único, suporte a relacionamentos e conformidade com PersistentModel."
+        },
+        {
+          "id": "query",
+          "text": "@Query é um property wrapper que busca dados do banco SwiftData e reage automaticamente a inserções, deleções e atualizações — semelhante ao @State mas com persistência."
+        }
+      ],
       "glossary": [
-        { "term": "ModelContext", "definition": "Objeto que rastreia mudanças e salva/busca objetos @Model." },
-        { "term": "ModelContainer", "definition": "Configura armazenamento e esquema SwiftData para o app." }
+        { "term": "@Model", "definition": "Macro que transforma uma class em modelo persistido pelo SwiftData." },
+        { "term": "ModelContainer", "definition": "O banco de dados SwiftData — gerencia o arquivo SQLite e o schema." },
+        { "term": "@Query", "definition": "Property wrapper para buscar dados reativos do banco SwiftData em Views." },
+        { "term": "ModelContext", "definition": "Objeto para criar, editar e deletar objetos no banco SwiftData." }
       ],
       "sources": [
         { "label": "Apple — SwiftData", "url": "https://developer.apple.com/documentation/swiftdata" },
-        { "label": "Apple — Adopting SwiftData", "url": "https://developer.apple.com/documentation/swiftdata/adopting-swiftdata-for-persistence" },
         { "label": "Hacking with Swift — SwiftData", "url": "https://www.hackingwithswift.com/quick-start/swiftdata" }
-      ]
-    },
-    {
-      "id": "fetch-save",
-      "title": "Fetch, @Query e salvar mudanças",
-      "estimatedMinutes": 30,
-      "objective": "Você vai listar dados com @Query (leitura reativa) e alterar com ModelContext (insert, delete, save) conforme a doc de threading.",
-      "prerequisites": ["ModelContainer (seção anterior)"],
-      "blocks": [
-        { "type": "text", "text": "@Query é um property wrapper que mantém a View atualizada quando o resultado da busca (fetch) muda. Para escrita use ModelContext: insert (incluir objeto), delete (remover), save (persistir mudanças) — sempre seguindo a documentação atual sobre em qual executor rodar." },
-        { "type": "code", "language": "swift", "code": "@Query(sort: \\Note.title) private var notes: [Note]" },
-        { "type": "checklist", "items": ["Sei ordenar e filtrar com sort / predicate básicos", "Sei quando chamar save()", "Uso container inMemory (RAM só) em Preview para não sujar disco"] }
-      ],
-      "commonMistakes": ["Buscar milhões de linhas na thread errada", "Esquecer save quando o fluxo exige persistir na hora"],
-      "tradeoffs": "@Query é prático na View; às vezes um view model sem SwiftUI facilita teste unitário.",
-      "miniChallenge": "Barra de busca: @Query com predicate que depende de @State — cuide para não refetch excessivo.",
-      "glossary": [
-        { "term": "@Query", "definition": "Property wrapper SwiftData que fornece resultados reativos de fetch na View." }
-      ],
-      "sources": [
-        { "label": "Apple — Query()", "url": "https://developer.apple.com/documentation/swiftdata/query()" },
-        { "label": "Apple — ModelContext", "url": "https://developer.apple.com/documentation/swiftdata/modelcontext" }
       ]
     }
   ]

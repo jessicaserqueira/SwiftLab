@@ -1,51 +1,123 @@
 {
   "id": "m10-combine",
-  "title": "Combine",
+  "title": "Combine — Programação Reativa",
   "level": "pleno",
-  "lastReviewed": "2025-03-22",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "publishers-subscribers",
+      "id": "combine-fundamentals",
       "title": "Publishers, Subscribers e Operators",
-      "estimatedMinutes": 30,
-      "objective": "Você vai ler código Combine (framework reativo da Apple) com Publisher (fonte de eventos), Subscriber (quem escuta) e operators (funções que transformam o fluxo), sabendo que apps novos costumam preferir async/await e Observation.",
-      "prerequisites": ["Concorrência — async básico"],
+      "estimatedMinutes": 55,
+      "objective": "Você vai entender o modelo Publisher/Subscriber do Combine, como encadear operadores para transformar streams de valores, quando Combine ainda faz sentido no contexto de Swift Concurrency, e a diferença entre AnyCancellable e Task para gerenciar subscriptions.[^publisher][^operator]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "Combine descreve fluxos de valores ao longo do tempo (stream). Publisher emite valores e pode terminar com sucesso ou erro; Subscriber assina e recebe. Operators como map (transforma), filter (filtra) e debounce (espera pausa na digitação) alteram o fluxo antes de chegar na UI." },
-        { "type": "callout", "variant": "info", "title": "Quando ainda estudar Combine", "body": "Você ainda vê URLSession.DataTaskPublisher (rede no estilo Combine), NotificationCenter.Publisher (eventos do sistema) e ObservableObject + @Published (estado reativo antigo). Para telas novas, compare com async/await e @Observable." },
-        { "type": "code", "language": "swift", "code": "cancellable = pub\n    .receive(on: DispatchQueue.main)\n    .sink { completion in } receiveValue: { value in }" },
-        { "type": "checklist", "items": ["Sei explicar Publisher vs AsyncSequence em uma frase", "Guardo AnyCancellable (token que mantém a assinatura viva) em propriedade", "Não adiciono Combine só por hábito se o app já é 100% async"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O que é programação reativa e por que Combine existe"
+        },
+        {
+          "type": "text",
+          "text": "Programação reativa é um paradigma onde você descreve como valores se transformam e propagam ao longo do tempo — em vez de escrever código que puxa dados quando precisa, você declara pipelines que reagem a valores novos automaticamente.\n\nCombine foi introduzido junto com SwiftUI no iOS 13 para resolver exatamente esse problema: como conectar eventos de UI, chamadas de rede e mudanças de estado num fluxo coeso. Com Swift Concurrency (async/await, iOS 15+), muitos casos de uso do Combine foram simplificados — mas Combine ainda é relevante especialmente para transformações complexas de eventos e em projetos que precisam de iOS 13-15."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "import Combine\n\n// O modelo básico:\n// Publisher — fonte de valores ao longo do tempo\n// Subscriber — consome os valores\n// Operator — transforma os valores entre Publisher e Subscriber\n\n// Publisher simples:\nlet publicador = [1, 2, 3, 4, 5].publisher\n\n// Subscriber com sink:\nlet cancelavel = publicador\n    .filter { $0 % 2 == 0 }    // só pares\n    .map { $0 * 10 }            // multiplica por 10\n    .sink { valor in\n        print(valor)  // imprime: 20, 40\n    }"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Publishers comuns — PassthroughSubject e CurrentValueSubject"
+        },
+        {
+          "type": "text",
+          "text": "Para criar publishers customizados que você controla (não arrays ou NotificationCenter), use:\n\n**PassthroughSubject** — emite valores que você envia manualmente. Não tem valor inicial. Ideal para eventos pontuais (ação de botão, notificação).\n\n**CurrentValueSubject** — como PassthroughSubject, mas guarda o último valor emitido. Novos subscribers recebem o valor atual imediatamente. Ideal para estado contínuo."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// PassthroughSubject — evento sem estado:\nlet eventoToque = PassthroughSubject<Void, Never>()\n\n// Emitir um evento:\neventoToque.send(())\n\n// CurrentValueSubject — estado com histórico:\nlet buscaAtual = CurrentValueSubject<String, Never>(\"\")\nbuscaAtual.value  // \"\" — valor atual\nbuscaAtual.send(\"Swift\")  // muda para \"Swift\"\n\n// Exemplo de busca com debounce:\nlet cancelavel = buscaAtual\n    .debounce(for: .milliseconds(300), scheduler: RunLoop.main)  // aguarda 300ms sem mudança\n    .removeDuplicates()  // ignora se o valor não mudou\n    .sink { texto in\n        Task {\n            await buscar(query: texto)\n        }\n    }"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Operadores — transformando streams"
+        },
+        {
+          "type": "text",
+          "text": "Operadores são funções que recebem um publisher e retornam um publisher transformado. Você pode encadeá-los para construir pipelines complexas de processamento. Os mais usados no dia a dia:\n\n- `map` — transforma cada valor\n- `filter` — deixa passar só valores que satisfazem uma condição\n- `debounce` — aguarda um intervalo de silêncio antes de emitir (ideal para buscas)\n- `removeDuplicates` — ignora valores iguais ao anterior\n- `combineLatest` — combina os últimos valores de dois publishers\n- `flatMap` — transforma cada valor em um novo publisher (para chamadas de rede)"
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Pipeline de validação de formulário:\nlet emailValido = $email  // @Published String\n    .map { $0.contains(\"@\") && $0.contains(\".\") }\n\nlet senhaValida = $senha\n    .map { $0.count >= 8 }\n\n// Combina dois publishers — botão ativo só quando os dois são válidos:\nlet podeEnviar = emailValido\n    .combineLatest(senhaValida)\n    .map { email, senha in email && senha }\n\nlet cancelavel = podeEnviar\n    .receive(on: RunLoop.main)\n    .assign(to: &$botaoAtivo)  // atualiza @Published diretamente\n\n// flatMap para chamadas de rede em sequência:\nlet resultados = $busca\n    .debounce(for: .milliseconds(300), scheduler: RunLoop.main)\n    .flatMap { query in\n        APIService.buscar(query: query)\n            .catch { _ in Just([]) }  // em caso de erro, retorna vazio\n    }"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "AnyCancellable — gerenciando o ciclo de vida de subscriptions"
+        },
+        {
+          "type": "text",
+          "text": "Uma subscription Combine continua ativa até ser cancelada explicitamente ou até o subscriber ser desalocado. `AnyCancellable` é o token de cancelamento retornado por `sink` e `assign`. Guarde-os como propriedades para manter a subscription viva — se o AnyCancellable for desalocado, a subscription é cancelada.\n\nPara múltiplas subscriptions, use um `Set<AnyCancellable>` e armazene com `.store(in:)`."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "class BuscaViewModel: ObservableObject {\n    @Published var resultados: [Item] = []\n    @Published var busca = \"\"\n\n    private var cancelaveis = Set<AnyCancellable>()  // mantém subscriptions vivas\n\n    init() {\n        $busca\n            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)\n            .removeDuplicates()\n            .sink { [weak self] texto in  // [weak self] evita retain cycle\n                guard let self else { return }\n                Task {\n                    await self.buscar(query: texto)\n                }\n            }\n            .store(in: &cancelaveis)  // armazena no Set — subscription ativa\n    }\n\n    // Quando BuscaViewModel é desalocado, cancelaveis é desalocado\n    // e todas as subscriptions são canceladas automaticamente\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Combine vs async/await — quando usar cada um"
+        },
+        {
+          "type": "text",
+          "text": "Com Swift Concurrency disponível (iOS 15+), muitos casos que antes precisavam de Combine são mais simples com async/await. A regra prática:\n\n**Use async/await** para operações de request-response (buscar dados, salvar, uma ação que tem início e fim).\n\n**Use Combine** para streams contínuos de eventos que precisam de transformações complexas — validação de formulário com múltiplos campos, debounce de busca, combinação de múltiplas fontes de dados.\n\nOs dois podem coexistir — você pode converter um Publisher em AsyncSequence com `.values`."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Convertendo Publisher em AsyncSequence:\nfor await valor in buscaAtual.values {\n    print(\"Novo valor: \\(valor)\")  // async/await sobre um Publisher\n}\n\n// Ou converter para async com .first():\nlet primeiroValor = try await URLSession.shared\n    .dataTaskPublisher(for: url)\n    .value  // converte Publisher para async\n\n// Debounce de busca com Combine (ainda mais conciso que async):\n$campoBusca\n    .debounce(for: .milliseconds(300), scheduler: RunLoop.main)\n    .removeDuplicates()\n    .sink { query in Task { await buscar(query) } }\n    .store(in: &cancelaveis)"
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Entendo o modelo Publisher → Operator → Subscriber do Combine.",
+            "Uso debounce para buscas em tempo real — evita chamada de rede a cada tecla.",
+            "Guardo AnyCancellable em Set<AnyCancellable> para manter subscriptions ativas.",
+            "Sei quando preferir Combine (streams contínuos) vs async/await (operações pontuais).",
+            "Uso [weak self] em closures de sink para evitar retain cycles."
+          ]
+        }
       ],
-      "commonMistakes": ["Não guardar AnyCancellable e a assinatura morrer na hora", "receive(on:) na ordem errada e atualizar UI na thread errada"],
-      "tradeoffs": "Combine é forte em streams longos; um request único costuma ficar mais claro com async let ou await.",
-      "miniChallenge": "Reescreva um debounce de busca em Combine usando Task.sleep com checagem de cancelamento.",
+      "commonMistakes": [
+        "Não guardar o AnyCancellable — a subscription cancela imediatamente quando o token é desalocado.",
+        "Não usar [weak self] em closures de sink dentro de classes — cria retain cycle.",
+        "Usar Combine para uma única chamada de rede — async/await é muito mais simples nesses casos."
+      ],
+      "tradeoffs": "Combine tem curva de aprendizado maior que async/await, mas oferece operadores poderosos para fluxos complexos. Para projetos novos iOS 17+, async/await + AsyncStream cobre a maioria dos casos. Combine continua essencial em projetos que mantêm suporte a iOS 13-15.",
+      "miniChallenge": "Crie um campo de busca que usa Combine para debounce + removeDuplicates. Conecte a um serviço async com flatMap ou sink + Task. Implemente também a versão equivalente com .task(id:) do SwiftUI e compare.",
+      "notes": [
+        {
+          "id": "publisher",
+          "text": "Publisher é um tipo que emite uma sequência de valores ao longo do tempo e pode terminar com sucesso ou erro. É o protocolo central do Combine."
+        },
+        {
+          "id": "operator",
+          "text": "Operadores do Combine são funções que transformam um Publisher em outro — como map, filter, debounce, combineLatest. Podem ser encadeados para criar pipelines de processamento."
+        }
+      ],
       "glossary": [
-        { "term": "Publisher", "definition": "Tipo que pode emitir sequência de valores e conclusão ou falha." },
-        { "term": "AnyCancellable", "definition": "Token que mantém assinatura ativa até cancelar ou destruir." }
+        { "term": "Publisher", "definition": "Fonte de valores ao longo do tempo no Combine — pode emitir 0 ou mais valores e completar ou falhar." },
+        { "term": "Subscriber", "definition": "Consome os valores de um Publisher via sink ou assign." },
+        { "term": "AnyCancellable", "definition": "Token de cancelamento de subscription — ao ser desalocado, cancela automaticamente a subscription." },
+        { "term": "debounce", "definition": "Operador que aguarda um intervalo sem novos valores antes de emitir — ideal para buscas em tempo real." }
       ],
       "sources": [
         { "label": "Apple — Combine", "url": "https://developer.apple.com/documentation/combine" },
-        { "label": "Hacking with Swift — Combine", "url": "https://www.hackingwithswift.com/quick-start/swiftui/introduction-to-combine" }
-      ]
-    },
-    {
-      "id": "async-sequence-bridge",
-      "title": "Ponte para AsyncSequence e migração mental",
-      "estimatedMinutes": 22,
-      "objective": "Você vai reconhecer AsyncSequence (sequência que você consome com for await) em APIs novas e decidir quando não precisa de Publisher.",
-      "prerequisites": [],
-      "blocks": [
-        { "type": "text", "text": "AsyncSequence é um protocolo Swift: você consome com for await como se fosse um loop, mas cada item pode demorar. Ao ler tutorial com Combine, pergunte: \"é um fluxo contínuo (vários eventos) ou uma operação única?\" — isso escolhe a ferramenta." },
-        { "type": "checklist", "items": ["Consigo dar um exemplo em que Publisher ainda é razoável", "Antes de copiar código, busco na doc se existe variante async"] }
-      ],
-      "commonMistakes": ["Misturar Combine e async no mesmo fluxo sem uma fronteira clara (camada de conversão)"],
-      "tradeoffs": "Pontes AsyncPublisher existem mas aumentam complexidade — use com critério.",
-      "miniChallenge": "Liste três APIs do seu app: marque se cada uma é evento único ou stream.",
-      "glossary": [
-        { "term": "AsyncSequence", "definition": "Protocolo para sequências assíncronas consumíveis com for await." }
-      ],
-      "sources": [
-        { "label": "Apple — AsyncSequence", "url": "https://developer.apple.com/documentation/swift/asyncsequence" }
+        { "label": "Hacking with Swift — Combine", "url": "https://www.hackingwithswift.com/books/ios-swiftui/introducing-combine" }
       ]
     }
   ]

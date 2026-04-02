@@ -1,87 +1,323 @@
 {
   "id": "m02-app-swiftui",
-  "title": "Estrutura de um app SwiftUI",
-  "level": "junior",
-  "lastReviewed": "2025-03-22",
+  "title": "Estrutura de um App SwiftUI",
+  "level": "junior-plus",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "app-entry-scene-window",
+      "id": "app-scene-windowgroup",
       "title": "@main, App, Scene e WindowGroup",
-      "estimatedMinutes": 35,
-      "objective": "Você vai entender onde o app começa: @main (marca o tipo que o sistema executa primeiro), o protocolo App (define quais cenas existem) e WindowGroup (tipo de Scene que cria janelas com a mesma raiz de tela).",
-      "prerequisites": ["Swift Essentials — conteúdos anteriores recomendados"],
-      "blocks": [
-        { "type": "heading", "level": 3, "text": "O que é @main" },
-        { "type": "text", "text": "@main é um atributo (anotação que muda o comportamento) que marca o tipo que o sistema usa para iniciar o programa. Deve existir exatamente um @main por target (alvo de compilação: seu app ou extensão). Em apps SwiftUI, costuma ser uma struct (tipo empacotado) que conforma App (segue o protocolo App)." },
-        { "type": "callout", "variant": "info", "title": "App (protocolo de entrada)", "body": "App descreve cenas (Scene, unidade que o sistema sabe apresentar — janela, documento, etc.). Você implementa body (propriedade que devolve o conteúdo) com uma Scene ou uma combinação de scenes." },
-        { "type": "code", "language": "swift", "code": "import SwiftUI\n\n@main\nstruct StudyApp: App {\n    var body: some Scene {\n        WindowGroup {\n            ContentView()\n        }\n    }\n}" },
-        { "type": "heading", "level": 3, "text": "WindowGroup" },
-        { "type": "text", "text": "WindowGroup (tipo concreto de Scene) agrupa uma ou mais janelas com a mesma raiz de conteúdo (a primeira View que abre dentro dela). No iOS (iPhone/iPad) isso costuma ser a tela principal do app; no macOS pode haver várias janelas ao mesmo tempo." },
-        { "type": "heading", "level": 3, "text": "ContentView" },
-        { "type": "text", "text": "ContentView é só convenção de nome: é a primeira View (componente de tela SwiftUI) que você coloca dentro do WindowGroup. Pode ser renomeada; o importante é ser uma View com body." },
-        { "type": "list", "ordered": true, "items": ["O Xcode (ambiente de desenvolvimento) cria arquivos como StudyAppApp e ContentView", "StudyAppApp conforma App e declara WindowGroup", "ContentView conforma View (protocolo de interface) e define body (o que desenhar)"] },
-        { "type": "callout", "variant": "tip", "title": "Leitura na doc", "body": "Compare seu template com a documentação oficial de App e WindowGroup para ver opções extras (por exemplo título de janela no macOS)." },
-        { "type": "checklist", "items": ["Sei onde o app começa (@main)", "Explico App vs View em uma frase", "Sei que WindowGroup é um tipo de Scene"] }
-      ],
-      "commonMistakes": ["Duplicar @main em dois arquivos do mesmo target", "Confundir struct App com UIViewController (classe antiga de tela na UIKit, outro framework) e seu ciclo de vida"],
-      "tradeoffs": "SwiftUI (declarativo: você descreve o estado desejado) simplifica estrutura; comportamentos multi-janela mudam entre iOS e macOS — consulte a doc se o app for multiplataforma.",
-      "miniChallenge": "Crie um segundo arquivo com uma View chamada RootTabs e use-a como raiz dentro do WindowGroup no lugar de ContentView; compile (transformar em app rodável) e rode.",
-      "glossary": [
-        { "term": "Scene", "definition": "Descrição de um conjunto de interface apresentado pelo sistema (ex.: janela, documento)." },
-        { "term": "WindowGroup", "definition": "Tipo de Scene que apresenta janelas que compartilham a mesma definição de conteúdo raiz." }
-      ],
-      "sources": [
-        { "label": "Apple — SwiftUI App", "url": "https://developer.apple.com/documentation/swiftui/app" },
-        { "label": "Apple — WindowGroup", "url": "https://developer.apple.com/documentation/swiftui/windowgroup" },
-        { "label": "Hacking with Swift — Structs for app and scene", "url": "https://www.hackingwithswift.com/quick-start/swiftui/what-is-in-the-swiftui-template" }
-      ]
-    },
-    {
-      "id": "lifecycle-basics",
-      "title": "Ciclo de vida: o que mudou em relação à UIKit",
-      "estimatedMinutes": 20,
-      "objective": "Você vai ter uma noção de como SwiftUI atualiza a tela (recalculando body) e quando ainda faz sentido usar UIKit (framework clássico de interface) ou callbacks (funções que o sistema chama).",
-      "prerequisites": ["@main, App, Scene e WindowGroup (seção anterior)"],
-      "blocks": [
-        { "type": "text", "text": "SwiftUI recalcula body (a descrição da interface daquela View) quando o estado relevante muda. Não existe um único viewDidLoad (método da UIKit que roda uma vez ao carregar) para toda a árvore; em vez disso você usa onAppear (modificador que roda ao aparecer), onChange (ao mudar um valor), tarefas async (código que pode esperar sem travar a UI) e pontes para UIKit quando necessário." },
-        { "type": "callout", "variant": "warn", "title": "Mentalidade", "body": "Pense em \"dados → View\" (estado vira tela) e não só \"evento → atualizar manualmente cada pedacinho\"." },
-        { "type": "heading", "level": 3, "text": "onAppear / onDisappear" },
-        { "type": "text", "text": "onAppear executa quando a view entra na hierarquia visível (passa a poder aparecer na tela); onDisappear quando sai. Serve para preparar dados ou cancelar efeitos — lembrando que a view pode reaparecer (não é sempre \"uma vez só\")." },
-        { "type": "code", "language": "swift", "code": "Text(\"Olá\")\n    .onAppear { /* preparar */ }\n    .onDisappear { /* limpar se necessário */ }" },
-        { "type": "checklist", "items": ["Sei que body pode rodar muitas vezes (não é como init uma vez)", "Uso onAppear sabendo que pode repetir", "Busco na doc quando preciso de UIKit bridge (UIViewControllerRepresentable etc.)"] }
-      ],
-      "commonMistakes": ["Colocar trabalho pesado síncrono (que trava a thread) dentro de body", "Achar que onAppear roda uma única vez no tempo de vida do app"],
-      "tradeoffs": "Callbacks simples são fáceis; fluxos grandes combinam melhor com modelos observáveis (Observation) e async/await (sintaxe de assincronia do Swift).",
-      "miniChallenge": "Coloque print em body e em onAppear da mesma tela e navegue; conte quantas vezes cada um aparece no console (saída de depuração).",
-      "glossary": [
-        { "term": "Body", "definition": "Propriedade computada que descreve a interface; pode ser reavaliada frequentemente." }
-      ],
-      "sources": [
-        { "label": "Apple — View.onAppear", "url": "https://developer.apple.com/documentation/swiftui/view/onappear(perform:)" },
-        { "label": "Apple — Managing user interface state", "url": "https://developer.apple.com/documentation/swiftui/managing-user-interface-state" }
-      ]
-    },
-    {
-      "id": "preview-and-structure",
-      "title": "Previews e organização de arquivos",
-      "estimatedMinutes": 20,
-      "objective": "Você vai usar SwiftUI Previews (canvas no Xcode que mostra a View sem rodar o app inteiro) e organizar arquivos por feature (funcionalidade) sem dogma pesado no começo.",
+      "estimatedMinutes": 40,
+      "objective": "Você vai entender como o sistema operacional inicializa o seu app, o que cada peça da hierarquia App → Scene → View faz, e por que SwiftUI separou esses conceitos em vez de usar um único ponto de entrada como o UIKit antigo.[^main][^scene]",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "Preview é um bloco com #Preview (macro nova) ou PreviewProvider (estilo antigo) que renderiza uma View isolada dentro do Xcode. Ajuda a ajustar layout (posição dos elementos) sem subir o simulador (iPhone falso no Mac) toda hora." },
-        { "type": "code", "language": "swift", "code": "#Preview {\n    ContentView()\n}" },
-        { "type": "callout", "variant": "tip", "title": "Organização", "body": "Comece simples: um arquivo por tipo principal. Quando crescer, agrupe por feature (pasta NomeDaFeature com Views e Model juntos)." },
-        { "type": "checklist", "items": ["Consigo rodar preview de uma tela isolada", "Sei que preview pode falhar se faltar Environment (valores injetados na árvore) ou dados de teste"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Como o sistema inicia um app SwiftUI"
+        },
+        {
+          "type": "text",
+          "text": "Quando você toca num ícone de app no iOS, o sistema operacional precisa encontrar onde começar. Em C e Objective-C isso era uma função `main()`. Em UIKit era um `@UIApplicationMain` numa classe AppDelegate. Em SwiftUI você marca uma struct com `@main`.\n\n`@main` não é mágica — é um atributo que diz ao compilador: \"este tipo tem um método `main()` estático, use-o como ponto de entrada\". O protocol `App` já fornece essa implementação. Você só precisa declarar sua struct e dizer que ela é o ponto de entrada."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// O compilador gera um main() por baixo dos panos\n@main\nstruct MeuAppApp: App {\n    var body: some Scene {\n        WindowGroup {\n            ContentView()  // a primeira View do app\n        }\n    }\n}\n\n// App é um protocol com um requisito:\nprotocol App {\n    associatedtype Body: Scene\n    var body: Self.Body { get }  // igual ao protocol View, mas retorna Scene\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "A hierarquia: App → Scene → View"
+        },
+        {
+          "type": "text",
+          "text": "SwiftUI usa três camadas distintas:\n\n**App** é o objeto raiz. Existe um por processo. Cuida do tempo de vida global, inicializações únicas (banco de dados, serviços de analytics) e da lista de Scenes.\n\n**Scene** representa uma janela ou grupo de janelas. No iPhone você geralmente tem uma Scene. No iPad e macOS, o sistema pode criar múltiplas instâncias. A Scene gerencia o ciclo de vida de janela (ativa, em segundo plano, terminando).\n\n**View** é tudo que aparece na tela dentro de uma Scene. Compostas, aninhadas, recriadas pelo sistema conforme o estado muda.\n\nEssa separação existe porque macOS e iPadOS suportam múltiplas janelas do mesmo app. O código da View é o mesmo — o que muda é quantas Scenes (janelas) o sistema criou."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// WindowGroup é a Scene mais comum — permite múltiplas janelas no iPadOS/macOS\n@main\nstruct MeuAppApp: App {\n    var body: some Scene {\n        WindowGroup {\n            ContentView()\n        }\n    }\n}\n\n// Outras Scenes úteis:\n// DocumentGroup — para apps baseados em documentos\n// Settings — painel de configurações no macOS\n// MenuBarExtra — ícone na barra de menu do macOS"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Inicializações que pertencem ao App, não à View"
+        },
+        {
+          "type": "text",
+          "text": "Algumas inicializações precisam acontecer uma vez, antes de qualquer View aparecer. Configurar o container do banco de dados, registrar serviços de analytics, configurar bibliotecas de rede — tudo isso vai no `App`, não numa View.\n\nSe você coloca inicializações pesadas no `body` de uma View, elas podem ser executadas várias vezes porque o SwiftUI recria Views com frequência. O `init()` do App é chamado exatamente uma vez."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "@main\nstruct MeuAppApp: App {\n    // init roda UMA vez — ideal para configurações globais\n    init() {\n        // Configurar aparência global de UINavigationBar (interop UIKit)\n        UINavigationBar.appearance().largeTitleTextAttributes = [\n            .foregroundColor: UIColor.systemBlue\n        ]\n    }\n\n    var body: some Scene {\n        WindowGroup {\n            ContentView()\n                .modelContainer(for: Tarefa.self)  // SwiftData\n        }\n    }\n}"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Ambiente de inicialização",
+          "body": "O objeto App é o melhor lugar para criar e injetar dependências globais via .environment() ou .environmentObject(). Todas as Views da hierarquia conseguem acessar esses objetos depois."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Sei o que @main faz e por que a struct App precisa desse atributo.",
+            "Entendo a diferença entre App, Scene e View e quando cada uma é responsável por cada coisa.",
+            "Coloco inicializações globais no App, não em Views que podem ser recriadas.",
+            "Sei que WindowGroup permite múltiplas janelas no iPadOS e macOS."
+          ]
+        }
       ],
-      "commonMistakes": ["Preview que depende de singleton global (objeto único espalhado) sem mock (dados falsos para teste)", "Colocar lógica de negócio enorme na View só porque o preview pede dados"],
-      "tradeoffs": "Muitos previews pequenos aceleram o desenho da UI; manter mocks iguais à produção tem custo de manutenção.",
-      "miniChallenge": "Crie dois previews do mesmo componente: um com lista vazia e outro com dados preenchidos.",
+      "commonMistakes": [
+        "Colocar inicializações de banco de dados ou serviços no body de ContentView — isso pode executar várias vezes.",
+        "Ter dois @main no projeto — o compilador vai se recusar a compilar com uma mensagem confusa sobre 'múltiplas anotações @main'."
+      ],
+      "tradeoffs": "O model App → Scene → View adiciona uma camada de indireção, mas permite suporte a múltiplas janelas sem alterar o código das Views. É um investimento de arquitetura que se paga em projetos maiores.",
+      "miniChallenge": "Adicione um init() na struct App que imprime uma mensagem no console. Execute e confirme que a mensagem aparece uma única vez. Depois mova essa lógica para o body de ContentView e observe quantas vezes aparece.",
+      "notes": [
+        {
+          "id": "main",
+          "text": "@main é um atributo Swift que delega ao tipo marcado a geração do ponto de entrada main() do executável. O protocol App já implementa esse método automaticamente."
+        },
+        {
+          "id": "scene",
+          "text": "Scene representa uma unidade de interface do usuário gerenciada pelo sistema. No iOS cada app tem uma Scene; no iPadOS e macOS o usuário pode abrir múltiplas janelas, cada uma sendo uma Scene."
+        }
+      ],
       "glossary": [
-        { "term": "Preview", "definition": "Bloco que o Xcode usa para renderizar uma View no canvas lateral." }
+        { "term": "@main", "definition": "Atributo que marca o tipo como ponto de entrada do app." },
+        { "term": "Scene", "definition": "Camada entre App e View que representa uma janela ou grupo de janelas." },
+        { "term": "WindowGroup", "definition": "Scene padrão que agrupa Views numa janela e suporta múltiplas instâncias." }
       ],
       "sources": [
-        { "label": "Apple — Previews in Xcode", "url": "https://developer.apple.com/documentation/swiftui/previews-in-xcode" },
-        { "label": "Hacking with Swift — Xcode previews", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-use-xcode-previews" }
+        { "label": "Apple — App and Environment", "url": "https://developer.apple.com/documentation/swiftui/app-and-environment" }
+      ]
+    },
+    {
+      "id": "lifecycle-events",
+      "title": "Ciclo de vida de Views e do app",
+      "estimatedMinutes": 40,
+      "objective": "Você vai entender como SwiftUI cria e recria Views declarativamente, por que isso é diferente do ciclo de vida UIKit, como responder a eventos de ciclo de vida com onAppear, onDisappear e task, e por que não deve fazer trabalho pesado no body.[^declarative][^task]",
+      "prerequisites": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Declarativo vs imperativo — a mudança de mentalidade"
+        },
+        {
+          "type": "text",
+          "text": "Em UIKit você gerenciava a tela imperativamente: chama `addSubview()`, depois `setNeedsLayout()`, depois `UIView.animate()`. Você dizia ao sistema como mudar a tela.\n\nEm SwiftUI você descreve como a tela deve parecer dado um estado. Quando o estado muda, SwiftUI recalcula o `body` e atualiza o que precisa mudar — você não chama nenhum método de atualização manualmente.\n\nIsso tem uma implicação importante: `body` pode ser chamado a qualquer momento e com frequência. Qualquer código pesado dentro do `body` vai travar a interface. O `body` deve ser puro e rápido — só monte a View, nada mais."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// ERRADO — trabalho pesado no body:\nstruct MinhaView: View {\n    var body: some View {\n        let dados = carregarDoDiscoDeSincronamente()  // bloqueia o body!\n        return Text(dados)\n    }\n}\n\n// CORRETO — body descreve a UI, trabalho pesado fica em outros lugares:\nstruct MinhaView: View {\n    @State private var dados = \"\"\n\n    var body: some View {\n        Text(dados)  // apenas descreve o layout\n            .task {\n                dados = await carregarDaRede()  // assíncrono, fora do body\n            }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "onAppear e onDisappear — quando a View entra e sai da tela"
+        },
+        {
+          "type": "text",
+          "text": "`.onAppear` é executado quando a View entra na hierarquia de Views visíveis na tela. É o análogo do `viewDidAppear` do UIKit — mas com uma diferença importante: pode ser chamado mais de uma vez se a View sair e entrar novamente na tela (por exemplo, voltando de uma navegação).\n\n`.onDisappear` é executado quando a View é removida da tela — quando o usuário navega para outra tela ou a View some. Útil para pausar timers ou cancelar operações desnecessárias."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct ListaDeTarefas: View {\n    @State private var tarefas: [Tarefa] = []\n\n    var body: some View {\n        List(tarefas) { tarefa in\n            Text(tarefa.titulo)\n        }\n        .onAppear {\n            // Cuidado: pode ser chamado mais de uma vez\n            print(\"Lista apareceu\")\n            carregarTarefas()\n        }\n        .onDisappear {\n            print(\"Lista sumiu da tela\")\n            cancelarBuscas()\n        }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "task — o jeito correto de fazer trabalho assíncrono"
+        },
+        {
+          "type": "text",
+          "text": "O modificador `.task` foi criado especificamente para trabalho assíncrono vinculado ao ciclo de vida de uma View. Ele inicia uma `Task` quando a View aparece na tela e cancela automaticamente essa Task quando a View desaparece.\n\nIsso é melhor que colocar uma `Task {}` dentro de `.onAppear` porque garante que tarefas de rede são canceladas quando o usuário sai da tela — evitando atualizações de estado numa View que já não existe mais."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct PerfilView: View {\n    let usuarioId: UUID\n    @State private var perfil: Perfil?\n\n    var body: some View {\n        Group {\n            if let perfil {\n                Text(perfil.nome)\n            } else {\n                ProgressView()\n            }\n        }\n        // task cancela a busca automaticamente se o usuário sair:\n        .task {\n            do {\n                perfil = try await PerfilService.buscar(id: usuarioId)\n            } catch {\n                print(\"Erro: \\(error)\")\n            }\n        }\n    }\n}\n\n// task com id — refaz a busca quando o id muda:\n.task(id: filtro) {\n    resultados = await buscar(filtro: filtro)\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Ciclo de vida do app — cenas em primeiro e segundo plano"
+        },
+        {
+          "type": "text",
+          "text": "Além do ciclo de vida de Views individuais, o app como um todo tem estados: ativo (na tela e interativo), em segundo plano (não visível), inativo (transição entre estados). Você pode reagir a esses eventos com o modificador `.onChange(of:)` aplicado ao valor de ambiente `scenePhase`."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "@main\nstruct MeuAppApp: App {\n    @Environment(\\.scenePhase) private var scenePhase\n\n    var body: some Scene {\n        WindowGroup {\n            ContentView()\n        }\n        .onChange(of: scenePhase) { _, novaFase in\n            switch novaFase {\n            case .active:\n                print(\"App ativo — usuário está interagindo\")\n            case .inactive:\n                print(\"App inativo — em transição\")\n            case .background:\n                print(\"App em segundo plano — salvar dados\")\n            @unknown default:\n                break\n            }\n        }\n    }\n}"
+        },
+        {
+          "type": "trace",
+          "title": "Ciclo de vida de uma View SwiftUI",
+          "steps": [
+            {
+              "label": "View criada",
+              "detail": "SwiftUI inicializa a struct View quando ela entra na hierarquia.",
+              "output": "init() chamado"
+            },
+            {
+              "label": "body calculado",
+              "detail": "SwiftUI chama body para montar a interface. Deve ser rápido.",
+              "output": "body { Text(dados) } — renderizado"
+            },
+            {
+              "label": "onAppear / .task disparados",
+              "detail": "A View apareceu na tela. Momento certo para iniciar carregamentos.",
+              "output": ".task { await buscar() } — iniciado"
+            },
+            {
+              "label": "Estado muda → body recalculado",
+              "detail": "Quando @State ou @Observable muda, SwiftUI recalcula body.",
+              "output": "dados = \"resultados\" → body() → Text(\"resultados\")"
+            },
+            {
+              "label": "onDisappear / task cancelada",
+              "detail": "View saiu da tela. Task assíncrona é cancelada automaticamente.",
+              "output": ".task cancelada — sem updates de View que não existe"
+            }
+          ]
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Sei que body pode ser chamado várias vezes — nunca coloco trabalho pesado lá.",
+            "Uso .task para buscar dados de rede — ele cancela automaticamente quando a View some.",
+            "Entendo que .onAppear pode ser chamado mais de uma vez na mesma sessão de uso.",
+            "Sei reagir a mudanças de scenePhase (app em segundo plano) para salvar dados."
+          ]
+        }
+      ],
+      "commonMistakes": [
+        "Fazer chamadas de rede síncronas ou calcular dados pesados dentro do body — isso trava a UI.",
+        "Usar Task {} dentro de onAppear em vez de .task — a Task não cancela quando a View some.",
+        "Assumir que onAppear é chamado uma única vez como viewDidLoad — pode ser chamado toda vez que o usuário volta à tela."
+      ],
+      "tradeoffs": "O modelo declarativo exige abrir mão do controle imperativo granular. Em troca, você ganha previsibilidade: o estado é a fonte de verdade, e a UI é uma função desse estado. Leva algum tempo para se adaptar, mas elimina classes inteiras de bugs de sincronização UI.",
+      "miniChallenge": "Crie uma View que usa .task para buscar um texto de uma URL e exibir. Confirme que ao voltar para a tela anterior e retornar, a busca é cancelada e reiniciada. Use print() para rastrear o ciclo.",
+      "notes": [
+        {
+          "id": "declarative",
+          "text": "Programação declarativa descreve o QUÊ deve existir dado um estado. O framework decide o COMO e QUANDO atualizar. Imperativo é o oposto: você descreve passo a passo como mudar o sistema."
+        },
+        {
+          "id": "task",
+          "text": "Task é a unidade de trabalho assíncrono no Swift Concurrency. O modificador .task cria uma Task estruturada vinculada ao ciclo de vida da View, garantindo cancelamento automático."
+        }
+      ],
+      "glossary": [
+        { "term": "onAppear", "definition": "Modificador de View chamado quando ela entra na hierarquia visível." },
+        { "term": ".task", "definition": "Modificador para trabalho assíncrono que cancela automaticamente quando a View desaparece." },
+        { "term": "scenePhase", "definition": "Valor de ambiente que indica o estado atual da Scene (ativo, inativo, em segundo plano)." }
+      ],
+      "sources": [
+        { "label": "Apple — State and Data Flow", "url": "https://developer.apple.com/documentation/swiftui/state-and-data-flow" },
+        { "label": "Hacking with Swift — onAppear and onDisappear", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-respond-to-view-lifecycle-events-onappear-and-ondisappear" }
+      ]
+    },
+    {
+      "id": "previews-organization",
+      "title": "Previews e organização do projeto",
+      "estimatedMinutes": 30,
+      "objective": "Você vai entender como o canvas de Preview funciona, como criar previews úteis que testam diferentes estados da sua UI, e como organizar arquivos em SwiftUI para manter o projeto navegável enquanto cresce.[^preview]",
+      "prerequisites": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O que é o Preview e por que ele existe"
+        },
+        {
+          "type": "text",
+          "text": "A macro `#Preview` cria instâncias da sua View dentro do Xcode sem precisar compilar e rodar o app inteiro. O canvas ao lado do código atualiza em segundos enquanto você digita.\n\nIsso não é só conveniência — é uma mudança de fluxo de trabalho. Em vez de: compilar → aguardar → navegar até a tela → ver o resultado, você vê o resultado em tempo quase real. Para iterações de design, isso é uma diferença enorme."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Preview básico — instância direta da View:\n#Preview {\n    ContentView()\n}\n\n// Com nome — aparece no canvas como aba:\n#Preview(\"Modo escuro\") {\n    ContentView()\n        .preferredColorScheme(.dark)\n}\n\n// Múltiplos previews no mesmo arquivo:\n#Preview(\"iPhone\") {\n    MinhaView()\n}\n\n#Preview(\"iPad\") {\n    MinhaView()\n        .previewDevice(\"iPad Pro 11-inch (M4)\")\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Previews com dados — teste diferentes estados"
+        },
+        {
+          "type": "text",
+          "text": "O Preview fica realmente útil quando você testa diferentes estados da sua View: lista vazia, lista cheia, item com nome longo, estado de carregamento, estado de erro. Fazer isso com dados reais é trabalhoso — mas criar dados de preview direto no arquivo é rápido e mantém esses dados junto ao código que eles testam.\n\nUma boa prática é criar extensões `static var preview` nos seus modelos com dados de exemplo."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Dados de preview junto ao modelo:\nextension Tarefa {\n    static var preview: Tarefa {\n        Tarefa(titulo: \"Revisar PR\", concluida: false)\n    }\n\n    static var previews: [Tarefa] {\n        [\n            Tarefa(titulo: \"Revisar PR\", concluida: false),\n            Tarefa(titulo: \"Escrever testes\", concluida: true),\n            Tarefa(titulo: \"Um título muito longo que vai quebrar o layout de formas interessantes\", concluida: false)\n        ]\n    }\n}\n\n// Preview usando os dados de exemplo:\n#Preview(\"Lista cheia\") {\n    ListaDeTarefasView(tarefas: Tarefa.previews)\n}\n\n#Preview(\"Lista vazia\") {\n    ListaDeTarefasView(tarefas: [])\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Quando o Preview falha — causas comuns"
+        },
+        {
+          "type": "text",
+          "text": "O Preview tem limitações: ele não tem acesso ao app completo em execução. As causas mais comuns de Preview falhando são: tentar acessar dados persistidos que não existem no contexto do canvas, usar singletons de serviços que não estão configurados, ou erros de compilação em outros arquivos do target.\n\nA estratégia é injetar dependências ao invés de acessá-las globalmente. Views que recebem dados como parâmetros funcionam no Preview sem configuração adicional."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// DIFÍCIL de testar em Preview — acessa dados globais:\nstruct PerfilView: View {\n    var body: some View {\n        Text(SessaoAtual.shared.usuario.nome)  // Preview não tem SessaoAtual\n    }\n}\n\n// FÁCIL de testar em Preview — dados são parâmetro:\nstruct PerfilView: View {\n    let usuario: Usuario  // recebe por injeção\n\n    var body: some View {\n        Text(usuario.nome)\n    }\n}\n\n#Preview {\n    PerfilView(usuario: Usuario.preview)  // funciona no canvas\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Organização de arquivos em projetos SwiftUI"
+        },
+        {
+          "type": "text",
+          "text": "Dois padrões populares:\n\n**Por camada** (Layer-first): Modelos, Views, ViewModels, Services ficam em pastas separadas. Fácil de encontrar tipos similares, mas navegar entre todos os arquivos de uma feature exige pular entre pastas.\n\n**Por feature** (Feature-first): Tudo relacionado a uma feature fica junto — `Tarefas/TarefaView.swift`, `Tarefas/TarefaModel.swift`, `Tarefas/TarefaService.swift`. Mais intuitivo para times: você sabe exatamente onde tudo de \"Tarefas\" vive.\n\nPara projetos pequenos ou médios, feature-first tende a escalar melhor porque cada feature é autocontida. Independente da escolha, a consistência é mais importante que o padrão específico."
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Um arquivo por View",
+          "body": "Manter cada View SwiftUI em seu próprio arquivo com o mesmo nome facilita o Cmd+Click em componentes e a busca rápida no Xcode com Cmd+Shift+O. Preview, extensões e subcomponentes pequenos podem ficar no mesmo arquivo da View principal."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Crio previews para diferentes estados da minha View (vazio, cheio, carregando, erro).",
+            "Uso dados estáticos de preview junto aos meus modelos para facilitar o uso no canvas.",
+            "Minhas Views recebem dados como parâmetros, não acessam singletons — isso também facilita Preview.",
+            "Organizo o projeto consistentemente, seja por feature ou por camada."
+          ]
+        }
+      ],
+      "commonMistakes": [
+        "Criar um único Preview com dados hardcoded no topo — não testa estados diferentes.",
+        "Deixar Views acessando singletons globais — impossibilita Preview e dificulta testes.",
+        "Ignorar o Preview quebrado e compilar o app inteiro para ver mudanças simples — perde a agilidade."
+      ],
+      "tradeoffs": "Previews exigem uma pequena disciplina arquitetural (injeção de dependência em vez de singletons). Esse investimento paga com desenvolvimento mais rápido, menos ciclos de compilação completa e, como bônus, Views mais testáveis.",
+      "miniChallenge": "Pegue uma View que acessa um singleton e refatore para receber os dados como parâmetro. Crie três previews: lista vazia, lista com dados normais e dados com texto muito longo. Confirme que todos funcionam no canvas.",
+      "notes": [
+        {
+          "id": "preview",
+          "text": "#Preview é uma macro Swift introduzida no Xcode 15 que cria snapshots interativos da View no canvas do Xcode, sem precisar executar o app completo no simulador ou dispositivo."
+        }
+      ],
+      "glossary": [
+        { "term": "#Preview", "definition": "Macro que renderiza Views no canvas do Xcode para inspeção visual durante o desenvolvimento." },
+        { "term": "Feature-first", "definition": "Organização onde arquivos de uma mesma funcionalidade ficam juntos, independente da camada." }
+      ],
+      "sources": [
+        { "label": "Apple — Previews in Xcode", "url": "https://developer.apple.com/documentation/swiftui/previews-in-xcode" }
       ]
     }
   ]

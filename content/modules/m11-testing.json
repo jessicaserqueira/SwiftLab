@@ -1,54 +1,226 @@
 {
   "id": "m11-testing",
-  "title": "Testes",
+  "title": "Testes Automatizados",
   "level": "pleno",
-  "lastReviewed": "2025-03-22",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "xctest-units",
-      "title": "XCTest e testes de modelo",
-      "estimatedMinutes": 32,
-      "objective": "Você vai criar um target de testes (segundo alvo no Xcode só para testes), escrever XCTest (framework de asserções) contra modelos puros e rodar sem abrir simulador para cada assert.",
-      "prerequisites": ["Arquitetura — modelo separado da View"],
+      "id": "unit-testing-with-xctest",
+      "title": "Testes unitários com XCTest",
+      "estimatedMinutes": 55,
+      "objective": "Você vai entender por que testes automatizados economizam tempo a longo prazo, como estruturar testes unitários com XCTest, o que significa um bom teste (isolado, determinístico, legível), e os principais tipos de doubles — fake, stub, spy e mock — para isolar dependências.[^sut][^double]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "Testes unitários (pedaços pequenos isolados) usam XCTest: subclasses XCTestCase ou, em toolchains novos, funções marcadas com @Test. Foque em funções puras (mesma entrada → mesma saída), modelos e serviços com dependências injetadas (passadas por parâmetro, não globais escondidos)." },
-        { "type": "code", "language": "swift", "code": "import XCTest\n@testable import MyApp\n\nfinal class UserTests: XCTestCase {\n    func testDisplayNameFallsBack() {\n        let u = User(displayName: nil)\n        XCTAssertEqual(u.effectiveName, \"Anônimo\")\n    }\n}" },
-        { "type": "callout", "variant": "tip", "title": "Determinismo", "body": "Troque relógio real, rede e random por protocolos ou doubles (implementações falsas) para o teste sempre prever o resultado." },
-        { "type": "checklist", "items": ["Tenho target de testes no Xcode", "Uso XCTAssert* para comparar resultado esperado", "Para código async, uso expectativa (XCTestExpectation) ou APIs modernas da toolchain"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Por que escrever testes — o argumento econômico"
+        },
+        {
+          "type": "text",
+          "text": "A pergunta mais comum de quem começa a testar é: \"Por que gastar tempo escrevendo testes se posso testar manualmente?\" A resposta é que testes manuais não escalam.\n\nA cada nova feature, você precisa retestar tudo que existia — na prática, isso não acontece. Bugs silenciosos acumulam. Refatorações são evitadas porque ninguém quer quebrar algo que funciona. Um conjunto sólido de testes automatizados permite refatorar com confiança, detectar regressões em segundos, e documentar o comportamento esperado de cada componente.\n\nA lei prática: o custo de um teste escrito agora é pequeno. O custo de encontrar o mesmo bug em produção — com usuários afetados, debugging manual e deploy de hotfix — é ordens de magnitude maior."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Estrutura de um teste unitário — Arrange, Act, Assert"
+        },
+        {
+          "type": "text",
+          "text": "Todo bom teste unitário segue o padrão AAA:\n\n- **Arrange** — configura o estado inicial e as dependências\n- **Act** — executa a ação que está sendo testada\n- **Assert** — verifica que o resultado é o esperado\n\nIso deixa o teste legível: qualquer pessoa que leia sabe exatamente o que está sendo testado, com que condições e qual é o resultado esperado."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "import XCTest\n@testable import MeuApp  // acesso a internals do módulo\n\nfinal class TarefaViewModelTests: XCTestCase {\n\n    // tearDown roda depois de cada teste — garante estado limpo:\n    override func tearDown() {\n        super.tearDown()\n    }\n\n    func test_adicionarTarefa_incrementaLista() {\n        // Arrange — estado inicial:\n        let vm = TarefasViewModel(repositorio: TarefaFake())\n        XCTAssertEqual(vm.tarefas.count, 0)\n\n        // Act — ação que está sendo testada:\n        vm.adicionar(titulo: \"Nova Tarefa\")\n\n        // Assert — resultado esperado:\n        XCTAssertEqual(vm.tarefas.count, 1)\n        XCTAssertEqual(vm.tarefas[0].titulo, \"Nova Tarefa\")\n    }\n\n    func test_marcarConcluida_mudaStatus() {\n        // Arrange:\n        let vm = TarefasViewModel(repositorio: TarefaFake())\n        vm.adicionar(titulo: \"Tarefa\")\n        let tarefa = vm.tarefas[0]\n\n        // Act:\n        vm.marcarConcluida(tarefa)\n\n        // Assert:\n        XCTAssertTrue(vm.tarefas[0].concluida)\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Testes de funções async com XCTest"
+        },
+        {
+          "type": "text",
+          "text": "XCTest suporta funções de teste async — basta marcar a função de teste com `async throws`. Isso permite usar `await` diretamente sem os antigos `expectation` e `waitForExpectations`."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "func test_carregarTarefas_populaLista() async throws {\n    // Arrange:\n    let fake = TarefaFake()\n    fake.retornar = [\n        Tarefa(titulo: \"A\", concluida: false),\n        Tarefa(titulo: \"B\", concluida: true)\n    ]\n    let vm = TarefasViewModel(repositorio: fake)\n\n    // Act:\n    try await vm.carregarTarefas()\n\n    // Assert:\n    XCTAssertEqual(vm.tarefas.count, 2)\n    XCTAssertFalse(vm.carregando)  // deve resetar após carregar\n}\n\nfunc test_carregarTarefas_comErro_defineMensagem() async {\n    // Arrange — fake que vai lançar erro:\n    let fake = TarefaFake()\n    fake.simularErro = true\n    let vm = TarefasViewModel(repositorio: fake)\n\n    // Act:\n    await vm.carregarTarefas()  // sem throws — ViewModel captura o erro\n\n    // Assert:\n    XCTAssertNotNil(vm.mensagemDeErro)\n    XCTAssertTrue(vm.tarefas.isEmpty)\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Test doubles — fake, stub, spy e mock"
+        },
+        {
+          "type": "text",
+          "text": "Para testar um componente em isolamento, você precisa substituir suas dependências externas por versões controladas. Esses substitutos têm nomes específicos:\n\n**Fake** — implementação simplificada que funciona de verdade, mas com dados em memória. Ex: repositório que armazena em array em vez de banco.\n\n**Stub** — retorna valores pré-definidos sem lógica. Só para que o teste tenha dados. Ex: stub de rede que retorna JSON fixo.\n\n**Spy** — registra as chamadas recebidas para que o teste possa verificá-las depois. Ex: serviço de analytics que grava os eventos.\n\n**Mock** — combine de stub e spy: retorna valores configurados E verifica que foi chamado de forma específica."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Protocolo de dependência:\nprotocol TarefaRepositorioProtocol {\n    func buscarTodas() async throws -> [Tarefa]\n    func salvar(_ tarefa: Tarefa) async throws\n    func deletar(_ tarefa: Tarefa) async throws\n}\n\n// Fake — implementação em memória:\nfinal class TarefaFake: TarefaRepositorioProtocol {\n    var tarefas: [Tarefa] = []\n    var simularErro = false\n    var erroRetornado: Error = NSError(domain: \"test\", code: -1)\n\n    func buscarTodas() async throws -> [Tarefa] {\n        if simularErro { throw erroRetornado }\n        return tarefas\n    }\n\n    func salvar(_ tarefa: Tarefa) async throws {\n        if simularErro { throw erroRetornado }\n        if let index = tarefas.firstIndex(where: { $0.id == tarefa.id }) {\n            tarefas[index] = tarefa  // atualiza existente\n        } else {\n            tarefas.append(tarefa)  // adiciona novo\n        }\n    }\n\n    func deletar(_ tarefa: Tarefa) async throws {\n        tarefas.removeAll { $0.id == tarefa.id }\n    }\n}\n\n// Spy — registra chamadas:\nfinal class AnalyticsSpy: AnalyticsProtocol {\n    var eventoRegistrados: [(nome: String, parametros: [String: Any])] = []\n\n    func registrar(evento: String, parametros: [String: Any]) {\n        eventoRegistrados.append((nome: evento, parametros: parametros))\n    }\n}\n\n// Teste usando o Spy:\nfunc test_concluirTarefa_registraEvento() async throws {\n    let spy = AnalyticsSpy()\n    let vm = TarefasViewModel(repositorio: TarefaFake(), analytics: spy)\n    vm.adicionar(titulo: \"Tarefa\")\n\n    vm.marcarConcluida(vm.tarefas[0])\n\n    XCTAssertEqual(spy.eventoRegistrados.count, 1)\n    XCTAssertEqual(spy.eventoRegistrados[0].nome, \"tarefa_concluida\")\n}"
+        },
+        {
+          "type": "trace",
+          "title": "Fluxo de um teste unitário no Xcode",
+          "steps": [
+            {
+              "label": "Cmd+U — executa o test suite",
+              "detail": "Xcode compila o target de teste e executa todos os test cases.",
+              "output": "Compilando MeuAppTests..."
+            },
+            {
+              "label": "setUp() executa antes de cada teste",
+              "detail": "Estado limpo para cada função de teste.",
+              "output": "setUp() — criando instâncias frescas"
+            },
+            {
+              "label": "Função de teste executa",
+              "detail": "Arrange → Act → Assert em sequência.",
+              "output": "test_adicionarTarefa_incrementaLista() — running"
+            },
+            {
+              "label": "XCTAssert valida",
+              "detail": "Se o assert falhar, o teste marca como FAILED com linha do erro.",
+              "output": "✓ XCTAssertEqual(vm.tarefas.count, 1) — passed"
+            },
+            {
+              "label": "tearDown() limpa",
+              "detail": "Libera recursos e reseta estado após o teste.",
+              "output": "tearDown() — próximo teste começa limpo"
+            }
+          ]
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Estruturo testes com Arrange, Act, Assert — legível para qualquer membro do time.",
+            "Uso protocolos para dependências (rede, banco) — permite substituir por fakes em testes.",
+            "Sei a diferença entre fake, stub, spy e mock — e quando usar cada um.",
+            "Testo casos de sucesso E de falha — o comportamento em erro é tão importante quanto o happy path."
+          ]
+        }
       ],
-      "commonMistakes": ["Testar View gigante em vez de extrair regra", "Singleton global que não dá para trocar em teste"],
-      "tradeoffs": "Mocks demais quebram a cada refactor; fakes simples costumam durar mais.",
-      "miniChallenge": "Extraia formatPrice(_:) pura e escreva 3 testes (positivo, zero, negativo se fizer sentido).",
+      "commonMistakes": [
+        "Testar a implementação em vez do comportamento — testes frágeis que quebram a cada refatoração.",
+        "Não testar o caminho de erro — bugs em produção aparecem justamente nos casos que ninguém testou.",
+        "Usar implementações reais (banco, rede) em testes unitários — torna os testes lentos e não determinísticos."
+      ],
+      "tradeoffs": "Testes com doubles exigem protocolo de dependência — adiciona uma camada de indireção. Mas essa indireção melhora a arquitetura geral: código testável é código bem estruturado.",
+      "miniChallenge": "Crie um TarefasViewModel com método carregarTarefas(). Escreva três testes: carregamento com sucesso, carregamento com erro, e verificação de que o flag carregando reseta após cada caso. Use um TarefaFake como repositório.",
+      "notes": [
+        {
+          "id": "sut",
+          "text": "SUT (System Under Test) é o componente sendo testado num determinado teste. Todas as dependências do SUT são substituídas por doubles para garantir isolamento."
+        },
+        {
+          "id": "double",
+          "text": "Test double é o termo genérico para qualquer substituto de dependência em testes: fake, stub, spy, mock são tipos específicos de doubles com comportamentos distintos."
+        }
+      ],
       "glossary": [
-        { "term": "XCTest", "definition": "Framework da Apple para testes automatizados." },
-        { "term": "SUT", "definition": "System under test — o pedaço que você está exercitando." }
+        { "term": "Fake", "definition": "Implementação funcional simplificada de uma dependência — usa dados em memória." },
+        { "term": "Stub", "definition": "Retorna valores pré-definidos sem lógica — só para fornecer dados ao teste." },
+        { "term": "Spy", "definition": "Registra chamadas recebidas para que o teste possa verificá-las." },
+        { "term": "Mock", "definition": "Combina stub e spy — retorna dados configurados e verifica expectativas de chamada." }
       ],
       "sources": [
         { "label": "Apple — XCTest", "url": "https://developer.apple.com/documentation/xctest" },
-        { "label": "Apple — Testing", "url": "https://developer.apple.com/documentation/xcode/testing" },
-        { "label": "Hacking with Swift — XCTest", "url": "https://www.hackingwithswift.com/read/39/overview/3" }
+        { "label": "Hacking with Swift — Unit testing", "url": "https://www.hackingwithswift.com/read/39/overview" }
       ]
     },
     {
-      "id": "ui-testing-basics",
-      "title": "XCUITest e acessibilidade como alavanca",
-      "estimatedMinutes": 28,
-      "objective": "Você vai escrever um fluxo XCUITest (teste que toca na interface real) usando accessibilityIdentifier (ID estável para o leitor de tela e para o teste).",
-      "prerequisites": ["Acessibilidade básica (módulo 12)"],
+      "id": "ui-testing-with-xcuitest",
+      "title": "Testes de UI com XCUITest",
+      "estimatedMinutes": 45,
+      "objective": "Você vai entender como XCUITest automatiza interações do usuário, como identificar elementos com accessibilityIdentifier, como escrever testes de UI confiáveis sem depender de textos localizáveis, e quando testes de UI fazem sentido versus testes unitários.[^xcuitest][^a11y-id]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "UI test automatiza toques como usuário. As queries (buscas de botão, texto…) usam a árvore de acessibilidade. Se você só usa texto visível que muda com idioma, o teste quebra fácil — por isso accessibilityIdentifier (string fixa só para identificar o controle)." },
-        { "type": "code", "language": "swift", "code": "let app = XCUIApplication()\napp.launch()\napp.buttons[\"saveButton\"].tap()" },
-        { "type": "checklist", "items": ["Defino accessibilityIdentifier nos botões críticos", "Evito sleep(2) fixo — uso expectation (espera até condição)"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O que são testes de UI — e quando usá-los"
+        },
+        {
+          "type": "text",
+          "text": "Testes unitários verificam componentes em isolamento. Testes de UI (XCUITest) verificam o app completo como o usuário o vê — tocando botões, preenchendo campos, verificando que texto aparece na tela. São mais lentos e mais frágeis que testes unitários, mas cobrem uma camada diferente: a integração de todos os componentes.\n\nUse testes de UI para fluxos críticos: login, checkout, onboarding. Não tente cobrir 100% com UI tests — para lógica de negócio, testes unitários são muito mais rápidos e estáveis."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "import XCTest\n\nfinal class LoginUITests: XCTestCase {\n    var app: XCUIApplication!\n\n    override func setUp() {\n        super.setUp()\n        continueAfterFailure = false  // para imediatamente no primeiro erro\n        app = XCUIApplication()\n        app.launchArguments = [\"--uitesting\"]  // flag para modo de teste\n        app.launch()\n    }\n\n    func test_loginComSucesso_navegaParaHome() {\n        // Encontra campos por accessibilityIdentifier:\n        let campoEmail = app.textFields[\"campo-email\"]\n        let campoSenha = app.secureTextFields[\"campo-senha\"]\n        let botaoEntrar = app.buttons[\"botao-entrar\"]\n\n        // Interage como o usuário:\n        campoEmail.tap()\n        campoEmail.typeText(\"usuario@email.com\")\n\n        campoSenha.tap()\n        campoSenha.typeText(\"senha123\")\n\n        botaoEntrar.tap()\n\n        // Verifica que navegou para home:\n        let titulo = app.staticTexts[\"tela-home-titulo\"]\n        XCTAssertTrue(titulo.waitForExistence(timeout: 5))\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "accessibilityIdentifier — a chave para testes estáveis"
+        },
+        {
+          "type": "text",
+          "text": "O pior teste de UI é aquele que localiza elementos por texto visível — quebra quando o texto muda ou quando o app é traduzido. A solução é `accessibilityIdentifier`: um ID estável, não visível ao usuário, que o XCUITest pode usar para encontrar elementos independente do texto, posição ou idioma.\n\nIsso também é bom para acessibilidade: organizar seus elementos com identificadores claros é parte de construir um app acessível para leitores de tela como VoiceOver."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Na View SwiftUI — adiciona identificador:\nstruct LoginView: View {\n    @State private var email = \"\"\n    @State private var senha = \"\"\n\n    var body: some View {\n        VStack {\n            TextField(\"Email\", text: $email)\n                .accessibilityIdentifier(\"campo-email\")  // identificador estável\n\n            SecureField(\"Senha\", text: $senha)\n                .accessibilityIdentifier(\"campo-senha\")\n\n            Button(\"Entrar\") { fazerLogin() }\n                .accessibilityIdentifier(\"botao-entrar\")\n        }\n    }\n}\n\n// No XCUITest — localiza pelo identificador:\nlet botao = app.buttons[\"botao-entrar\"]\nXCTAssertTrue(botao.exists)\nXCTAssertTrue(botao.isEnabled)\nbotao.tap()\n\n// Verifica texto de um elemento:\nlet mensagem = app.staticTexts[\"mensagem-erro\"]\nXCTAssertEqual(mensagem.label, \"Email inválido\")"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Modo de teste — controlando o app para testes"
+        },
+        {
+          "type": "text",
+          "text": "Testes de UI rodam o app real — incluindo chamadas de rede. Para tornar os testes determinísticos (sempre o mesmo resultado), você precisa controlar o ambiente. O padrão é usar `launchArguments` para sinalizar ao app que está em modo de teste, e então substituir implementações de rede por stubs que retornam dados fixos."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// No app — detecta modo de teste:\nfunc configurarDependencias() {\n    if CommandLine.arguments.contains(\"--uitesting\") {\n        // Usa dados fixos em vez de rede real:\n        let repositorio = TarefaStubParaTeste()\n        ViewModelFactory.tarefas = TarefasViewModel(repositorio: repositorio)\n    } else {\n        // Produção — usa API real:\n        let repositorio = TarefaAPI()\n        ViewModelFactory.tarefas = TarefasViewModel(repositorio: repositorio)\n    }\n}\n\n// No test:\napp.launchArguments = [\"--uitesting\"]\napp.launch()  // app inicia com dados controlados"
+        },
+        {
+          "type": "callout",
+          "variant": "warn",
+          "title": "waitForExistence — não assuma velocidade",
+          "body": "Nunca use sleep() para aguardar elementos aparecerem. Use XCTAssertTrue(elemento.waitForExistence(timeout: 5)) — ele verifica repetidamente até o timeout. Se o elemento aparecer em 0.3s, o teste termina em 0.3s. Se não aparecer em 5s, falha com mensagem clara."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Uso accessibilityIdentifier em vez de texto visível para localizar elementos em tests.",
+            "Uso --uitesting launch argument para ativar modo de dados fixos no app.",
+            "Uso waitForExistence(timeout:) em vez de sleep() para elementos assíncronos.",
+            "Testo só fluxos críticos com UI tests — lógica de negócio fica em testes unitários."
+          ]
+        }
       ],
-      "commonMistakes": ["Query só por texto traduzido", "Teste que depende de Wi‑Fi real"],
-      "tradeoffs": "UI test é lento; cubra poucos caminhos críticos e deixe lógica pesada no unitário.",
-      "miniChallenge": "Um teste: launch → tap em botão com ID → XCTAssert elemento aparece.",
+      "commonMistakes": [
+        "Localizar elementos pelo texto visível — quebra quando o texto muda ou é traduzido.",
+        "Não usar continueAfterFailure = false — deixa o teste continuar após falha, gerando erros em cascata.",
+        "Tentar cobrir toda a lógica de negócio com UI tests — são lentos e frágeis demais para isso."
+      ],
+      "tradeoffs": "Testes de UI são 10-100x mais lentos que testes unitários. Uma boa estratégia é a pirâmide de testes: muitos testes unitários, poucos de integração, e apenas testes de UI para os fluxos mais críticos.",
+      "miniChallenge": "Adicione accessibilityIdentifiers num formulário de login. Escreva dois testes de UI: um que verifica que o botão está desabilitado com campos vazios e outro que verifica navegação após login com dados de stub.",
+      "notes": [
+        {
+          "id": "xcuitest",
+          "text": "XCUITest automatiza interações de usuário no app real — toca botões, digita texto, verifica elementos na tela. É mais lento que testes unitários mas cobre a integração completa."
+        },
+        {
+          "id": "a11y-id",
+          "text": "accessibilityIdentifier é uma string estável associada a um elemento de UI, usada por XCUITest e por leitores de tela como VoiceOver. Diferente do accessibilityLabel (lido pelo VoiceOver), o identifier não é exposto ao usuário."
+        }
+      ],
       "glossary": [
-        { "term": "XCUITest", "definition": "Framework de testes de interface no Xcode." }
+        { "term": "XCUITest", "definition": "Framework de testes de UI que automatiza interações com o app como o usuário faria." },
+        { "term": "accessibilityIdentifier", "definition": "ID estável de um elemento de UI, usado por testes e ferramentas de acessibilidade." },
+        { "term": "waitForExistence", "definition": "Método XCUITest que aguarda um elemento aparecer na tela até um timeout." }
       ],
       "sources": [
-        { "label": "Apple — UI Testing", "url": "https://developer.apple.com/documentation/xctest/user_interface_tests" },
-        { "label": "Hacking with Swift — UI tests", "url": "https://www.hackingwithswift.com/read/71/overview/3" }
+        { "label": "Apple — XCUITest", "url": "https://developer.apple.com/documentation/xctest/xcuiapplication" },
+        { "label": "Hacking with Swift — UI Testing", "url": "https://www.hackingwithswift.com/read/39/2/how-to-use-xcode-ui-testing" }
       ]
     }
   ]

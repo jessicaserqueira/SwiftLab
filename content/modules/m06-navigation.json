@@ -1,54 +1,213 @@
 {
   "id": "m06-navigation",
-  "title": "Navegação",
-  "level": "pleno-minus",
-  "lastReviewed": "2025-03-22",
+  "title": "Navegação e Modais",
+  "level": "junior-plus",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "navigationstack",
-      "title": "NavigationStack e caminho (path)",
-      "estimatedMinutes": 32,
-      "objective": "Você vai usar NavigationStack (pilha de telas com barra no topo), amarrar o path (lista de destinos visitados) a dados e mapear cada tipo de destino para uma tela.",
-      "prerequisites": ["State e data flow — fundamentos"],
+      "id": "navigation-stack-and-link",
+      "title": "NavigationStack, NavigationLink e NavigationPath",
+      "estimatedMinutes": 50,
+      "objective": "Você vai entender como o NavigationStack moderno funciona, por que ele substituiu o NavigationView legado, como NavigationLink empurra e desempilha telas, e como controlar a pilha de navegação programaticamente com NavigationPath.[^navstack][^navpath]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "NavigationStack mostra uma pilha: tela inicial, depois detalhes empilhados, com botão Voltar. Você pode ligar essa pilha a um array (ou NavigationPath) de valores — navegação programática (código empurra tela) e deep link (link abre tela certa) ficam mais claros." },
-        { "type": "code", "language": "swift", "code": "NavigationStack {\n    List(items) { item in\n        NavigationLink(value: item) {\n            Text(item.title)\n        }\n    }\n    .navigationDestination(for: Item.self) { item in\n        DetailView(item: item)\n    }\n}" },
-        { "type": "callout", "variant": "warn", "title": "Tipos Hashable", "body": "Valores que entram no path costumam precisar ser Hashable (podem ir em Set e como chave) e estáveis. Se misturar structs e enums, alinhe com o que a API espera — senão o compilador reclama." },
-        { "type": "checklist", "items": ["Uso .navigationDestination(for:) para dizer \"tipo X abre qual View\"", "Entendo NavigationLink(value:) (empurra um valor na pilha)", "Testo voltar e, se fizer deep link, abrir URL de teste"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Por que NavigationView foi substituído"
+        },
+        {
+          "type": "text",
+          "text": "O NavigationView antigo (iOS 13-15) tinha problemas: era difícil navegar programaticamente, não tinha API limpa para deep links, e se comportava de formas inconsistentes em iPhone vs iPad. O NavigationStack (iOS 16+) resolveu tudo isso com uma abordagem baseada em dados.\n\nA ideia central mudou: em vez de a navegação ser puramente declarativa (\"quando clicar aqui, mostre aquilo\"), ela agora é orientada a dados: uma pilha de valores (`NavigationPath`) que você empurra e remove, e o SwiftUI renderiza as telas correspondentes. Isso torna deep links e navegação programática triviais."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// NavigationView legado — evite em código novo:\nNavigationView {\n    ContentView()\n        .navigationTitle(\"Início\")\n}\n\n// NavigationStack moderno (iOS 16+):\nNavigationStack {\n    ContentView()\n        .navigationTitle(\"Início\")\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "NavigationLink — empurrando telas na pilha"
+        },
+        {
+          "type": "text",
+          "text": "NavigationLink empurra uma nova tela na pilha quando ativado. Existem duas formas principais:\n\n**Link com destino inline** — o destino é declarado dentro do link. Simples, mas o destino é criado mesmo sem o usuário tocar. Ideal para telas simples.\n\n**Link com valor** — você passa um valor ao link; a tela correspondente é registrada separadamente com `.navigationDestination(for:)`. Esse é o padrão moderno: mais eficiente (tela só é criada quando navegado) e permite navegação programática."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Forma 1 — link com destino inline:\nNavigationStack {\n    List(tarefas) { tarefa in\n        NavigationLink(tarefa.titulo) {\n            DetalheTarefa(tarefa: tarefa)  // criado mesmo sem navegar\n        }\n    }\n}\n\n// Forma 2 — link com valor (preferida para listas):\nNavigationStack {\n    List(tarefas) { tarefa in\n        NavigationLink(tarefa.titulo, value: tarefa)  // só passa o dado\n    }\n    .navigationDestination(for: Tarefa.self) { tarefa in\n        DetalheTarefa(tarefa: tarefa)  // criado quando o usuário navega\n    }\n}\n\n// NavigationLink com label customizado:\nNavigationLink(value: tarefa) {\n    TarefaRow(tarefa: tarefa)  // qualquer View como label\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "NavigationPath — controle programático da pilha"
+        },
+        {
+          "type": "text",
+          "text": "Com `NavigationPath`, você mantém a pilha de navegação como estado explícito. Isso permite:\n\n- Navegar programaticamente (ex: após ação de um botão)\n- Voltar para a raiz com um `removeAll()`\n- Navegar via deep link adicionando valores ao path\n- Salvar e restaurar a pilha entre sessões\n\nO NavigationPath aceita valores de tipos diferentes — desde que cada tipo seja Hashable."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Enum que representa os destinos possíveis:\nenum Rota: Hashable {\n    case detalhe(Tarefa)\n    case edicao(Tarefa)\n    case configuracoes\n}\n\n// App raiz com path controlado:\nstruct AppView: View {\n    @State private var caminho = NavigationPath()\n\n    var body: some View {\n        NavigationStack(path: $caminho) {\n            ListaDeTarefas(caminho: $caminho)\n                .navigationDestination(for: Rota.self) { rota in\n                    switch rota {\n                    case .detalhe(let tarefa): DetalheTarefa(tarefa: tarefa)\n                    case .edicao(let tarefa): EditarTarefa(tarefa: tarefa)\n                    case .configuracoes: ConfiguracoesView()\n                    }\n                }\n        }\n    }\n}\n\n// Navegar de qualquer lugar:\ncaminho.append(Rota.detalhe(tarefa))  // empurra tela\ncaminho.removeLast()                  // volta uma tela\ncaminho.removeLast(2)                 // volta duas telas\ncaminho = NavigationPath()            // volta para a raiz"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "navigationTitle, toolbar e navigationBarItems"
+        },
+        {
+          "type": "text",
+          "text": "A barra de navegação é configurada com modificadores aplicados na View de destino — não no NavigationStack. Isso é intencional: cada tela controla seu próprio título e botões, e quando você navega de volta, a barra anterior é restaurada automaticamente."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct ListaDeTarefas: View {\n    @State private var caminho = NavigationPath()\n\n    var body: some View {\n        NavigationStack(path: $caminho) {\n            List { ... }\n                .navigationTitle(\"Tarefas\")\n                .navigationBarTitleDisplayMode(.large)\n                .toolbar {\n                    ToolbarItem(placement: .topBarTrailing) {\n                        Button {\n                            caminho.append(Rota.novaTarefa)\n                        } label: {\n                            Image(systemName: \"plus\")\n                        }\n                    }\n                    ToolbarItem(placement: .topBarLeading) {\n                        EditButton()  // ativa edit mode da List\n                    }\n                }\n        }\n    }\n}"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "navigationDestination fora da List",
+          "body": "O .navigationDestination deve ser aplicado à View raiz do NavigationStack (ou próximo a ela), não dentro do ForEach ou List. Se você colocar dentro da lista, cada célula registra seu próprio destino, o que pode causar comportamentos inesperados."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Uso NavigationStack (iOS 16+) em vez de NavigationView.",
+            "Prefiro NavigationLink com valor + .navigationDestination para listas de itens.",
+            "Sei usar NavigationPath para navegar programaticamente e voltar para a raiz.",
+            "Configuro navigationTitle e toolbar na View de destino, não no NavigationStack."
+          ]
+        }
       ],
-      "commonMistakes": ["Colocar destino gigante inline dentro de NavigationLink sem extrair View", "Manter path e o que está na tela dessincronizados"],
-      "tradeoffs": "Path tipado é poderoso; muitos tipos de tela diferentes podem pedir um enum Route (lista fechada de casos).",
-      "miniChallenge": "Lista → detalhe com NavigationStack e enum Route com dois casos (duas telas diferentes).",
+      "commonMistakes": [
+        "Colocar .navigationDestination dentro de ForEach — registra destino para cada célula, pode conflitar.",
+        "Usar NavigationView no código novo — é legado, não tem suporte a NavigationPath.",
+        "Tentar controlar a navegação sem NavigationPath — apenas com @State booleano para cada tela."
+      ],
+      "tradeoffs": "NavigationLink inline é mais simples mas ineficiente (cria destino antecipadamente). NavigationLink com valor é mais eficiente mas exige que o tipo do valor seja Hashable e registrado com .navigationDestination.",
+      "miniChallenge": "Crie um app com lista de países. Cada país navega para uma tela de detalhe. Adicione um botão na tela de detalhe que vai direto para a raiz usando NavigationPath.removeAll().",
+      "notes": [
+        {
+          "id": "navstack",
+          "text": "NavigationStack é o contêiner de navegação em pilha do iOS 16+. Mantém uma pilha de Views e permite navegar para frente (append) e para trás (removeLast). Substitui o NavigationView legado."
+        },
+        {
+          "id": "navpath",
+          "text": "NavigationPath é uma pilha heterogênea de valores Hashable que representa o estado de navegação do NavigationStack. Manipular o path programaticamente é a forma oficial de deep linking e navegação automática."
+        }
+      ],
       "glossary": [
-        { "term": "NavigationPath", "definition": "Tipo que representa pilha de destinos; pode ser tipado ou homogêneo." }
+        { "term": "NavigationStack", "definition": "Container de navegação em pilha com suporte a NavigationPath (iOS 16+)." },
+        { "term": "NavigationPath", "definition": "Pilha de valores Hashable que controla o estado de navegação do NavigationStack." },
+        { "term": "navigationDestination", "definition": "Modificador que registra qual View mostrar para um determinado tipo de valor no NavigationStack." }
       ],
       "sources": [
         { "label": "Apple — NavigationStack", "url": "https://developer.apple.com/documentation/swiftui/navigationstack" },
-        { "label": "Hacking with Swift — NavigationStack", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-use-navigationstack" }
+        { "label": "Hacking with Swift — NavigationStack and NavigationPath", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-use-programmatic-navigation-in-swiftui" }
       ]
     },
     {
-      "id": "sheets-and-links",
-      "title": "Sheets, fullScreenCover e Links",
-      "estimatedMinutes": 26,
-      "objective": "Você vai apresentar modais (telas que sobrepõem a atual) com .sheet e abrir URLs com Link (botão que abre Safari ou Mail).",
+      "id": "modals-and-sheets",
+      "title": "Modais: sheet, fullScreenCover, alert e confirmationDialog",
+      "estimatedMinutes": 40,
+      "objective": "Você vai entender como apresentar conteúdo modal em SwiftUI, as diferenças entre sheet, fullScreenCover e popover, como passar dados para modais de forma correta, e quando usar alert e confirmationDialog para confirmações importantes.[^sheet][^alert]",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": ".sheet(isPresented:content:) mostra outra View por cima (em iPhone costuma subir de baixo). Há variante com item opcional: quando o optional deixa de ser nil, o sheet aparece (útil para editar um item selecionado)." },
-        { "type": "code", "language": "swift", "code": ".sheet(isPresented: $showSettings) {\n    SettingsView()\n}" },
-        { "type": "heading", "level": 3, "text": "Link e openURL" },
-        { "type": "text", "text": "Link (View do SwiftUI) abre URLs https ou mailto. Se precisar de lógica antes de abrir, use o ambiente openURL (closure que o sistema chama) ou APIs UIKit onde a doc permitir." },
-        { "type": "checklist", "items": ["Evito sheet em cima de sheet sem necessidade (confunde usuário)", "Testo fechar (dismiss) e o Binding isPresented voltar para false"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "sheet — o modal mais comum"
+        },
+        {
+          "type": "text",
+          "text": "`.sheet` apresenta conteúdo num painel que desliza de baixo para cima, ficando sobre a tela atual. O usuário pode fechar arrastando para baixo ou tocando fora. É ideal para ações contextuais que não merecem uma tela completa na pilha de navegação.\n\nO sheet é controlado por um `@State` booleano ou por um `@State` de um item opcional — a segunda forma é preferível quando você quer passar dados para o modal, pois elimina a necessidade de uma variável separada para o item."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Sheet com booleano — simples mas sem dados:\nstruct ListaView: View {\n    @State private var mostrarFormulario = false\n\n    var body: some View {\n        Button(\"Nova Tarefa\") { mostrarFormulario = true }\n            .sheet(isPresented: $mostrarFormulario) {\n                FormularioNovaTarefa()\n            }\n    }\n}\n\n// Sheet com item opcional — preferido quando passa dados:\nstruct ListaView: View {\n    @State private var tarefaParaEditar: Tarefa?\n\n    var body: some View {\n        List(tarefas) { tarefa in\n            Button(tarefa.titulo) { tarefaParaEditar = tarefa }\n        }\n        .sheet(item: $tarefaParaEditar) { tarefa in\n            EditarTarefaView(tarefa: tarefa)  // tarefa passada diretamente\n        }\n    }\n}\n\n// Fechando o sheet de dentro:\nstruct EditarTarefaView: View {\n    @Environment(\\.dismiss) private var fechar\n\n    var body: some View {\n        Button(\"Fechar\") { fechar() }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "fullScreenCover — modal tela cheia"
+        },
+        {
+          "type": "text",
+          "text": "`.fullScreenCover` apresenta uma View que cobre a tela inteira — sem a borda arredondada do sheet e sem possibilidade de arrastar para fechar. Use quando a tarefa requer atenção total do usuário (como um onboarding, câmera, editor de conteúdo complexo).\n\nA API é idêntica ao sheet. A diferença é visual e de intenção: fullScreenCover comunica \"você precisa concluir ou cancelar isso antes de continuar\"."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct AppView: View {\n    @State private var mostrarOnboarding = !UsuarioPreferencias.onboardingVisto\n\n    var body: some View {\n        ContentView()\n            .fullScreenCover(isPresented: $mostrarOnboarding) {\n                OnboardingView()\n            }\n    }\n}\n\n// Fechando fullScreenCover (obrigatório — usuário não pode arrastar):\nstruct OnboardingView: View {\n    @Environment(\\.dismiss) private var fechar\n\n    var body: some View {\n        VStack {\n            Text(\"Bem-vindo!\")\n            Button(\"Começar\") {\n                UsuarioPreferencias.onboardingVisto = true\n                fechar()\n            }\n        }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "alert e confirmationDialog — confirmações e ações críticas"
+        },
+        {
+          "type": "text",
+          "text": "Para ações irreversíveis (deletar, cancelar assinatura, desconectar), você deve pedir confirmação ao usuário. Em iOS isso é feito com `.alert` (para confirmações com texto e até 2 ações) ou `.confirmationDialog` (para múltiplas opções, exibe como action sheet na base da tela).\n\nAmplamente suportados pelas plataformas, eles seguem automaticamente as HIG (Human Interface Guidelines) da Apple — incluindo destacar botões destrutivos em vermelho."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Alert de confirmação:\nstruct DetalheView: View {\n    @State private var mostrarConfirmacaoDeletar = false\n    let tarefa: Tarefa\n\n    var body: some View {\n        Button(\"Deletar\", role: .destructive) {\n            mostrarConfirmacaoDeletar = true\n        }\n        .alert(\"Deletar tarefa?\", isPresented: $mostrarConfirmacaoDeletar) {\n            Button(\"Deletar\", role: .destructive) { deletar(tarefa) }\n            Button(\"Cancelar\", role: .cancel) { }  // role: .cancel fecha o alert\n        } message: {\n            Text(\"Essa ação não pode ser desfeita.\")\n        }\n    }\n}\n\n// confirmationDialog — para múltiplas opções:\n.confirmationDialog(\"O que deseja fazer?\", isPresented: $mostrarOpcoes) {\n    Button(\"Editar\") { editar(tarefa) }\n    Button(\"Compartilhar\") { compartilhar(tarefa) }\n    Button(\"Deletar\", role: .destructive) { deletar(tarefa) }\n    Button(\"Cancelar\", role: .cancel) { }\n} message: {\n    Text(tarefa.titulo)\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Link — abrindo URLs e outros apps"
+        },
+        {
+          "type": "text",
+          "text": "Para abrir URLs no Safari, enviar emails, ligar ou abrir apps de terceiros, use o componente `Link` ou o ambiente `openURL`. Link é simples para texto/botão; openURL é para ações programáticas."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Link — abre no Safari ou app correspondente:\nLink(\"Ver documentação\", destination: URL(string: \"https://developer.apple.com\")!)\n\nLink(destination: URL(string: \"mailto:suporte@app.com\")!) {\n    Label(\"Contato\", systemImage: \"envelope\")\n}\n\n// openURL — navegação programática:\nstruct SuporteView: View {\n    @Environment(\\.openURL) private var abrirURL\n\n    var body: some View {\n        Button(\"Abrir suporte\") {\n            if let url = URL(string: \"https://suporte.app.com\") {\n                abrirURL(url)\n            }\n        }\n    }\n}"
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Uso .sheet(item:) quando preciso passar dados para o modal — mais limpo que booleano + variável separada.",
+            "Uso .fullScreenCover para tarefas que precisam de atenção total do usuário.",
+            "Uso .alert ou .confirmationDialog para confirmar ações irreversíveis.",
+            "Fecho modais com @Environment(\\.dismiss) — nunca com lógica de state manual."
+          ]
+        }
       ],
-      "commonMistakes": ["Esquecer de limpar o estado que abre o sheet depois de fechar", "Achar que sheet ocupa a mesma fração da tela em iPhone e iPad"],
-      "tradeoffs": "fullScreenCover cobre a tela inteira (mais intrusivo); sheet é melhor para formulários secundários.",
-      "miniChallenge": "Sheet com campo editável ligado por @Binding ao pai; ao Salvar, feche e atualize a lista no pai.",
+      "commonMistakes": [
+        "Tentar fechar um sheet alterando um @State manualmente — use @Environment(\\.dismiss).",
+        "Usar sheet quando o usuário deveria permanecer na mesma tela na pilha — NavigationLink seria mais adequado.",
+        "Não usar role: .destructive em buttons de deletar — o sistema não vai destacar em vermelho automaticamente."
+      ],
+      "tradeoffs": "Sheet permite fechar arrastando (bom para ações leves), fullScreenCover exige ação explícita (bom para fluxos obrigatórios). Escolha pela intenção da tarefa que o modal executa.",
+      "miniChallenge": "Crie uma lista de notas. Toque numa nota abre um sheet de edição com campo de texto. Botão de delete mostra um alert de confirmação com role: .destructive antes de remover.",
+      "notes": [
+        {
+          "id": "sheet",
+          "text": "Sheet é uma apresentação modal que desliza de baixo para cima. O usuário pode fechar arrastando para baixo. Ideal para ações contextuais e fluxos curtos."
+        },
+        {
+          "id": "alert",
+          "text": "Alert é uma caixa de diálogo que interrompe o fluxo e pede atenção do usuário. Deve ser usado apenas para ações importantes — não como meio de exibir informações comuns."
+        }
+      ],
       "glossary": [
-        { "term": "Modal", "definition": "Apresentação que cobre ou bloqueia a tela de baixo até o usuário concluir ou fechar." }
+        { "term": "sheet", "definition": "Modal que desliza de baixo para cima, descartável por arrasto." },
+        { "term": "fullScreenCover", "definition": "Modal que cobre a tela inteira — exige ação explícita para fechar." },
+        { "term": "confirmationDialog", "definition": "Action sheet com múltiplas opções, exibida na base da tela." }
       ],
       "sources": [
-        { "label": "Apple — sheet(isPresented:onDismiss:content:)", "url": "https://developer.apple.com/documentation/swiftui/view/sheet(ispresented:ondismiss:content:)" },
-        { "label": "Apple — Link", "url": "https://developer.apple.com/documentation/swiftui/link" }
+        { "label": "Apple — Modal presentations", "url": "https://developer.apple.com/documentation/swiftui/modal-presentations" },
+        { "label": "Hacking with Swift — Sheets", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-present-a-new-view-using-sheets" }
       ]
     }
   ]

@@ -28,6 +28,23 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
+function safeAnchorId(str) {
+  return String(str || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function renderInlineText(text, noteOrder = new Map()) {
+  return escapeHtml(text || '').replace(/\[\^([a-z0-9-]+)\]/gi, (_, rawId) => {
+    const id = String(rawId || '').toLowerCase();
+    const index = noteOrder.get(id);
+    if (!index) return '';
+    const anchor = safeAnchorId(id);
+    return `<sup class="footnote-ref"><a href="#fn-${anchor}" aria-label="Ir para nota ${index}">${index}</a></sup>`;
+  });
+}
+
 /** Idioma do fenced code block Markdown (ex.: ```swift) → slug seguro para class="language-swift". */
 function markdownCodeLang(raw) {
   const s = String(raw ?? 'swift').trim().toLowerCase();
@@ -201,11 +218,11 @@ function renderSidebar() {
   }
 }
 
-function renderBlock(block) {
+function renderBlock(block, noteOrder = new Map()) {
   if (!block || !block.type) return '';
   switch (block.type) {
     case 'text': {
-      const parts = (block.text || '').split(/\n\n+/).map((p) => `<p>${escapeHtml(p)}</p>`).join('');
+      const parts = (block.text || '').split(/\n\n+/).map((p) => `<p>${renderInlineText(p, noteOrder)}</p>`).join('');
       return `<div class="block block-text">${parts}</div>`;
     }
     case 'heading': {
@@ -216,7 +233,7 @@ function renderBlock(block) {
     case 'callout': {
       const v = ['info', 'tip', 'warn', 'danger'].includes(block.variant) ? block.variant : 'info';
       const title = block.title ? `<div class="ct">${escapeHtml(block.title)}</div>` : '';
-      return `<div class="callout ${v}">${title}<div>${escapeHtml(block.body || '')}</div></div>`;
+      return `<div class="callout ${v}">${title}<div>${renderInlineText(block.body || '', noteOrder)}</div></div>`;
     }
     case 'code': {
       const lang = markdownCodeLang(block.language);
@@ -226,12 +243,25 @@ function renderBlock(block) {
     }
     case 'list': {
       const tag = block.ordered ? 'ol' : 'ul';
-      const items = (block.items || []).map((i) => `<li>${escapeHtml(i)}</li>`).join('');
+      const items = (block.items || []).map((i) => `<li>${renderInlineText(i, noteOrder)}</li>`).join('');
       return `<${tag} class="block-list">${items}</${tag}>`;
     }
     case 'checklist': {
-      const items = (block.items || []).map((i) => `<li>${escapeHtml(i)}</li>`).join('');
+      const items = (block.items || []).map((i) => `<li>${renderInlineText(i, noteOrder)}</li>`).join('');
       return `<ul class="checklist">${items}</ul>`;
+    }
+    case 'trace': {
+      const title = escapeHtml(block.title || 'Trace guiado');
+      const steps = (block.steps || [])
+        .map((step, index) => {
+          const detail = step.detail ? `<p>${renderInlineText(step.detail, noteOrder)}</p>` : '';
+          const output = step.output
+            ? `<pre class="trace-output"><code>${escapeHtml(step.output)}</code></pre>`
+            : '';
+          return `<li class="trace-step" style="--trace-index:${index};"><div class="trace-step-head"><span class="trace-step-num">${index + 1}</span><strong>${escapeHtml(step.label || '')}</strong></div>${detail}${output}</li>`;
+        })
+        .join('');
+      return `<section class="trace-block"><div class="trace-title">${title}</div><ol class="trace-steps">${steps}</ol></section>`;
     }
     default:
       return '';
@@ -259,19 +289,29 @@ async function showSection(moduleId, sectionId) {
   const pre = (section.prerequisites || [])
     .map((k) => `<span>${escapeHtml(k)}</span>`)
     .join(' · ');
-  const blocksHtml = (section.blocks || []).map(renderBlock).join('');
+  const noteOrder = new Map((section.notes || []).map((note, index) => [String(note.id || '').toLowerCase(), index + 1]));
+  const blocksHtml = (section.blocks || []).map((block) => renderBlock(block, noteOrder)).join('');
 
   let mistakes = '';
   if (section.commonMistakes?.length) {
-    mistakes = `<h3>Erros comuns</h3><ul class="mistakes">${section.commonMistakes.map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul>`;
+    mistakes = `<h3>Erros comuns</h3><ul class="mistakes">${section.commonMistakes.map((x) => `<li>${renderInlineText(x, noteOrder)}</li>`).join('')}</ul>`;
   }
   let trade = '';
   if (section.tradeoffs) {
-    trade = `<h3>Trade-offs</h3><div class="block-text"><p>${escapeHtml(section.tradeoffs)}</p></div>`;
+    trade = `<h3>Trade-offs</h3><div class="block-text"><p>${renderInlineText(section.tradeoffs, noteOrder)}</p></div>`;
   }
   let challenge = '';
   if (section.miniChallenge) {
-    challenge = `<h3>Mini desafio</h3><div class="callout tip"><div class="ct">Prática</div><div>${escapeHtml(section.miniChallenge)}</div></div>`;
+    challenge = `<h3>Mini desafio</h3><div class="callout tip"><div class="ct">Prática</div><div>${renderInlineText(section.miniChallenge, noteOrder)}</div></div>`;
+  }
+  let notes = '';
+  if (section.notes?.length) {
+    notes = `<h3>Notas</h3><ol class="footnotes">${section.notes
+      .map((note, index) => {
+        const anchor = safeAnchorId(note.id);
+        return `<li id="fn-${anchor}"><span class="footnote-index">${index + 1}.</span><span>${renderInlineText(note.text || '', noteOrder)}</span></li>`;
+      })
+      .join('')}</ol>`;
   }
   let gloss = '';
   if (section.glossary?.length) {
@@ -291,9 +331,9 @@ async function showSection(moduleId, sectionId) {
       <p class="meta">${section.estimatedMinutes ? `~${section.estimatedMinutes} min · ` : ''}Revisado: ${escapeHtml(mod.lastReviewed || '—')}</p>
       ${pre ? `<p class="meta">Pré-requisitos: ${pre}</p>` : ''}
     </div>
-    <div class="objective callout info"><div class="ct">Objetivo</div><div>${escapeHtml(section.objective || '')}</div></div>
+    <div class="objective callout info"><div class="ct">Objetivo</div><div>${renderInlineText(section.objective || '', noteOrder)}</div></div>
     ${blocksHtml}
-    <div class="sec-extra">${mistakes}${trade}${challenge}${gloss}<h3>Fontes</h3><div class="sources">${src}</div></div>
+    <div class="sec-extra">${mistakes}${trade}${challenge}${notes}${gloss}<h3>Fontes</h3><div class="sources">${src}</div></div>
     <div class="complete-row">
       <input type="checkbox" id="secComplete" ${checked} />
       <label for="secComplete">Marcar esta seção como estudada</label>

@@ -1,52 +1,312 @@
 {
   "id": "m13-debug-performance",
-  "title": "Debugging e performance",
-  "level": "pleno-plus",
-  "lastReviewed": "2025-03-22",
+  "title": "Debug e Performance",
+  "level": "pleno",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "previews-instruments",
-      "title": "Previews, breakpoints e Instruments",
+      "id": "xcode-shortcuts",
+      "title": "Atalhos do Xcode que você vai usar todos os dias",
       "estimatedMinutes": 30,
-      "objective": "Você vai usar o debugger do Xcode (pausar execução e inspecionar variáveis), View Debugger (árvore visual de views) e Instruments (ferramenta de medição de CPU/memória) antes de \"achar\" onde otimizar.",
+      "objective": "Você vai aprender os atalhos de teclado mais impactantes do Xcode para navegar código, compilar, debugar e gerenciar arquivos — e entender por que dominar esses atalhos é um multiplicador de produtividade real.",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "Breakpoint (ponto de parada) pausa o app na linha. po no console inspeciona objeto. Com async, use a pilha async (async stack) do Xcode. View Debugger mostra hierarquia SwiftUI/UIKit. Instruments tem Time Profiler (onde o CPU gastou tempo), Allocations (memória) e modelos específicos quando disponíveis." },
-        { "type": "callout", "variant": "warn", "title": "Medir primeiro", "body": "Sem trace (gravação de medição), otimização vira chute. Grave poucos segundos, ache hot path (trecho mais caro), mude uma coisa, compare." },
-        { "type": "checklist", "items": ["Sei pausar em exceção Objective-C se precisar", "Abro View Debugger quando layout foge do esperado", "Sei gravar um trace curto no Instruments"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Atalhos de navegação"
+        },
+        {
+          "type": "text",
+          "text": "Os atalhos de navegação são os mais impactantes porque você navega código dezenas de vezes por hora. Cada mouse click que você elimina com um atalho soma horas no longo prazo."
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "code": "Navegação rápida:\n  Cmd + Shift + O     Abrir arquivo pelo nome (fuzzy search)\n  Cmd + Click         Ir para definição de um símbolo\n  Ctrl + Cmd + ←/→    Voltar / avançar no histórico de navegação\n  Cmd + L             Ir para linha específica\n  Cmd + Shift + J     Revelar arquivo atual no Project Navigator\n\nEntre arquivos:\n  Cmd + Ctrl + ↑/↓    Alternar entre .swift e arquivo relacionado\n  Cmd + 1-9           Abrir painel do Navigator (1=files, 2=git, 3=symbols)\n  Cmd + Shift + F     Busca em todo o projeto\n\nEm Swift:\n  Cmd + /             Comentar/descomentar linha ou seleção\n  Ctrl + I            Reindentação (selecione código bagunçado e use)\n  Cmd + D             Duplicar linha\n  Cmd + Backspace     Deletar linha inteira"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Atalhos de build e execução"
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "code": "Build e run:\n  Cmd + R             Build e executar\n  Cmd + B             Apenas compilar (sem executar)\n  Cmd + .             Parar execução\n  Cmd + U             Executar todos os testes\n  Cmd + Shift + U     Executar testes do arquivo atual\n  Cmd + Ctrl + U      Executar teste sob o cursor\n\nCanvas (SwiftUI Preview):\n  Cmd + Option + P    Resumir/pausar preview\n  Cmd + Option + Enter Abrir/fechar canvas\n  Ctrl + Option + P   Forçar refresh do preview"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Atalhos de debug"
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "code": "Breakpoints:\n  Cmd + \\             Adicionar/remover breakpoint na linha atual\n  Cmd + Y             Ativar/desativar todos os breakpoints\n\nControle de execução (quando pausado no breakpoint):\n  F6                  Step over — executa linha atual e vai para próxima\n  F7                  Step into — entra na função chamada\n  F8                  Step out  — sai da função atual\n  Ctrl + Y            Continue — continua até próximo breakpoint\n\nNo console LLDB:\n  po objeto           Imprime objeto com descrição legível\n  p valor             Imprime valor com tipo\n  bt                  Backtrace — pilha de chamadas\n  frame variable      Lista variáveis locais do frame atual"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Refactoring e editing"
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "code": "Refactoring:\n  Cmd + Ctrl + E      Renomear símbolo (rename no arquivo atual)\n  Ctrl + Shift + R    Refactor → Rename (em todo o projeto)\n  Ctrl + Shift + M    Extrair para função/propriedade (Extract)\n\nMulti-cursor:\n  Ctrl + Shift + Click  Adicionar cursor em ponto específico\n  Option + arrasto      Seleção em coluna (block selection)\n\nOrganização:\n  Cmd + Option + [/]  Mover linha para cima/baixo\n  Cmd + Shift + A     Quick actions (fixit, documentar, etc.)"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Aprenda um atalho por semana",
+          "body": "Não tente memorizar todos de uma vez. Escolha um atalho que você usa com mouse frequentemente, force-se a usar o teclado por uma semana, e depois passe para o próximo. Em 2 meses você terá internalizado os mais importantes."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Uso Cmd+Shift+O para abrir arquivos pelo nome sem usar o mouse.",
+            "Uso Cmd+Click para ir para definição de símbolos.",
+            "Conheço F6/F7/F8 para controlar o debugger passo a passo.",
+            "Sei usar po no console LLDB para inspecionar objetos durante um breakpoint."
+          ]
+        }
       ],
-      "commonMistakes": ["print dentro de body em build de produção", "Otimizar List sem prova de que ela é o gargalo"],
-      "tradeoffs": "Aprender Instruments leva tempo; paga em bugs de memória e travamentos.",
-      "miniChallenge": "Cause atualização em loop e veja no Time Profiler qual função aparece no topo.",
+      "commonMistakes": [
+        "Usar o menu superior para ações que têm atalho — é muito mais lento.",
+        "Não usar Ctrl+I para reindentação — selecionar tudo e Ctrl+I formata o arquivo inteiro instantaneamente."
+      ],
+      "tradeoffs": "Atalhos têm curva de aprendizado inicial mas retorno permanente. O tempo de aprender um atalho de 2 minutos se paga em dias.",
+      "miniChallenge": "Abra um projeto existente. Por 30 minutos, proíba-se de usar o mouse para: abrir arquivos, ir para definição, comentar código e mover linhas. Use apenas atalhos.",
+      "notes": [],
       "glossary": [
-        { "term": "Instruments", "definition": "Suite de ferramentas de profiling da Apple integrada ao Xcode." }
+        { "term": "LLDB", "definition": "Low Level Debugger — o debugger usado pelo Xcode. O console LLDB aceita comandos po, p, bt e muitos outros para inspeção de estado em tempo de execução." }
       ],
       "sources": [
-        { "label": "Apple — Debugging with Xcode", "url": "https://developer.apple.com/documentation/xcode/debugging" },
-        { "label": "Apple — Improving your app's performance", "url": "https://developer.apple.com/documentation/xcode/improving-your-app-s-performance" }
+        { "label": "Apple — Xcode Keyboard Shortcuts", "url": "https://developer.apple.com/documentation/xcode" }
       ]
     },
     {
-      "id": "swiftui-performance",
-      "title": "Performance em SwiftUI",
-      "estimatedMinutes": 26,
-      "objective": "Você vai aplicar ideias práticas: identidade estável em ForEach (lista), não fazer trabalho pesado dentro de body, usar listas preguiçosas quando fizer sentido.",
+      "id": "xcode-debug-workflow",
+      "title": "Workflow de debug no Xcode — breakpoints e LLDB",
+      "estimatedMinutes": 50,
+      "objective": "Você vai aprender a usar breakpoints com eficiência para pausar e inspecionar estado do app, os diferentes tipos de breakpoints disponíveis, os comandos LLDB mais úteis no console, e como o View Debugger ajuda a identificar problemas visuais em layouts SwiftUI.[^breakpoint][^lldb]",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "SwiftUI faz diff (compara árvore antiga com nova) para mudar o mínimo. ForEach precisa de id estável (Identifiable ou \\.id). Objetos caros não devem nascer dentro de body a cada render — use .task ou cache. List e Lazy stacks ajudam com muitos itens." },
-        { "type": "list", "ordered": false, "items": ["equatable() / EquatableView quando só poucos campos importam para redesenhar", "Lazy stacks em scroll longo", "Imagens: tamanho certo e cache (não decodificar gigante toda hora)"] },
-        { "type": "checklist", "items": ["Revise ForEach que usa índice como id (muda quando a lista muda)", "Fetch de rede pesado saiu do body"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Breakpoints — pausando na linha certa"
+        },
+        {
+          "type": "text",
+          "text": "Um breakpoint pausa a execução do app na linha marcada, exatamente quando aquele código vai ser executado. Nesse momento você pode inspecionar variáveis, executar código no console LLDB, e avançar linha por linha para entender o fluxo.\n\nO breakpoint mais simples é clicar no número de linha no Xcode (ou Cmd+\\). Mas há tipos especializados muito mais poderosos:"
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "code": "Tipos de breakpoint no Xcode:\n\n1. Linha (Line breakpoint)\n   - Clicar na calha ou Cmd+\\\n   - Pausa quando aquela linha é executada\n\n2. Exception breakpoint\n   - Breakpoint Navigator → + → Exception Breakpoint\n   - Pausa quando uma exceção é lançada — antes do crash\n   - ESSENCIAL para encontrar causa raiz de crashes\n\n3. Symbolic breakpoint\n   - Breakpoint Navigator → + → Symbolic Breakpoint\n   - Pausa em qualquer chamada de uma função por nome\n   - Ex: símbolo \"-[UIView layoutSubviews]\" pausa em todo layout\n\n4. Swift Error breakpoint\n   - Pausa quando um Error é lançado\n   - Útil para rastrear throws em código async\n\n5. Condição em breakpoint\n   - Clique duplo no breakpoint → adicione condição\n   - Ex: pausa só quando i == 42 ou usuario.nome == \"test\""
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Breakpoints com ação — sem modificar o código"
+        },
+        {
+          "type": "text",
+          "text": "Breakpoints podem executar ações sem pausar a execução. Isso é útil para adicionar logs temporários sem alterar o código: clique duplo no breakpoint → adicione uma ação \"Log Message\" ou \"Debugger Command\" → marque \"Automatically continue after evaluating\".\n\nIsso é superior a adicionar `print()` porque você pode remover todos os breakpoints de uma vez com Cmd+Y, sem precisar procurar e remover prints espalhados pelo código."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Em vez de adicionar prints temporários:\nfunc calcularTotal(itens: [Item]) -> Double {\n    print(\"calcularTotal chamado com \\(itens.count) itens\")  // remover depois!\n    let total = itens.reduce(0) { $0 + $1.preco }\n    print(\"Total calculado: \\(total)\")  // remover depois!\n    return total\n}\n\n// Use breakpoints com ação — zero modificação no código:\n// 1. Adicione breakpoint na primeira linha de calcularTotal\n// 2. Clique duplo → Add Action → Log Message:\n//    \"calcularTotal chamado com @itens.count@ itens\"\n// 3. Marque 'Automatically continue'\n// Resultado: log aparece no console sem pausar e sem alterar código"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "LLDB — inspecionando estado no console"
+        },
+        {
+          "type": "text",
+          "text": "Quando o app está pausado num breakpoint, o console LLDB está disponível para inspecionar e até modificar o estado do app. Os comandos mais úteis:"
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "code": "// No console LLDB (quando pausado num breakpoint):\n\npo objeto                    // imprime objeto (usa debugDescription)\n(lldb) po tarefa\n▿ Tarefa\n  - id: A3B2C1...\n  - titulo: \"Revisar PR\"\n  - concluida: false\n\np expressao                  // imprime com tipo e endereço\n(lldb) p tarefa.titulo\n(String) $R0 = \"Revisar PR\"\n\nbt                           // backtrace — pilha de chamadas\n(lldb) bt\n  frame #0: calcularTotal(itens:)\n  frame #1: TarefasViewModel.salvar()\n  frame #2: TarefasView.body\n\nexpr variavel = novoValor    // modifica variável em tempo de execução!\n(lldb) expr tarefa.concluida = true\n\nframe variable               // lista todas as variáveis locais\n(lldb) frame variable\n(Tarefa) tarefa = ...\n(Double) total = 0.0\n\nwatch set var variavel       // watchpoint — pausa quando variável muda"
+        },
+        {
+          "type": "trace",
+          "title": "Debugando um crash com Exception Breakpoint",
+          "steps": [
+            {
+              "label": "App crasha — mensagem genérica",
+              "detail": "Thread 1: EXC_BAD_ACCESS ou Fatal error: Unexpectedly found nil.",
+              "output": "Crash na main thread — sem informação de onde veio"
+            },
+            {
+              "label": "Adicione Exception Breakpoint",
+              "detail": "Breakpoint Navigator → + → Exception Breakpoint → Swift.",
+              "output": "Xcode vai pausar ANTES do crash na próxima execução"
+            },
+            {
+              "label": "Reproduza o crash",
+              "detail": "Execute o app e reproduza os passos que causavam o crash.",
+              "output": "App pausa na linha EXATA onde a exceção foi lançada"
+            },
+            {
+              "label": "Inspecione o estado",
+              "detail": "Use po para ver os valores das variáveis no momento do crash.",
+              "output": "(lldb) po array.count → 0 — estava tentando acessar índice fora dos limites!"
+            },
+            {
+              "label": "Corrija a causa raiz",
+              "detail": "Com a linha exata e o estado visível, a correção fica óbvia.",
+              "output": "guard !array.isEmpty else { return } — bug corrigido"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "View Debugger — inspecionando hierarquia de Views"
+        },
+        {
+          "type": "text",
+          "text": "Quando sua interface não aparece do jeito esperado — View invisível, layout errado, cor estranha — o View Debugger é a ferramenta certa. Ele captura um snapshot 3D da hierarquia de Views em execução, permitindo inspecionar cada layer, seus frames, e as constraints aplicadas.\n\nPara ativar: com o app rodando, clique no ícone de pirâmide na barra inferior do Xcode (ou Debug → View Debugging → Capture View Hierarchy)."
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "code": "Usando o View Debugger:\n\n1. Rode o app e navegue até a tela com problema\n2. No Xcode: Debug → View Debugging → Capture View Hierarchy\n3. No painel esquerdo: árvore completa de todas as Views\n4. No centro: visualização 3D — clique e arraste para rotacionar\n5. No painel direito (Inspector):\n   - Frame: posição e tamanho exatos em pontos\n   - Background, alpha, isHidden\n   - Constraints (para UIKit)\n\nO que procurar:\n- View com frame zero (width=0 ou height=0) → invisible\n- View com alpha=0 ou isHidden=true quando deveria estar visível\n- Dois elementos sobrepostos (ZStack acidental)\n- View fora dos bounds do pai (clipping)"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Self._ em SwiftUI View Debugger",
+          "body": "No View Debugger, Views SwiftUI aparecem com nomes descritivos como ModifiedContent<Text, _FrameLayout>. Para identificar suas Views customizadas mais facilmente, adicione .accessibilityIdentifier('nome') — aparece na árvore do View Debugger."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Uso Exception Breakpoint para encontrar causa raiz de crashes antes de pesquisar aleatoriamente.",
+            "Uso po no console LLDB para inspecionar objetos em vez de adicionar prints temporários.",
+            "Conheço os comandos bt, frame variable e expr do LLDB.",
+            "Sei usar o View Debugger para encontrar Views invisíveis ou com frames errados."
+          ]
+        }
       ],
-      "commonMistakes": ["id que muda todo render → lista pisca e perde estado", "Binding que recria objeto pesado a cada tecla"],
-      "tradeoffs": "Micro-otimização sem métrica pode piorar leitura do código.",
-      "miniChallenge": "Lista com 1000 itens: compare UUID fixo vs UUID novo por linha e observe diferença.",
+      "commonMistakes": [
+        "Adicionar print() para debug e esquecer de remover — use breakpoints com ação ao invés disso.",
+        "Não usar Exception Breakpoint — torna o processo de encontrar crashes muito mais lento.",
+        "Não usar po no LLDB — inspecionar objetos no console é mais rápido que adicionar watches."
+      ],
+      "tradeoffs": "Breakpoints com ações são poderosos mas têm overhead para configurar. Para logs rápidos de desenvolvimento, print() ainda é mais rápido. Para bugs difíceis de reproduzir, breakpoints condicionais e com ações são incomparavelmente melhores.",
+      "miniChallenge": "Introduza um bug proposital num array — acesso fora dos índices. Adicione Exception Breakpoint e reproduza o crash. Use po no LLDB para ver o estado do array no momento do crash. Corrija.",
+      "notes": [
+        {
+          "id": "breakpoint",
+          "text": "Breakpoint é um marcador que pausa a execução do app quando aquela linha é atingida. Pode ter condições, ações (log, script), e pode ser desabilitado sem ser removido."
+        },
+        {
+          "id": "lldb",
+          "text": "LLDB (Low Level Debugger) é o debugger integrado ao Xcode. Aceita comandos no console quando o app está pausado — po, p, bt, expr, frame variable, entre outros."
+        }
+      ],
       "glossary": [
-        { "term": "Diff", "definition": "Comparação entre árvores de view para aplicar mudanças mínimas." }
+        { "term": "Breakpoint", "definition": "Marcador que pausa a execução do app para inspeção de estado." },
+        { "term": "LLDB", "definition": "Debugger do Xcode — aceita comandos para inspecionar e modificar estado em runtime." },
+        { "term": "po", "definition": "Comando LLDB que imprime um objeto usando sua debugDescription." },
+        { "term": "bt", "definition": "Comando LLDB para backtrace — mostra a pilha completa de chamadas que levou ao breakpoint." }
       ],
       "sources": [
-        { "label": "Apple — Diagnosing performance issues", "url": "https://developer.apple.com/documentation/xcode/diagnosing-performance-issues" },
-        { "label": "Apple — SwiftUI (overview)", "url": "https://developer.apple.com/documentation/swiftui" },
-        { "label": "Hacking with Swift — SwiftUI performance tips", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-improve-swiftui-performance" }
+        { "label": "Apple — Debugging with LLDB", "url": "https://developer.apple.com/library/archive/documentation/IDEs/Conceptual/gdb_to_lldb_transition_guide/document/Introduction.html" }
+      ]
+    },
+    {
+      "id": "previews-instruments",
+      "title": "Previews e Instruments — performance em SwiftUI",
+      "estimatedMinutes": 50,
+      "objective": "Você vai entender como identificar e corrigir problemas de performance em SwiftUI usando o Instruments Time Profiler e Allocations, como o Preview do Xcode ajuda a detectar problemas visuais antes de compilar, e quais são as causas mais comuns de lentidão em listas e animações SwiftUI.[^instruments][^timeprofile]",
+      "prerequisites": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Quando otimizar — e quando não"
+        },
+        {
+          "type": "text",
+          "text": "A regra mais importante de performance: nunca otimize sem medir. Otimizações prematuras introduzem complexidade desnecessária em partes do código que não são gargalo.\n\nO fluxo correto é: app lento → medir com Instruments → identificar o gargalo real → otimizar aquele ponto específico → medir novamente para confirmar melhora. Pular a medição é um erro — você pode gastar horas otimizando a parte errada."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Instruments — Time Profiler e Allocations"
+        },
+        {
+          "type": "text",
+          "text": "O Instruments é a ferramenta de profiling da Apple. Tem mais de 20 instrumentos diferentes; os mais usados no dia a dia são:\n\n**Time Profiler** — mostra quanto tempo de CPU cada função consome. Perfeito para encontrar código que está travando a thread principal ou calculando demais.\n\n**Allocations** — mostra alocações de memória ao longo do tempo. Use para encontrar vazamentos de memória e criações excessivas de objetos.\n\nPara abrir: Xcode → Product → Profile (Cmd+I). Escolha o instrumento no template."
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "code": "Workflow com Time Profiler:\n\n1. Cmd+I para iniciar profiling (compila em Release/Profile)\n2. Escolha \"Time Profiler\" no template\n3. Clique Record (botão vermelho)\n4. Reproduza o cenário lento no app\n5. Clique Stop\n6. Na timeline, arraste para selecionar o intervalo lento\n7. Abaixo: árvore de chamadas com % de tempo\n8. Clique em Call Tree Options:\n   - Invert Call Tree — mostra funções folha (geralmente onde está o gargalo)\n   - Hide System Libraries — mostra só seu código\n9. Clique duplo na função para ir ao código"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Causas comuns de lentidão em SwiftUI"
+        },
+        {
+          "type": "text",
+          "text": "As causas mais comuns de performance ruim em SwiftUI não são algoritmos complexos — são padrões simples que geram trabalho desnecessário:"
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// PROBLEMA 1: Cálculo pesado no body:\nstruct ListaView: View {\n    let itens: [Item]\n\n    var body: some View {\n        // ordenar 10000 itens a cada recálculo do body:\n        let ordenados = itens.sorted { $0.data > $1.data }  // LENTO\n        return List(ordenados) { item in ItemView(item: item) }\n    }\n}\n\n// SOLUÇÃO: Calcular fora do body:\nstruct ListaView: View {\n    let itensOrdenados: [Item]  // calculado antes, passado como parâmetro\n\n    var body: some View {\n        List(itensOrdenados) { item in ItemView(item: item) }\n    }\n}\n\n// PROBLEMA 2: VStack com muitos itens (não lazy):\nScrollView {\n    VStack {  // cria 10000 Views de uma vez\n        ForEach(itens) { item in ItemView(item: item) }\n    }\n}\n\n// SOLUÇÃO: LazyVStack:\nScrollView {\n    LazyVStack {\n        ForEach(itens) { item in ItemView(item: item) }\n    }\n}\n\n// PROBLEMA 3: Imagens não cacheadas:\nList(fotos) { foto in\n    AsyncImage(url: foto.url)  // baixa a imagem a cada scroll!\n}\n\n// SOLUÇÃO: Cache de imagens (use SDWebImageSwiftUI, Kingfisher, ou cache manual)"
+        },
+        {
+          "type": "callout",
+          "variant": "warn",
+          "title": "Compile em Release para medir",
+          "body": "O Instruments (Cmd+I) compila automaticamente em configuração Profile (semelhante a Release com símbolos). NUNCA meça performance em Debug — o compilador não aplica otimizações e o resultado é enganoso. A diferença pode ser de 5-10x."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Uso Instruments Time Profiler para identificar gargalos antes de otimizar.",
+            "Não faço cálculos pesados no body de Views — pré-processo ou uso propriedades computadas no ViewModel.",
+            "Uso LazyVStack com listas longas dentro de ScrollView.",
+            "Cacheo imagens baixadas da rede — não re-baixo a cada scroll."
+          ]
+        }
+      ],
+      "commonMistakes": [
+        "Otimizar código sem medir — introduz complexidade sem garantia de melhora.",
+        "Medir performance em Debug — resultados não representam o app em produção.",
+        "Não usar Lazy containers com listas longas — o VStack regular cria todas as Views de uma vez."
+      ],
+      "tradeoffs": "LazyVStack tem overhead de criar/destruir Views durante scroll. Para listas curtas (< 50 itens), VStack pode ser mais simples e igualmente performático. Meça primeiro.",
+      "miniChallenge": "Crie uma lista com 1000 itens usando VStack. Meça com Time Profiler o tempo de scroll. Troque para LazyVStack e meça novamente. Documente a diferença em ms de CPU.",
+      "notes": [
+        {
+          "id": "instruments",
+          "text": "Instruments é o conjunto de ferramentas de profiling da Apple, integrado ao Xcode. Usa DTrace e ktrace para coletar dados de CPU, memória, rede e GPU sem modificar o código."
+        },
+        {
+          "id": "timeprofile",
+          "text": "Time Profiler coleta amostras do estado da CPU a intervalos regulares (1ms por padrão). As funções que aparecem com mais frequência nas amostras são as que consomem mais CPU."
+        }
+      ],
+      "glossary": [
+        { "term": "Instruments", "definition": "Ferramenta de profiling da Apple para medir CPU, memória, GPU e outros recursos." },
+        { "term": "Time Profiler", "definition": "Instrumento que mostra tempo de CPU por função — para encontrar gargalos." },
+        { "term": "Allocations", "definition": "Instrumento que rastreia alocações de memória — para encontrar vazamentos." }
+      ],
+      "sources": [
+        { "label": "Apple — Instruments Help", "url": "https://help.apple.com/instruments/mac/current/" },
+        { "label": "WWDC — Detect and diagnose memory issues", "url": "https://developer.apple.com/videos/play/wwdc2021/10180/" }
       ]
     }
   ]

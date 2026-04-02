@@ -1,53 +1,123 @@
 {
   "id": "m12-accessibility",
-  "title": "Acessibilidade",
-  "level": "pleno-plus",
-  "lastReviewed": "2025-03-22",
+  "title": "Acessibilidade e Design Inclusivo",
+  "level": "pleno",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "labels-hints",
-      "title": "Label, Hint, Value e traits",
-      "estimatedMinutes": 28,
-      "objective": "Você vai configurar VoiceOver (leitor de tela da Apple) para ler seus controles com label (nome curto), hint (o que acontece ao ativar), value (estado atual) e traits (papel: botão, cabeçalho…).",
+      "id": "voiceover-and-semantic-labels",
+      "title": "VoiceOver, labels semânticos e Dynamic Type",
+      "estimatedMinutes": 50,
+      "objective": "Você vai entender como VoiceOver lê sua interface, por que labels semânticos importam mais que visuais, como o Dynamic Type escala texto corretamente, e como auditar acessibilidade com as ferramentas do Xcode para garantir que seu app serve todos os usuários.[^voiceover][^dynamictype]",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "accessibilityLabel é o nome que o VoiceOver fala primeiro. accessibilityHint explica a ação (ex.: \"abre configurações\"). accessibilityValue mostra estado (ex.: \"50%\"). accessibilityTraits marcam papel: .isButton, .isHeader, .isSelected." },
-        { "type": "callout", "variant": "tip", "title": "SwiftUI", "body": "Use .accessibilityLabel, .accessibilityHint, .accessibilityAddTraits e, quando vários elementos são um só controle lógico, accessibilityElement(children: .combine)." },
-        { "type": "checklist", "items": ["Testei com VoiceOver ligado no iPhone real", "Não repito hint igual ao label sem necessidade", "Imagem só decorativa fica hidden da acessibilidade"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Por que acessibilidade é responsabilidade técnica, não opcional"
+        },
+        {
+          "type": "text",
+          "text": "Acessibilidade não é um recurso extra para um segmento pequeno de usuários. Cerca de 26% dos adultos têm alguma forma de deficiência. No Brasil, são mais de 18 milhões de pessoas com deficiência visual. Legalmente, apps publicados em algumas jurisdições são obrigados a seguir padrões de acessibilidade.\n\nAlém do impacto humano, acessibilidade melhora a qualidade técnica do app: interfaces acessíveis são mais organizadas semanticamente, mais testáveis (os mesmos identificadores usados por VoiceOver funcionam em XCUITest), e geralmente mais fáceis de manter.\n\nA boa notícia: SwiftUI tem excelente suporte nativo a acessibilidade. Text, Button, Image e a maioria dos componentes são acessíveis por padrão — você só precisa completar as lacunas."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Como o VoiceOver lê sua interface"
+        },
+        {
+          "type": "text",
+          "text": "O VoiceOver navega pela interface em elementos focáveis, lendo em voz alta o label, o valor atual e o hint de cada elemento. Para cada elemento, ele combina automaticamente o label, o role (botão, campo de texto, imagem) e o estado (selecionado, desabilitado).\n\nO problema surge quando elementos não têm label semântico adequado: ícones sem descrição, imagens decorativas que são anunciadas como \"image\", botões cujo único label é um SF Symbol sem texto. O VoiceOver anuncia \"button\" sem dizer o que o botão faz."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// PROBLEMA — botão sem label útil para VoiceOver:\nButton {\n    favoritar(tarefa)\n} label: {\n    Image(systemName: \"heart\")  // VoiceOver anuncia: \"heart, button\"\n}\n\n// SOLUÇÃO — label semântico:\nButton {\n    favoritar(tarefa)\n} label: {\n    Image(systemName: \"heart\")\n}\n.accessibilityLabel(\"Favoritar \\(tarefa.titulo)\")  // VoiceOver: \"Favoritar Tarefa A, button\"\n\n// Imagem decorativa — ocultar do VoiceOver:\nImage(\"background-pattern\")\n    .accessibilityHidden(true)  // VoiceOver ignora essa imagem\n\n// Imagem informativa — adicionar descrição:\nImage(\"grafico-vendas\")\n    .accessibilityLabel(\"Gráfico de vendas dos últimos 30 dias\")"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "accessibilityValue e accessibilityHint"
+        },
+        {
+          "type": "text",
+          "text": "Além do `accessibilityLabel` (o nome do elemento), você pode fornecer:\n\n**accessibilityValue** — o valor atual do elemento (progresso de um slider, número selecionado, texto de um campo). Muda dinamicamente.\n\n**accessibilityHint** — instrução curta sobre o que acontece ao interagir. Use com moderação — usuários experientes de VoiceOver às vezes desativam hints."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Slider com label e valor personalizado:\nSlider(value: $volume, in: 0...1)\n    .accessibilityLabel(\"Volume\")\n    .accessibilityValue(\"\\(Int(volume * 100))%\")\n\n// Toggle com label contextual:\nToggle(\"\", isOn: $notificacoes)\n    .accessibilityLabel(\"Notificações push\")\n    .accessibilityHint(\"Ativa ou desativa notificações do app\")\n\n// Elemento com ações customizadas:\nTarefaCard(tarefa: tarefa)\n    .accessibilityLabel(tarefa.titulo)\n    .accessibilityValue(tarefa.concluida ? \"Concluída\" : \"Pendente\")\n    .accessibilityActions {\n        AccessibilityAction(named: \"Concluir\") {\n            vm.marcarConcluida(tarefa)\n        }\n        AccessibilityAction(named: \"Deletar\") {\n            vm.deletar(tarefa)\n        }\n    }"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Dynamic Type — respeite o tamanho de fonte do usuário"
+        },
+        {
+          "type": "text",
+          "text": "Dynamic Type é a preferência de tamanho de texto do usuário — configurada em Configurações → Acessibilidade → Tamanho do texto. Pode ir de pequeno (ao.xSmall) até Acessibilidade XXL, que é significativamente maior.\n\nQuando você usa `.font(.body)`, `.font(.headline)` ou outros text styles semânticos, o SwiftUI escala automaticamente o texto com a preferência do usuário. Quando você usa `.font(.system(size: 17))` com tamanho fixo, o texto NÃO escala — ignorando a escolha do usuário.\n\nAlém de texto, você precisa garantir que seu layout sobrevive a textos grandes: evitar truncamento, usar linhas múltiplas quando necessário, e não fixar alturas de células que vão quebrar quando o texto crescer."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Correto — text style semântico, escala com Dynamic Type:\nText(\"Título\")\n    .font(.headline)  // escala automaticamente\n\nText(\"Corpo do texto\")\n    .font(.body)      // escala automaticamente\n\n// Evite — tamanho fixo não escala:\nText(\"Título\")\n    .font(.system(size: 17))  // NÃO escala com Dynamic Type\n\n// Permite múltiplas linhas para textos longos:\nText(tarefa.titulo)\n    .font(.headline)\n    .lineLimit(nil)  // sem limite de linhas — respeita Dynamic Type grande\n    .fixedSize(horizontal: false, vertical: true)  // expande verticalmente\n\n// Preview em diferentes tamanhos:\n#Preview {\n    TarefaCard(tarefa: .preview)\n        .environment(\\.sizeCategory, .accessibilityExtraExtraLarge)\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Auditando acessibilidade no Xcode"
+        },
+        {
+          "type": "text",
+          "text": "O Xcode tem ferramentas para verificar acessibilidade sem precisar de um dispositivo real com VoiceOver ativo:\n\n**Accessibility Inspector** — abre em Xcode → Open Developer Tool → Accessibility Inspector. Mostra os elementos acessíveis, seus labels, roles e values. Tem auditoria automática que aponta problemas.\n\n**Simulador com VoiceOver** — pressione Cmd+F5 no simulador para ativar VoiceOver. Navegue com Tab/Shift+Tab.\n\n**Canvas Preview com acessibilidade** — no canvas do Xcode, mude o modo de preview para verificar Dynamic Type grande."
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Agrupar elementos para simplificar navegação",
+          "body": "Em uma célula com imagem, título e subtítulo, o VoiceOver por padrão para em cada elemento. Use .accessibilityElement(children: .combine) para que o VoiceOver trate o grupo inteiro como um elemento — lê tudo de uma vez, mais natural para o usuário."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Agrupar elementos de uma célula:\nHStack {\n    Image(systemName: tarefa.icone)\n    VStack(alignment: .leading) {\n        Text(tarefa.titulo).font(.headline)\n        Text(tarefa.subtitulo).font(.caption)\n    }\n}\n.accessibilityElement(children: .combine)  // VoiceOver lê tudo junto\n// VoiceOver anuncia: \"[ícone], [título], [subtítulo], button\""
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Todos os botões com ícones têm accessibilityLabel descritivo.",
+            "Imagens decorativas têm accessibilityHidden(true).",
+            "Uso text styles semânticos (.headline, .body) em vez de tamanhos fixos.",
+            "Testei minha UI com o tamanho de fonte Acessibilidade XXL no simulador.",
+            "Usei .accessibilityElement(children: .combine) em células compostas."
+          ]
+        }
       ],
-      "commonMistakes": ["Ícone clicável sem label → VoiceOver diz só \"botão\"", "Hint enorme repetindo o label"],
-      "tradeoffs": "Muitos elementos focáveis cansam quem navega com gesto; agrupe quando for um só controle mental.",
-      "miniChallenge": "Card com avatar + nome: combine em um único elemento com label \"Foto de Fulano, Fulano\".",
+      "commonMistakes": [
+        "Usar font(.system(size:)) em vez de text styles semânticos — textos não escalam com Dynamic Type.",
+        "Não adicionar accessibilityLabel em botões com apenas ícones — VoiceOver anuncia o nome do SF Symbol.",
+        "Fixar altura de células — quebrará quando o texto dobrar de tamanho com Dynamic Type grande."
+      ],
+      "tradeoffs": "Acessibilidade perfeita requer iteração. Comece com as correções de maior impacto: labels em botões de ícone, text styles semânticos, e agrupamento de elementos em células. A melhoria incremental é mais sustentável que tentar cobrir tudo de uma vez.",
+      "miniChallenge": "Abra o Accessibility Inspector em um app existente. Encontre três problemas de label faltando. Corrija e verifique com VoiceOver no simulador. Documente o antes e depois.",
+      "notes": [
+        {
+          "id": "voiceover",
+          "text": "VoiceOver é o leitor de tela do iOS/macOS — narra em voz alta os elementos da interface para usuários com deficiência visual. Navega por elementos focáveis lendo label, role, value e hint."
+        },
+        {
+          "id": "dynamictype",
+          "text": "Dynamic Type é o sistema de tamanho de texto preferido do usuário no iOS. Text styles semânticos (.headline, .body) escalam automaticamente. Tamanhos fixos em pontos ignoram a preferência do usuário."
+        }
+      ],
       "glossary": [
-        { "term": "VoiceOver", "definition": "Leitor de tela integrado da Apple." },
-        { "term": "Trait", "definition": "Metadado de papel ou estado do elemento acessível." }
+        { "term": "VoiceOver", "definition": "Leitor de tela do iOS que narra a interface para usuários com deficiência visual." },
+        { "term": "accessibilityLabel", "definition": "Texto descritivo lido pelo VoiceOver para identificar um elemento." },
+        { "term": "Dynamic Type", "definition": "Sistema que escala o texto do app baseado na preferência de tamanho do usuário." }
       ],
       "sources": [
-        { "label": "Apple — Accessibility", "url": "https://developer.apple.com/documentation/accessibility" },
-        { "label": "Apple — SwiftUI accessibility modifiers", "url": "https://developer.apple.com/documentation/swiftui/view-accessibility" },
-        { "label": "Hacking with Swift — Accessibility", "url": "https://www.hackingwithswift.com/quick-start/swiftui/swiftui-accessibility-guide" }
-      ]
-    },
-    {
-      "id": "dynamic-type",
-      "title": "Dynamic Type e contraste",
-      "estimatedMinutes": 24,
-      "objective": "Você vai respeitar Dynamic Type (texto do sistema que cresce nas Ajustes) e contraste (diferença legível entre texto e fundo).",
-      "prerequisites": [],
-      "blocks": [
-        { "type": "text", "text": "Dynamic Type é o recurso do iOS que aumenta ou diminui fontes em todo o sistema. Prefira estilos semânticos (.body, .headline) em vez de tamanho fixo em pontos. Evite altura fixa que corte texto quando o usuário usa tamanho grande." },
-        { "type": "list", "ordered": false, "items": ["Teste no maior tamanho de texto (Ajustes → Tamanho do texto)", "Contraste: verifique WCAG (padrão de acessibilidade de cor) quando possível", "Se animar, ofereça caminho com reduce motion (menos movimento)"] },
-        { "type": "checklist", "items": ["Troque font(.system(size:)) fixo por estilo dinâmico onde der", "Revise telas com texto grande ativado"] }
-      ],
-      "commonMistakes": ["frame(height: 40) em Text multilinha", "Animação forte sem respeitar prefersReducedMotion"],
-      "tradeoffs": "Layout flexível dá mais trabalho de QA; aumenta quem consegue usar o app.",
-      "miniChallenge": "Ligue o maior Text Size e navegue 5 minutos — anote o que quebra.",
-      "glossary": [
-        { "term": "Dynamic Type", "definition": "Sistema de tipografia escalável do iOS conforme preferência do usuário." }
-      ],
-      "sources": [
-        { "label": "Apple — Human Interface Guidelines — Accessibility", "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility" },
-        { "label": "Apple — SwiftUI dynamicTypeSize", "url": "https://developer.apple.com/documentation/swiftui/environmentvalues/dynamictypesize" }
+        { "label": "Apple — Accessibility", "url": "https://developer.apple.com/accessibility/" },
+        { "label": "Hacking with Swift — Accessibility", "url": "https://www.hackingwithswift.com/books/ios-swiftui/accessibility-labels-and-hints" }
       ]
     }
   ]

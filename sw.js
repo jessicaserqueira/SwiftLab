@@ -1,5 +1,5 @@
 /* SwiftLab — Service Worker: cache-first + atualização em background (mesma ideia do CTFL-Lab). */
-const CACHE_NAME = 'swiftlab-v1.3';
+const CACHE_NAME = 'swiftlab-v1.7';
 const OFFLINE_FALLBACK = './index.html';
 
 const ASSETS_TO_CACHE = [

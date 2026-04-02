@@ -530,6 +530,107 @@ pre.logic-solution code.hljs {
   color: var(--accent);
 }
 
+.footnote-ref {
+  margin-left: 2px;
+  vertical-align: super;
+  font-size: 0.72em;
+}
+
+.footnote-ref a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.trace-block {
+  margin: 1.1rem 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card) 92%, transparent), var(--bg2));
+}
+
+.trace-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.trace-steps {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+}
+
+.trace-step {
+  --trace-index: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  animation: trace-enter 0.45s ease both;
+  animation-delay: calc(var(--trace-index) * 120ms);
+}
+
+.trace-step-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.trace-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.trace-step p {
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.trace-step p:last-child {
+  margin-bottom: 0;
+}
+
+.trace-output {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: #cbd5e1;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+
+@keyframes trace-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .sec-extra {
   margin-top: 2rem;
   padding-top: 1.5rem;
@@ -572,6 +673,32 @@ pre.logic-solution code.hljs {
   color: var(--muted);
   font-size: 0.875rem;
   margin-left: 0;
+}
+
+.footnotes {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: grid;
+  gap: 8px;
+}
+
+.footnotes li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.footnote-index {
+  color: var(--accent);
+  font-weight: 800;
 }
 
 .complete-row {

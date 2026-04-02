@@ -1,91 +1,190 @@
 {
   "id": "m15-design-system",
-  "title": "Design system, HIG e por baixo dos panos",
-  "level": "junior-plus",
-  "lastReviewed": "2025-03-22",
+  "title": "Design System e HIG",
+  "level": "pleno",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "design-system-hig",
-      "title": "O que é design system e o papel do HIG",
-      "estimatedMinutes": 28,
-      "objective": "Você vai entender design system (conjunto de regras, componentes e tokens que mantêm o app consistente), HIG (Human Interface Guidelines, guia oficial de UX da Apple) e por que isso vem antes de \"inventar estilo do zero\".",
-      "prerequisites": ["Layout (módulo anterior na trilha)"],
+      "id": "design-tokens-and-components",
+      "title": "Tokens, componentes e sistema de design em Swift",
+      "estimatedMinutes": 50,
+      "objective": "Você vai entender o que é um design system e por que ele existe, como implementar tokens de design (cores, tipografia, espaçamento) em Swift para garantir consistência, como criar componentes reutilizáveis que encapsulam decisões de design, e como evitar inconsistências visuais à medida que o app cresce.[^token][^designsystem]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "heading", "level": 3, "text": "Design system em uma frase" },
-        { "type": "text", "text": "Design system é o \"kit\" do produto: cores permitidas, tipos de botão, espaçamentos, ícones e padrões de texto. Em time, evita cada tela ficar com aparência diferente; sozinho, evita decisão cansativa a cada tela." },
-        { "type": "heading", "level": 3, "text": "HIG (guia da Apple)" },
-        { "type": "text", "text": "O HIG diz como usuários esperam se comportar apps nas plataformas Apple: navegação, feedback (resposta visual a uma ação), acessibilidade, gestos. Não é lei rígida em todo ponto, mas é a referência oficial quando você discute UX (experiência do usuário) com produto ou design." },
-        { "type": "callout", "variant": "tip", "title": "Tokens (fichas de design)", "body": "Token é um nome estável (ex.: \"cor de destaque\") que aponta para um valor concreto (hex, estilo SF Symbol). SwiftUI oferece cores e estilos semânticos (.primary, .secondary) que já reagem a tema claro/escuro — isso é próximo de token sem você montar tabela própria no início." },
-        { "type": "list", "ordered": true, "items": ["Leia o HIG do componente que vai usar (botão, lista, modal)", "Defina 2–3 regras suas: espaçamento base, canto de card, estilo de título", "Prefira componentes do sistema quando o HIG recomendar familiaridade"] },
-        { "type": "checklist", "items": ["Sei explicar design system com minhas palavras", "Abri o HIG pelo menos uma vez e localizei um tópico", "Entendo diferença entre copiar app bonito de dribbble e seguir padrão de plataforma"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O problema que design systems resolvem"
+        },
+        {
+          "type": "text",
+          "text": "Sem um sistema de design, um app com 50+ telas acumula inconsistências: um botão azul aqui, outro tom de azul ali, padding de 16 em uma tela e 20 em outra, tamanho de fonte diferente para o mesmo nível de hierarquia em telas distintas.\n\nEssas inconsistências aparecem de duas formas: diferentes desenvolvedores tomando decisões locais sem referência, e os mesmos desenvolvedores não lembrando exatamente o valor usado 3 meses atrás. Design system resolve isso com uma fonte única de verdade para decisões de design — implementada em código."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Tokens de design — a base do sistema"
+        },
+        {
+          "type": "text",
+          "text": "Tokens são os valores mais fundamentais do sistema: cores, tamanhos de fonte, valores de espaçamento, raios de borda. Em vez de usar `Color(hex: \"#007AFF\")` em 50 lugares, você usa `Design.Color.primaryAction`. Se a cor mudar, muda em um lugar apenas.\n\nBoas extensões de Swift tornam tokens ergonômicos — o autocomplete do Xcode sugere os tokens disponíveis, e o compilador avisa se você usar um token que não existe."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Tokens de cor — enumeração de valores semânticos:\nextension Color {\n    // Tokens semânticos — descrevem propósito, não aparência:\n    static let primaryAction = Color(\"PrimaryAction\")  // azul do sistema\n    static let destructiveAction = Color(\"DestructiveAction\")  // vermelho\n    static let primaryLabel = Color(\"PrimaryLabel\")  // texto principal\n    static let secondaryLabel = Color(\"SecondaryLabel\")  // texto secundário\n    static let groupedBackground = Color(\"GroupedBackground\")\n\n    // Esses tokens funcionam automaticamente em modo claro e escuro\n    // usando Assets.xcassets com variantes de appearance\n}\n\n// Tokens de tipografia:\nextension Font {\n    static let displayLarge = Font.system(.largeTitle, design: .rounded, weight: .bold)\n    static let headingMedium = Font.headline\n    static let bodyRegular = Font.body\n    static let captionSmall = Font.caption\n}\n\n// Tokens de espaçamento:\nstruct Spacing {\n    static let xxs: CGFloat = 4\n    static let xs: CGFloat = 8\n    static let sm: CGFloat = 12\n    static let md: CGFloat = 16\n    static let lg: CGFloat = 24\n    static let xl: CGFloat = 32\n    static let xxl: CGFloat = 48\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Componentes — encapsulando decisões de design"
+        },
+        {
+          "type": "text",
+          "text": "Com tokens definidos, você cria componentes que encapsulam as decisões de como combinar esses tokens. Um componente `PrimaryButton` sempre usa `Color.primaryAction`, sempre tem o padding correto, sempre usa a fonte correta. Desenvolvedores usam `PrimaryButton(\"Salvar\") { salvar() }` — não precisam lembrar as especificações.\n\nComponentes também garantem comportamentos consistentes: o estado `isLoading` de um botão é sempre implementado do mesmo jeito, o feedback de toque é consistente, o estado desabilitado tem aparência padronizada."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Componente PrimaryButton — encapsula design e comportamento:\nstruct PrimaryButton: View {\n    let titulo: String\n    var isLoading: Bool = false\n    var isDestructive: Bool = false\n    let acao: () -> Void\n\n    private var corFundo: Color {\n        isDestructive ? .destructiveAction : .primaryAction\n    }\n\n    var body: some View {\n        Button(acao) {\n            Group {\n                if isLoading {\n                    ProgressView().tint(.white)\n                } else {\n                    Text(titulo)\n                        .font(.bodyRegular)\n                        .fontWeight(.semibold)\n                }\n            }\n            .frame(maxWidth: .infinity)\n        }\n        .padding(.vertical, Spacing.md)\n        .padding(.horizontal, Spacing.lg)\n        .background(corFundo)\n        .foregroundStyle(.white)\n        .clipShape(RoundedRectangle(cornerRadius: 12))\n        .disabled(isLoading)\n    }\n}\n\n// Uso consistente em qualquer tela:\nPrimaryButton(titulo: \"Salvar\") { salvar() }\nPrimaryButton(titulo: \"Deletar conta\", isDestructive: true) { deletar() }\nPrimaryButton(titulo: \"Enviando...\", isLoading: true) { }"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "SF Symbols — ícones consistentes com o sistema"
+        },
+        {
+          "type": "text",
+          "text": "SF Symbols tem mais de 5.000 ícones projetados especificamente para iOS, macOS e outras plataformas Apple. Eles escalam com Dynamic Type, respondem ao modo escuro, suportam variantes (fill, circle, slash), e têm suporte a multicolor e hierarquia de cores.\n\nSempre prefira SF Symbols a ícones customizados quando o símbolo comunica claramente a ação. Ícones familiares reduzem a carga cognitiva do usuário — estrela para favoritar, lixeira para deletar, seta para compartilhar são universalmente entendidos."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// SF Symbols com configuração consistente:\nImage(systemName: \"star.fill\")\n    .symbolRenderingMode(.hierarchical)  // modo de renderização\n    .foregroundStyle(.primaryAction)\n    .font(.title2)\n\n// Variantes com environment:\nImage(systemName: \"person\")\n    .symbolVariant(.circle.fill)  // person.circle.fill\n\n// Animação nativa (iOS 17+):\nImage(systemName: botaoPressionado ? \"heart.fill\" : \"heart\")\n    .contentTransition(.symbolEffect(.replace))\n    .foregroundStyle(botaoPressionado ? Color.red : .secondary)\n    .onTapGesture { botaoPressionado.toggle() }\n\n// Icone com badge (iOS 17+):\nImage(systemName: \"bell\")\n    .overlay(alignment: .topTrailing) {\n        Image(systemName: \"circle.fill\")\n            .font(.system(size: 8))\n            .foregroundStyle(.red)\n            .symbolVariant(.fill)\n    }"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "App SF Symbols",
+          "body": "Instale o app gratuito 'SF Symbols' da Apple (disponível em developer.apple.com) para navegar, pesquisar e exportar todos os símbolos disponíveis. Você pode filtrar por categoria, ver variantes e até exportar como SVG para usar com designers."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Defino cores semânticas como extensões de Color — não uso hex inline no código.",
+            "Uso tokens de espaçamento consistentes (Spacing.md) em vez de números mágicos.",
+            "Tenho componentes reutilizáveis para os padrões de UI mais usados no app.",
+            "Uso SF Symbols com .symbolRenderingMode e configuração consistente."
+          ]
+        }
       ],
-      "commonMistakes": ["Ignorar HIG e surpreender usuário com gesto estranho", "Criar 40 cores nomeadas sem necessidade no MVP (produto mínimo)"],
-      "tradeoffs": "Sistema rígido acelera time grande; sozinho, comece mínimo e cresça quando repetir o mesmo ajuste três vezes.",
-      "miniChallenge": "Anote num papel: cor primária, estilo de botão principal e espaçamento entre seções — use só isso em uma tela nova.",
+      "commonMistakes": [
+        "Usar Color(hex: \"#007AFF\") inline em 50 lugares — qualquer mudança de cor requer 50 edições.",
+        "Criar componentes genéricos demais que ninguém usa — componentes devem resolver problemas reais do app.",
+        "Não ter variantes de cor para modo escuro — app quebra visualmente no modo escuro."
+      ],
+      "tradeoffs": "Design system tem custo de criação e manutenção. Para projetos pequenos de uma pessoa, pode ser overhead. Para equipes de 3+, o custo de inconsistências supera o custo de criar e manter o sistema.",
+      "miniChallenge": "Defina 5 cores semânticas para seu app usando extensões de Color com variantes de modo escuro. Crie um componente PrimaryButton e um SecondaryButton. Substitua todos os buttons e cores hardcoded em uma tela por esses componentes.",
+      "notes": [
+        {
+          "id": "token",
+          "text": "Tokens de design são os valores fundamentais de um design system — cores, fontes, espaçamentos — representados como constantes nomeadas semanticamente. 'primaryAction' é um token; '#007AFF' é um valor raw."
+        },
+        {
+          "id": "designsystem",
+          "text": "Design system é a coleção de padrões, componentes e tokens que definem como um produto visual é construído. Garante consistência entre plataformas, equipes e ao longo do tempo."
+        }
+      ],
       "glossary": [
-        { "term": "Design system", "definition": "Conjunto coordenado de regras visuais e de componentes reutilizáveis." },
-        { "term": "Token", "definition": "Nome simbólico para um valor de design (cor, raio, sombra)." }
-      ],
-      "sources": [
-        { "label": "Apple — Human Interface Guidelines", "url": "https://developer.apple.com/design/human-interface-guidelines" },
-        { "label": "Apple — SwiftUI (design e layout)", "url": "https://developer.apple.com/documentation/swiftui" }
-      ]
-    },
-    {
-      "id": "visual-language",
-      "title": "Linguagem visual: SF Symbols, tipo e cor",
-      "estimatedMinutes": 30,
-      "objective": "Você vai usar SF Symbols (biblioteca de ícones da Apple), tipografia semântica (estilos que respeitam Dynamic Type) e cores que se adaptam ao tema — alinhado ao que o sistema já oferece.",
-      "prerequisites": ["Design system e HIG (seção anterior)"],
-      "blocks": [
-        { "type": "text", "text": "SF Symbols são ícones vetoriais que combinam com o texto do sistema e ganham variantes (espessura, modo multicolor). Use Image(systemName:) (API SwiftUI) com o nome do símbolo — consulte o app SF Symbols no Mac para licenças e nomes." },
-        { "type": "code", "language": "swift", "code": "Label(\"Adicionar\", systemImage: \"plus.circle.fill\")\n    .font(.headline)\n    .foregroundStyle(.tint)" },
-        { "type": "heading", "level": 3, "text": "Cor e aparência" },
-        { "type": "text", "text": "foregroundStyle (.primary, .secondary, .tint) liga sua UI ao tema (claro/escuro) e ao accentColor do app. Evite hardcode de cinza \"bonito\" que some no modo escuro sem você perceber. Materials (Material.thin, etc.) são camadas com desfoque — úteis para barras flutuantes; use com parcimônio e leia o HIG sobre legibilidade." },
-        { "type": "callout", "variant": "warn", "title": "Acessibilidade é parte do design", "body": "Contraste (diferença legível entre texto e fundo) e tamanho de toque não são extras — entram no mesmo pacote que cor e ícone." },
-        { "type": "checklist", "items": ["Sei abrir o catálogo SF Symbols e copiar um nome válido", "Uso .body / .headline em vez de font(size:) fixo quando possível", "Testo tela em modo claro e escuro"] }
-      ],
-      "commonMistakes": ["Símbolo com nome errado que compila em um OS e muda em outro sem aviso claro", "Ícone colorido que perde significado só em escala de cinza para daltonismo"],
-      "tradeoffs": "Símbolos do sistema aceleram; marca muito específica pode precisar de assets próprios no Asset Catalog (pasta de imagens do Xcode).",
-      "miniChallenge": "Substitua três emojis ou imagens soltas por SF Symbols com Label.",
-      "glossary": [
-        { "term": "SF Symbols", "definition": "Biblioteca de ícones vetoriais integrada ao ecossistema Apple." },
-        { "term": "Asset Catalog", "definition": "Repositório no Xcode para imagens, cores nomeadas e variantes por aparência." }
+        { "term": "Token de design", "definition": "Valor fundamental (cor, fonte, espaçamento) com nome semântico — a base de um design system." },
+        { "term": "SF Symbols", "definition": "Biblioteca de ícones da Apple integrada ao sistema, com suporte a Dynamic Type e modo escuro." },
+        { "term": "Design system", "definition": "Coleção de tokens, componentes e padrões que garante consistência visual no app." }
       ],
       "sources": [
         { "label": "Apple — SF Symbols", "url": "https://developer.apple.com/sf-symbols/" },
-        { "label": "Apple — HIG — Color", "url": "https://developer.apple.com/design/human-interface-guidelines/color" },
-        { "label": "Apple — SwiftUI — foregroundStyle", "url": "https://developer.apple.com/documentation/swiftui/view/foregroundstyle(_:)" }
+        { "label": "Apple — Human Interface Guidelines", "url": "https://developer.apple.com/design/human-interface-guidelines/" }
       ]
     },
     {
-      "id": "swiftui-como-funciona",
-      "title": "Por baixo dos panos: o que o SwiftUI faz (visão de alto nível)",
-      "estimatedMinutes": 32,
-      "objective": "Você vai entender, sem mitologia, o que significa o SwiftUI recalcular body (sua descrição de tela), por que identidade (id estável) importa, e como a UI pode conviver com UIKit (framework clássico) — sempre com base na documentação pública da Apple.",
-      "prerequisites": ["Views e composição", "State e data flow (recomendado)"],
+      "id": "hig-principles",
+      "title": "Human Interface Guidelines — princípios que guiam decisões de UX",
+      "estimatedMinutes": 40,
+      "objective": "Você vai entender os princípios centrais das HIG (Human Interface Guidelines) da Apple, por que seguir essas diretrizes resulta em apps mais intuitivos, como as plataformas Apple têm convenções diferentes, e como tomar decisões de UX embasadas em vez de baseadas em preferência pessoal.[^hig]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "SwiftUI é declarativo: você descreve a interface em função do estado atual. Quando o estado muda, o framework compara a nova descrição com a anterior e atualiza só o necessário na tela. A Apple documenta ideias como attribute graph (grafo de atributos) em materiais de alto nível — pense nisso como \"mapa de dependências\" entre dados e pedaços de UI, não precisa decorar implementação interna." },
-        { "type": "heading", "level": 3, "text": "Identidade e ForEach" },
-        { "type": "text", "text": "Cada View na árvore tem identidade estável quando possível. ForEach precisa saber qual item é qual — por isso Identifiable (protocolo com id) ou chave explícita. Id que muda toda hora força recriação e pode causar flicker (piscar) ou perda de foco." },
-        { "type": "heading", "level": 3, "text": "UIKit na mesma app" },
-        { "type": "text", "text": "SwiftUI roda em cima das mesmas camadas gráficas da plataforma. Para embutir SwiftUI em tela UIKit usa-se UIHostingController (controlador que hospeda uma hierarquia SwiftUI). O inverso usa UIViewRepresentable (embrulhar UIView em SwiftUI). Esses pontos de integração são oficiais; são a \"ponte\" entre os dois mundos." },
-        { "type": "callout", "variant": "info", "title": "Renderização (bem resumido)", "body": "O sistema operacional compõe a tela com motor gráfico (camadas, composição). Você não programa Metal (API de baixo nível da GPU) no dia a dia SwiftUI; o que importa é evitar trabalho desnecessário em body e medir com Instruments quando houver problema." },
-        { "type": "checklist", "items": ["Explico em uma frase por que body pode rodar muitas vezes", "Sei que ForEach + id estável evita surpresas", "Sei nomear UIHostingController e UIViewRepresentable como pontes UIKit"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Por que as HIG existem"
+        },
+        {
+          "type": "text",
+          "text": "A Apple mantém documentação extensa sobre como apps devem se comportar — não por vaidade, mas por uma razão prática: usuários aprendem padrões. Um usuário que aprende que deslizar para a esquerda deleta itens em um app espera o mesmo comportamento em outro. Quebrar esse padrão cria confusão e erros desnecessários.\n\nAs HIG cobrem desde princípios filosóficos (clareza, deferência, profundidade) até especificações concretas (tamanho mínimo de alvo de toque: 44×44 pontos, como usar a barra de navegação vs a tab bar, quando usar sheets vs push navigation). Conhecer esses princípios te diferencia de desenvolvedores que tomam decisões de UX por instinto."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Os princípios centrais: Clareza, Deferência, Profundidade"
+        },
+        {
+          "type": "text",
+          "text": "**Clareza** — texto é legível em todos os tamanhos, ícones são precisos e claros, ornamentos são adequados e sutis, e o foco está na funcionalidade. O conteúdo é o herói da interface — a UI serve o conteúdo, não o contrário.\n\n**Deferência** — UI e movimento ajudam o usuário a entender e interagir com o conteúdo sem competir com ele. Translucência e blur dão contexto sem esconder o conteúdo subjacente.\n\n**Profundidade** — camadas visuais e movimento realistas transmitem hierarquia, dão vitalidade e facilitam a compreensão. Transições definem relacionamentos espaciais entre telas."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Decisões concretas baseadas nas HIG"
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// REGRA HIG: Alvo mínimo de toque = 44x44 pontos\n// Ícones pequenos precisam de área de toque maior que o visual:\nButton {\n    acao()\n} label: {\n    Image(systemName: \"ellipsis\")\n        .font(.body)\n        .frame(width: 44, height: 44)  // área de toque mínima\n}\n\n// REGRA HIG: Usar materiais do sistema para backgrounds de barra:\n.toolbarBackground(.visible, for: .navigationBar)\n.toolbarBackground(Material.bar, for: .navigationBar)\n\n// REGRA HIG: NavigationBar para hierarquia linear;\n// TabBar para navegação entre seções irmãs\n// (não use TabBar dentro de NavigationStack)\ntabBarItem: {\n    Label(\"Início\", systemImage: \"house\")\n}\n\n// REGRA HIG: Destructive actions em vermelho, com confirmação:\nButton(\"Deletar conta\", role: .destructive) {\n    mostrarConfirmacao = true\n}\n.confirmationDialog(\"Tem certeza?\", isPresented: $mostrarConfirmacao) {\n    Button(\"Deletar permanentemente\", role: .destructive) { deletar() }\n    Button(\"Cancelar\", role: .cancel) { }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Diferenças entre plataformas"
+        },
+        {
+          "type": "text",
+          "text": "SwiftUI permite escrever código que roda em iOS, iPadOS, macOS, watchOS e tvOS. Mas as HIG de cada plataforma são diferentes — o que funciona no iPhone pode ser errado no Mac.\n\nNo **iPhone**: interface de toque, rolagem, gestos, telas menores. Ações via swipe e menus contextuais.\n\nNo **iPad**: suporte a mouse e teclado, telas maiores com suporte a multitasking (slide over, split view), mais conteúdo visível ao mesmo tempo.\n\nNo **Mac**: menu bar, atalhos de teclado obrigatórios, clique duplo para abrir, janelas redimensionáveis.\n\nSwiftUI ajuda com adaptatibilidade automática, mas você precisa entender as diferenças para tomar boas decisões quando adaptar layouts para cada plataforma."
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "HIG como argumento técnico",
+          "body": "Quando há debate sobre uma decisão de UX numa equipe, as HIG são uma referência objetiva. Em vez de 'eu prefiro assim', você pode dizer 'as HIG recomendam X nesse caso por Y razão'. Isso despe o debate de preferências pessoais e ancora na experiência da plataforma."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Todos os alvos de toque têm pelo menos 44x44 pontos de área.",
+            "Uso NavigationBar para hierarquia e TabBar para seções paralelas — não misturo.",
+            "Ações destrutivas têm confirmação (alert ou confirmationDialog) antes de executar.",
+            "Conheço as diferenças básicas de HIG entre iPhone, iPad e Mac."
+          ]
+        }
       ],
-      "commonMistakes": ["Achar que body roda uma vez como viewDidLoad", "Tratar documentação de engine interna como API estável — prefira páginas oficiais SwiftUI/UIKit"],
-      "tradeoffs": "Abstração do SwiftUI troca controle fino por velocidade; quando precisar de pixel-perfect legado, a ponte UIKit existe por motivo.",
-      "miniChallenge": "Leia a página Apple \"Improving the performance of your SwiftUI app\" (ou \"Diagnosing performance issues\") e marque uma dica que você ainda não aplicava.",
+      "commonMistakes": [
+        "Ícones pequenos (16x16) sem área de toque adequada — usuários tocam na área errada.",
+        "Usar navegação push para seções paralelas que deveriam ser tabs — cria hierarquia falsa.",
+        "Não testar no iPad quando o app tem suporte a iPadOS — layouts de iPhone ficam esticados."
+      ],
+      "tradeoffs": "Seguir as HIG cria consistência com o sistema mas pode limitar diferenciação de design. Apps de marcas fortes (Spotify, Instagram) quebram algumas HIG intencionalmente para identidade visual. Para a maioria dos apps utilitários, seguir as HIG é a escolha certa.",
+      "miniChallenge": "Abra as HIG online (developer.apple.com/design/human-interface-guidelines). Escolha 3 seções relevantes ao app que você está construindo. Identifique 2 coisas que seu app faz diferente das recomendações e decida se são quebras intencionais ou que precisam ser corrigidas.",
+      "notes": [
+        {
+          "id": "hig",
+          "text": "HIG (Human Interface Guidelines) é a documentação oficial da Apple sobre como apps devem se comportar em cada plataforma. Cobre princípios filosóficos, componentes específicos e especificações de interação."
+        }
+      ],
       "glossary": [
-        { "term": "Attribute graph", "definition": "Conceito de alto nível: estrutura que relaciona dados e views; detalhes internos não são API pública." },
-        { "term": "UIHostingController", "definition": "UIViewController que exibe conteúdo SwiftUI dentro de fluxo UIKit." }
+        { "term": "HIG", "definition": "Human Interface Guidelines — documentação da Apple sobre padrões de UX para cada plataforma." },
+        { "term": "Clareza", "definition": "Princípio HIG: UI serve o conteúdo, foco na funcionalidade, texto legível em todos os tamanhos." },
+        { "term": "Deferência", "definition": "Princípio HIG: interface não compete com o conteúdo — serve e contextualizao." }
       ],
       "sources": [
-        { "label": "Apple — Managing model data in your app", "url": "https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app" },
-        { "label": "Apple — UIHostingController", "url": "https://developer.apple.com/documentation/swiftui/uihostingcontroller" },
-        { "label": "Apple — UIViewRepresentable", "url": "https://developer.apple.com/documentation/swiftui/uiviewrepresentable" },
-        { "label": "Apple — Diagnosing performance issues", "url": "https://developer.apple.com/documentation/xcode/diagnosing-performance-issues" },
-        { "label": "Hacking with Swift — UIKit interop", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-use-uikit-in-swiftui" }
+        { "label": "Apple — Human Interface Guidelines", "url": "https://developer.apple.com/design/human-interface-guidelines/" }
       ]
     }
   ]

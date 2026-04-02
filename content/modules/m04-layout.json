@@ -1,54 +1,240 @@
 {
   "id": "m04-layout",
-  "title": "Layout",
-  "level": "junior",
-  "lastReviewed": "2025-03-22",
+  "title": "Layout e Posicionamento",
+  "level": "junior-plus",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "stacks-grids",
-      "title": "Stacks, Spacer e Lazy containers",
-      "estimatedMinutes": 26,
-      "objective": "Você vai montar layout (posição dos elementos) com HStack (linha horizontal), VStack (coluna vertical), ZStack (empilhado no fundo/frente), Spacer (espaço flexível) e containers lazy (que só criam o que aparece na tela).",
+      "id": "stacks-and-spacer",
+      "title": "Stacks, Spacer e o sistema de layout SwiftUI",
+      "estimatedMinutes": 45,
+      "objective": "Você vai entender como o SwiftUI negocia tamanho entre Views pai e filhas, como HStack, VStack, ZStack posicionam seus filhos, e por que Spacer e frame se comportam de formas que parecem contraintuitivas quando você não sabe como o layout funciona internamente.[^layout-proposal][^spacer]",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "HStack organiza filhos na horizontal; VStack na vertical; ZStack empilha no eixo Z (frente e fundo). Spacer é uma View que \"empurra\" e distribui espaço livre entre os vizinhos." },
-        { "type": "code", "language": "swift", "code": "VStack(alignment: .leading, spacing: 8) {\n    Text(\"Título\")\n        .font(.headline)\n    Text(\"Subtítulo\")\n        .foregroundStyle(.secondary)\n    Spacer(minLength: 0)\n}" },
-        { "type": "heading", "level": 3, "text": "LazyVStack / LazyHStack" },
-        { "type": "text", "text": "LazyVStack e LazyHStack criam cada filho sob demanda quando ele entra na área visível — útil dentro de ScrollView (área rolável) com muitos itens. List (componente de lista da Apple) já faz algo parecido com virtualização em vários casos." },
-        { "type": "checklist", "items": ["Escolho H vs V conforme o eixo principal do design", "Uso Spacer(minLength: 0) quando quero permitir encolher a zero", "Penso em Lazy em listas muito longas roláveis"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Como o SwiftUI negocia tamanho — proposta e resposta"
+        },
+        {
+          "type": "text",
+          "text": "O sistema de layout do SwiftUI é uma negociação entre pai e filha:\n\n1. O **pai propõe** um tamanho disponível para a filha (\"você tem até 300 × 100 pontos\")\n2. A **filha responde** com o tamanho que ela precisa (\"preciso de 120 × 44 pontos\")\n3. O **pai posiciona** a filha nesse tamanho respondido\n\nIsso é fundamentalmente diferente de UIKit onde você define frames absolutos. Em SwiftUI, a View filha tem a palavra final sobre seu próprio tamanho — dentro dos limites propostos pelo pai. Entender esse fluxo explica por que `.frame()`, `Spacer` e contêineres se comportam como se comportam."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Text responde com o tamanho exato que precisa para o texto:\nText(\"Olá\")  // responde: 28 × 20 pts\n\n// Color é \"gulosa\" — quer todo o espaço disponível:\nColor.blue  // responde: todo o tamanho proposto\n\n// Spacer também é guloso dentro de Stacks:\nHStack {\n    Text(\"Esquerda\")\n    Spacer()  // expande para preencher o restante\n    Text(\"Direita\")\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "HStack, VStack — alinhamento e spacing"
+        },
+        {
+          "type": "text",
+          "text": "HStack organiza filhas na horizontal, VStack na vertical. Ambos têm dois parâmetros configuráveis:\n\n- `alignment` — como as filhas se alinham no eixo cruzado (HStack alinha verticalmente, VStack alinha horizontalmente)\n- `spacing` — distância entre filhas (por padrão usa o espaçamento padrão do sistema)\n\nO eixo principal dos Stacks distribui o espaço entre as filhas baseado no que cada uma pediu. Filhas de tamanho fixo recebem o que pediram; o restante vai para as flexíveis."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// HStack com alinhamento e spacing customizado:\nHStack(alignment: .top, spacing: 16) {\n    Image(systemName: \"bell\")\n    VStack(alignment: .leading, spacing: 4) {\n        Text(\"Notificação\").font(.headline)\n        Text(\"Detalhes aqui\").font(.caption)\n    }\n    Spacer()\n}\n\n// Alinhamentos comuns de VStack:\nVStack(alignment: .leading) { ... }  // alinha filhas à esquerda\nVStack(alignment: .center) { ... }  // padrão\nVStack(alignment: .trailing) { ... } // alinha à direita\n\n// spacing: 0 para remover espaço entre elementos:\nVStack(spacing: 0) {\n    DivisorTopo()\n    ConteudoPrincipal()\n    DivisorBase()\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "ZStack — empilhando layers"
+        },
+        {
+          "type": "text",
+          "text": "ZStack posiciona seus filhos no mesmo ponto, uns sobre os outros no eixo Z (profundidade). O primeiro filho fica na base, o último no topo. É o container certo para overlays, badges, backgrounds customizados e composições de camadas.\n\nO ZStack tem o tamanho do maior filho. Você pode usar `alignment` para controlar onde os filhos menores ficam dentro do espaço do maior."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Badge sobre ícone:\nZStack(alignment: .topTrailing) {\n    Image(systemName: \"bell\")\n        .font(.title)\n\n    // Badge no canto superior direito:\n    Circle()\n        .fill(.red)\n        .frame(width: 12, height: 12)\n        .overlay {\n            Text(\"3\")\n                .font(.system(size: 8))\n                .foregroundStyle(.white)\n        }\n}\n\n// Overlay de loading sobre conteúdo:\nZStack {\n    ConteudoPrincipal()\n    if carregando {\n        Color.black.opacity(0.4)\n        ProgressView()\n            .tint(.white)\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Spacer — expandindo o espaço entre elementos"
+        },
+        {
+          "type": "text",
+          "text": "Spacer() pede o máximo de espaço disponível no eixo principal do Stack onde está. Isso empurra outros elementos para as extremidades. Em VStack, Spacer empurra na vertical; em HStack, na horizontal.\n\nVocê pode limitar o quanto o Spacer pode expandir com `.frame(minLength:)`. Também pode colocar dois Spacers ao redor de um elemento para centralizá-lo com espaço igualmente distribuído."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Empurrar botão para a base:\nVStack {\n    ConteudoPrincipal()\n    Spacer()  // empurra o botão para baixo\n    Button(\"Confirmar\") { confirmar() }\n        .buttonStyle(.borderedProminent)\n}\n\n// Centralizar com espaço igual nos dois lados:\nHStack {\n    Spacer()\n    Text(\"Centralizado\")\n    Spacer()\n}\n\n// Spacer com mínimo:\nHStack {\n    Text(\"Usuário\")\n    Spacer(minLength: 20)  // pelo menos 20 pts de separação\n    Text(\"Status\")\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "frame — definindo tamanho explícito"
+        },
+        {
+          "type": "text",
+          "text": "O modificador `.frame()` não define o tamanho da View — ele cria uma View contenedora com o tamanho especificado que então propõe esse espaço para a filha. A View filha ainda pode responder com um tamanho menor se quiser.\n\nQuando você quer que a View ocupe toda a largura disponível, use `.frame(maxWidth: .infinity)`. Isso faz a View proposta pedir a largura máxima do pai — que geralmente é a tela ou o contêiner."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Tamanho fixo:\nImage(\"avatar\")\n    .frame(width: 60, height: 60)\n\n// Largura máxima — ocupa toda a largura disponível:\nButton(\"Salvar\") { salvar() }\n    .frame(maxWidth: .infinity)\n    .padding()\n    .background(.blue)\n\n// Limites mínimos e máximos:\nText(descricao)\n    .frame(minHeight: 40, maxHeight: 200)  // cresce mas tem limites\n\n// Alinhamento dentro do frame:\nText(\"Início\")\n    .frame(maxWidth: .infinity, alignment: .leading)  // alinha o texto à esquerda"
+        },
+        {
+          "type": "trace",
+          "title": "Como o SwiftUI calcula um layout de HStack",
+          "steps": [
+            {
+              "label": "HStack recebe proposta do pai",
+              "detail": "Pai diz: você tem 390 pts de largura.",
+              "output": "Proposta recebida: width=390"
+            },
+            {
+              "label": "HStack mede filhas de tamanho fixo",
+              "detail": "Image(systemName:) responde com 24 pts.",
+              "output": "Image: 24 pts reservados"
+            },
+            {
+              "label": "HStack distribui o restante",
+              "detail": "390 - 24 - spacing = 358 pts para Text e Spacer.",
+              "output": "Text recebe o que precisa, Spacer pega o resto"
+            },
+            {
+              "label": "HStack posiciona cada filha",
+              "detail": "Image na esquerda, Text depois, Spacer expande, próximo elemento no fim.",
+              "output": "Layout finalizado: 390 pts preenchidos"
+            }
+          ]
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Entendo que SwiftUI negocia tamanho (proposta do pai → resposta da filha) em vez de usar frames absolutos.",
+            "Sei usar HStack, VStack e ZStack com os alinhamentos corretos.",
+            "Uso Spacer() para empurrar elementos para extremidades ou criar espaço flexível.",
+            "Uso .frame(maxWidth: .infinity) para Views que precisam ocupar toda a largura disponível."
+          ]
+        }
       ],
-      "commonMistakes": ["Spacer onde o pai não definiu tamanho e o layout vira \"infinito\" (SwiftUI reclama ou trava)", "Confundir alignment do stack com alinhamento de texto dentro de Text"],
-      "tradeoffs": "Layout declarativo é rápido de testar; casos difíceis podem pedir GeometryReader (lê tamanho do pai) — use na próxima seção só se precisar.",
-      "miniChallenge": "Card de perfil: avatar à esquerda, coluna de textos à direita, com HStack + VStack.",
+      "commonMistakes": [
+        "Usar .frame(width:) em Text esperando que o texto centralize — precisa também de .multilineTextAlignment().",
+        "Empilhar VStacks e HStacks sem pensar na negociação — às vezes um Spacer ou .frame(maxWidth:) resolve mais elegantemente.",
+        "Usar ZStack quando .overlay() ou .background() seriam mais semânticos e performáticos."
+      ],
+      "tradeoffs": "O sistema de negociação de layout é mais abstrato que UIKit AutoLayout, mas elimina conflitos de constraint. Em troca, exige entender que a View filha tem a palavra final sobre seu tamanho.",
+      "miniChallenge": "Crie um card com imagem à esquerda, título e subtítulo no centro, e ícone à direita. Use HStack, VStack e Spacer. O card deve ocupar toda a largura disponível.",
+      "notes": [
+        {
+          "id": "layout-proposal",
+          "text": "O sistema de layout do SwiftUI usa o padrão 'propose-respond': o pai propõe dimensões e a filha responde com o que precisa. A filha tem a palavra final sobre seu tamanho dentro dos limites propostos."
+        },
+        {
+          "id": "spacer",
+          "text": "Spacer é uma View que pede o máximo de espaço disponível no eixo principal. Se não houver espaço disponível (Stack com tamanho fixo já preenchido), o Spacer colapsa para o minLength."
+        }
+      ],
       "glossary": [
-        { "term": "Lazy stack", "definition": "Stack que constrói subviews conforme elas entram na área visível." }
+        { "term": "HStack", "definition": "Container que organiza Views horizontalmente." },
+        { "term": "VStack", "definition": "Container que organiza Views verticalmente." },
+        { "term": "ZStack", "definition": "Container que empilha Views no eixo de profundidade." },
+        { "term": "Spacer", "definition": "View flexível que expande para preencher espaço disponível no Stack." }
       ],
       "sources": [
-        { "label": "Apple — VStack", "url": "https://developer.apple.com/documentation/swiftui/vstack" },
-        { "label": "Apple — LazyVStack", "url": "https://developer.apple.com/documentation/swiftui/lazyvstack" }
+        { "label": "Apple — Layout", "url": "https://developer.apple.com/documentation/swiftui/layout-fundamentals" },
+        { "label": "Hacking with Swift — How layout works in SwiftUI", "url": "https://www.hackingwithswift.com/books/ios-swiftui/how-layout-works-in-swiftui" }
       ]
     },
     {
-      "id": "sizing-and-limits",
-      "title": "Tamanho, frame e limites",
-      "estimatedMinutes": 24,
-      "objective": "Você vai usar .frame (modificador de tamanho e alinhamento), min/max, layoutPriority (quem ganha espaço em disputa) e entender proposta de tamanho (o pai oferece espaço, o filho responde).",
-      "prerequisites": ["Stacks (seção anterior)"],
+      "id": "adaptive-layout",
+      "title": "Layout adaptativo com GeometryReader e LazyStacks",
+      "estimatedMinutes": 40,
+      "objective": "Você vai aprender a criar layouts que se adaptam ao tamanho disponível com GeometryReader, usar LazyVStack e LazyHStack para listas longas com boa performance, e entender ScrollView combinado com componentes Lazy.[^geometryreader][^lazy]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "SwiftUI negocia layout: a view pai propõe um retângulo; a filha diz quanto quer ocupar. .frame(idealWidth:min:max:) e variantes ajustam isso e o alinhamento dentro do espaço extra." },
-        { "type": "code", "language": "swift", "code": "Color.orange\n    .frame(maxWidth: .infinity, maxHeight: 200)\n    .clipShape(RoundedRectangle(cornerRadius: 12))" },
-        { "type": "callout", "variant": "tip", "title": "GeometryReader", "body": "GeometryReader (View que expõe o tamanho que o pai oferece) é poderoso mas pode complicar composição; tente stacks e frame primeiro." },
-        { "type": "checklist", "items": ["Testo com Dynamic Type (texto grande nas Ajustes)", "Uso maxWidth: .infinity quando quero largura total útil"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "GeometryReader — quando você precisa do tamanho real"
+        },
+        {
+          "type": "text",
+          "text": "Normalmente você não precisa saber o tamanho exato do espaço disponível — o sistema de layout cuida disso. Mas às vezes você precisa: uma View proporcional à tela, um gráfico que ocupa 60% da altura disponível, um cálculo de posição baseado em tamanho real.\n\nGeometryReader fornece um `proxy` com `size` (largura e altura disponíveis) e `safeAreaInsets`. Cuidado: GeometryReader é guloso — ele ocupa todo o espaço proposto pelo pai, similar a Color. Use dentro de `.overlay()` ou `.background()` para não afetar o layout principal."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// GeometryReader fora de overlay — ocupa tudo e afeta o layout:\nGeometryReader { proxy in\n    Text(\"Largura: \\(proxy.size.width)\")\n}\n\n// Melhor — GeometryReader dentro de overlay para não afetar o layout:\nstruct BarraDeProgressoView: View {\n    let progresso: Double  // 0.0 a 1.0\n\n    var body: some View {\n        Rectangle()\n            .fill(.secondary.opacity(0.2))\n            .frame(height: 8)\n            .overlay(alignment: .leading) {\n                GeometryReader { proxy in\n                    Rectangle()\n                        .fill(.blue)\n                        .frame(width: proxy.size.width * progresso)\n                }\n            }\n            .clipShape(Capsule())\n    }\n}\n\n// Leitura do tamanho com preference key (sem afetar layout):\nstruct MedidorDeAltura: View {\n    var body: some View {\n        Color.clear\n            .frame(height: 0)\n            .onGeometryChange(for: CGFloat.self) { proxy in\n                proxy.size.height  // iOS 17+\n            } action: { novaAltura in\n                print(\"Altura disponível: \\(novaAltura)\")\n            }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "LazyVStack e LazyHStack — carregamento sob demanda"
+        },
+        {
+          "type": "text",
+          "text": "VStack e HStack criam TODAS as Views filhas de uma vez, mesmo as que não estão visíveis. Com 20 itens isso não importa. Com 1.000 itens, criar tudo de uma vez usa memória desnecessária e torna o scroll lento.\n\nLazyVStack e LazyHStack criam Views sob demanda — apenas as que estão próximas da área visível. Quando o usuário faz scroll, Views novas são criadas e as que saíram da tela são liberadas.\n\nLazy não tem scroll próprio — precisa ficar dentro de um ScrollView. Essa separação é intencional: você pode ter múltiplas seções Lazy dentro do mesmo ScrollView."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// VStack normal — cria todos os 1000 itens de uma vez:\nScrollView {\n    VStack {  // evite com muitos itens\n        ForEach(0..<1000) { i in\n            ItemView(numero: i)\n        }\n    }\n}\n\n// LazyVStack — cria apenas o visível:\nScrollView {\n    LazyVStack(spacing: 8) {  // use com listas longas\n        ForEach(itens) { item in\n            ItemView(item: item)\n        }\n    }\n    .padding()\n}\n\n// Seções com cabeçalho fixo (pinnedViews):\nScrollView {\n    LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {\n        ForEach(secoes) { secao in\n            Section {\n                ForEach(secao.itens) { item in\n                    ItemView(item: item)\n                }\n            } header: {\n                CabecalhoSecao(titulo: secao.titulo)  // fica fixo no scroll\n            }\n        }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Grid — layout tabular moderno"
+        },
+        {
+          "type": "text",
+          "text": "Quando você precisa de colunas alinhadas como uma tabela, Grid e GridRow são a escolha certa. Diferente de LazyVGrid (para grids de fotos e coleções), Grid regular alinha colunas de forma que os elementos ficam perfeitamente alinhados mesmo com conteúdos de tamanhos diferentes."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Grid tabular — colunas alinhadas:\nGrid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {\n    GridRow {\n        Text(\"Nome\").bold()\n        Text(\"Status\").bold()\n        Text(\"Data\").bold()\n    }\n    Divider()\n        .gridCellUnsizedAxes(.horizontal)\n    ForEach(tarefas) { tarefa in\n        GridRow {\n            Text(tarefa.nome)\n            StatusBadge(status: tarefa.status)\n            Text(tarefa.data, format: .dateTime.day().month())\n        }\n    }\n}\n\n// LazyVGrid — grid de fotos com colunas adaptativas:\nlet colunas = [GridItem(.adaptive(minimum: 100))]\n\nScrollView {\n    LazyVGrid(columns: colunas, spacing: 4) {\n        ForEach(fotos) { foto in\n            FotoView(foto: foto)\n                .aspectRatio(1, contentMode: .fill)\n        }\n    }\n}"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "List vs ScrollView + LazyVStack",
+          "body": "List traz comportamentos nativos de plataforma (swipe, reordenação, separadores). ScrollView + LazyVStack é mais customizável. Use List quando quer interações nativas de tabela; use ScrollView + LazyVStack quando quer controle total sobre aparência e não precisa de swipe-to-delete."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Uso GeometryReader dentro de .overlay() para não afetar o layout principal.",
+            "Substituo VStack por LazyVStack dentro de ScrollView quando tenho mais de ~50 itens.",
+            "Entendo a diferença entre Grid (alinhamento tabular) e LazyVGrid (grid de coleção).",
+            "Sei quando escolher List vs ScrollView + LazyVStack para listas longas."
+          ]
+        }
       ],
-      "commonMistakes": ["GeometryReader em todo lugar \"por medo\"", "Ignorar safe area (área livre de entalhe) sem motivo de design"],
-      "tradeoffs": "maxWidth: .infinity ajuda botões largos; em Grid pode competir com vizinhos — ajuste layoutPriority.",
-      "miniChallenge": "Botão com largura total visível menos padding 24 em telas pequenas e grandes.",
+      "commonMistakes": [
+        "Usar GeometryReader no nível raiz do body — ele é guloso e quebra o layout de containers.",
+        "Usar VStack (não Lazy) com ForEach de centenas de itens dentro de ScrollView — isso cria todas as Views de uma vez.",
+        "Usar LazyVStack sem ScrollView — o Lazy não tem scroll, ele só faz carregamento sob demanda."
+      ],
+      "tradeoffs": "LazyVStack usa menos memória mas tem overhead de criar/destruir Views durante scroll. Para listas curtas, VStack regular é mais simples e pode ser mais performático. Benchmark antes de otimizar prematuramente.",
+      "miniChallenge": "Crie uma lista com 500 itens usando LazyVStack dentro de ScrollView. Adicione um print no init de cada ItemView para confirmar no console que apenas os itens visíveis são criados.",
+      "notes": [
+        {
+          "id": "geometryreader",
+          "text": "GeometryReader é uma View que oferece acesso ao tamanho e posição disponíveis via um GeometryProxy. Como ela é gulosa (pede todo o espaço disponível), frequentemente é usada dentro de .overlay() para não afetar o layout."
+        },
+        {
+          "id": "lazy",
+          "text": "Lazy (LazyVStack, LazyHStack, LazyVGrid) adia a criação de Views até que estejam próximas da área visível. Isso economiza memória em listas longas ao custo de um overhead de criação/destruição durante scroll."
+        }
+      ],
       "glossary": [
-        { "term": "Safe area", "definition": "Região onde conteúdo não fica sob entalhe, indicadores ou bordas do sistema." }
+        { "term": "GeometryReader", "definition": "View que expõe o tamanho disponível para seus filhos via GeometryProxy." },
+        { "term": "LazyVStack", "definition": "VStack que cria Views filhas sob demanda durante scroll, economizando memória." },
+        { "term": "GridItem", "definition": "Descriptor de coluna para LazyVGrid — define largura fixa, flexível ou adaptativa." }
       ],
       "sources": [
-        { "label": "Apple — frame modifier", "url": "https://developer.apple.com/documentation/swiftui/view/frame(width:height:alignment:)" },
-        { "label": "Apple — Layout fundamentals", "url": "https://developer.apple.com/documentation/swiftui/layout-fundamentals" }
+        { "label": "Apple — GeometryReader", "url": "https://developer.apple.com/documentation/swiftui/geometryreader" },
+        { "label": "Hacking with Swift — How to get the size of the screen", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-get-the-size-of-the-screen-using-geometryreader" }
       ]
     }
   ]

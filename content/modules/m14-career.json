@@ -1,50 +1,150 @@
 {
   "id": "m14-career",
-  "title": "Carreira iOS",
-  "level": "transversal",
-  "lastReviewed": "2025-03-22",
+  "title": "Carreira iOS — do Júnior ao Pleno",
+  "level": "pleno",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "learning-and-hig",
-      "title": "Aprendizado contínuo e HIG",
-      "estimatedMinutes": 22,
-      "objective": "Você vai montar um hábito: codar → ler documentação oficial do que usou → revisar HIG (Human Interface Guidelines, guia de UX da Apple) → repetir.",
+      "id": "portfolio-and-github",
+      "title": "Portfolio, projetos reais e como mostrar evolução",
+      "estimatedMinutes": 40,
+      "objective": "Você vai entender como construir um portfolio que mostra sua evolução técnica, o que recrutadores de iOS procuram em projetos no GitHub, quais tipos de projetos diferenciam candidatos júnior de pleno, e como documentar seu código para facilitar avaliações técnicas.[^portfolio]",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "Especialização vem de ciclo curto: você constrói uma feature, abre a página da API na developer.apple.com, depois lê o trecho do HIG relacionado (layout, feedback, acessibilidade). Release notes (notas de versão) do iOS e do Xcode listam APIs novas e APIs antigas marcadas como obsoletas." },
-        { "type": "list", "ordered": true, "items": ["Um projeto pequeno por mês (escopo fechado)", "Depois de cada feature, leia a doc das APIs que tocou", "Anote trade-offs (vantagens e custos) num README pessoal"] },
-        { "type": "checklist", "items": ["Acompanho canal oficial Apple Developer (vídeo ou news)", "Li pelo menos um capítulo do HIG por trimestre", "Explico em voz alta uma feature que implementei"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O portfolio é a sua prova de trabalho"
+        },
+        {
+          "type": "text",
+          "text": "Para desenvolvedores iOS júnior e pleno, o portfolio no GitHub é frequentemente mais importante que o currículo. Um currículo diz o que você afirma saber. Um portfolio mostra o que você realmente construiu.\n\nRecrutadores técnicos avaliam portfolios de iOS procurando: código Swift idiomático, arquitetura que faz sentido, testes automatizados, commits com mensagens claras (que narram a evolução do projeto), e README que explica as decisões técnicas — não só como rodar o projeto."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O que diferenciam projetos de júnior e pleno"
+        },
+        {
+          "type": "text",
+          "text": "Projetos de júnior geralmente têm: ViewController com centenas de linhas, views que fazem chamadas de rede diretamente, sem testes, sem tratamento de erros, com force unwrap por todo lado.\n\nProjetos de pleno têm: separação clara de responsabilidades, testes unitários cobrindo a lógica principal, tratamento de erros consistente, uso correto de async/await ou Combine, código que comunica intenção — nomes claros, sem comentários óbvios, com comentários onde a lógica não é evidente."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Projeto de JÚNIOR — sinais de alerta:\nclass ViewController: UIViewController {\n    override func viewDidLoad() {\n        super.viewDidLoad()\n        URLSession.shared.dataTask(with: URL(string: \"https://api.app.com/dados\")!) { data, _, _ in\n            let dados = try! JSONDecoder().decode([Dado].self, from: data!)  // force unwrap + try!\n            DispatchQueue.main.async {\n                self.tableView.reloadData()  // sem separação de responsabilidade\n            }\n        }.resume()\n    }\n}\n\n// Projeto de PLENO — sinais positivos:\n@Observable\nclass DadosViewModel {\n    var itens: [Dado] = []\n    var erro: String?\n\n    private let repositorio: DadoRepositorioProtocol\n\n    init(repositorio: DadoRepositorioProtocol = DadoAPI()) {\n        self.repositorio = repositorio  // injeção de dependência\n    }\n\n    func carregar() async {\n        do {\n            itens = try await repositorio.buscarTodos()\n        } catch {\n            self.erro = error.localizedDescription\n        }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Projetos que impressionam"
+        },
+        {
+          "type": "text",
+          "text": "Você não precisa construir 20 apps. Dois ou três projetos bem feitos e bem documentados são mais eficazes que dez projetos de tutorial genérico.\n\nProjetos de maior impacto para portfolio iOS:\n\n- App com consumo de API REST pública (OpenWeather, GitHub API, TMDb): mostra networking, parsing, tratamento de erros\n- App com persistência SwiftData ou CoreData: mostra CRUD completo, queries, migrações\n- Clone de uma tela de app conhecido (mas com código seu): mostra habilidade de layout e atenção a detalhe\n- Contribuição para projeto open source Swift/iOS: mostra colaboração, pull requests, code review"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "README que conta uma história",
+          "body": "Um bom README de portfolio inclui: o problema que o app resolve, as decisões técnicas principais (por que SwiftData e não UserDefaults, por que MVVM), capturas de tela, como rodar localmente, e o que você faria diferente hoje. Esse último item mostra maturidade — que você reflete sobre seu próprio trabalho."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Tenho pelo menos 2 projetos completos com README detalhado no GitHub.",
+            "Meus projetos têm tratamento de erros — não usam force unwrap ou try! livremente.",
+            "Uso commits com mensagens descritivas que narram a evolução do projeto.",
+            "Pelo menos um projeto tem testes unitários cobrindo a lógica principal."
+          ]
+        }
       ],
-      "commonMistakes": ["Só vídeo/tutorial sem abrir doc primária", "Ignorar estados vazios e acessibilidade no desenho"],
-      "tradeoffs": "Documentação oficial é densa; use exemplos mínimos no Xcode para ancorar.",
-      "miniChallenge": "Escolha uma API usada esta semana e leia a página inteira na Apple.",
+      "commonMistakes": [
+        "Ter repositórios com commits como 'update' ou 'fix' sem contexto — não mostra raciocínio.",
+        "Projetos que copiam exatamente um tutorial sem personalização ou documentação.",
+        "Não ter README — avaliadores pulam projetos sem contexto."
+      ],
+      "tradeoffs": "Profundidade vs breadth: um projeto com arquitetura sólida, testes e boa documentação impressiona mais do que 10 projetos superficiais. Invista onde o retorno é maior.",
+      "miniChallenge": "Escolha um projeto existente no seu GitHub. Adicione um README com: o que o app faz, as principais decisões técnicas, e uma seção 'o que faria diferente'. Refatore um arquivo para usar async/await em vez de callbacks.",
+      "notes": [
+        {
+          "id": "portfolio",
+          "text": "Portfolio é a coleção de projetos públicos que demonstra suas habilidades técnicas na prática. Para iOS, geralmente é um perfil GitHub com projetos comentados e documentados."
+        }
+      ],
       "glossary": [
-        { "term": "HIG", "definition": "Human Interface Guidelines — diretrizes de design e comportamento da Apple." }
+        { "term": "Portfolio", "definition": "Coleção de projetos que demonstra suas habilidades na prática." }
       ],
       "sources": [
-        { "label": "Apple — Human Interface Guidelines", "url": "https://developer.apple.com/design/human-interface-guidelines" },
-        { "label": "Apple — SwiftUI updates", "url": "https://developer.apple.com/documentation/updates/swiftui" }
+        { "label": "Hacking with Swift — How to build an iOS developer portfolio", "url": "https://www.hackingwithswift.com/articles/230/how-to-build-an-ios-portfolio" }
       ]
     },
     {
-      "id": "code-review-portfolio",
-      "title": "Revisão de código, comunicação e portfólio",
-      "estimatedMinutes": 26,
-      "objective": "Você vai praticar PR (Pull Request, pedido de revisão no Git), dar feedback curto e claro, e manter portfólio com README (arquivo que explica o projeto) honesto.",
+      "id": "code-review-and-collaboration",
+      "title": "Code review, colaboração e soft skills técnicos",
+      "estimatedMinutes": 35,
+      "objective": "Você vai entender como participar de code reviews produtivos, como dar e receber feedback técnico, convenções de equipe que reduzem atrito, e como comunicar decisões técnicas de forma clara para diferentes audiências.[^codereview]",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "Em time, PR pequeno (poucas linhas, um objetivo) revisa mais rápido e seguro. Na descrição: por que mudou, prints ou vídeo curto, passos para testar. No GitHub pessoal: licença de bibliotecas de terceiros e parágrafo \"por que SwiftData / por que NavigationStack\"." },
-        { "type": "callout", "variant": "tip", "title": "Entrevistas", "body": "Prepare histórias STAR (Situação, Tarefa, Ação, Resultado): um bug difícil, um trade-off de arquitetura, um review que você deu ou recebeu." },
-        { "type": "checklist", "items": ["Tenho um app no GitHub com README e screenshot", "Consigo explicar um PR em até 3 minutos", "Peço review antes de merge (integrar na branch principal)"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Code review — mais que encontrar bugs"
+        },
+        {
+          "type": "text",
+          "text": "Code review é uma das atividades mais importantes de uma equipe de software, mas frequentemente mal compreendida. O objetivo não é só encontrar bugs — é compartilhar conhecimento, garantir consistência de código, e ajudar todos do time a crescer.\n\nUm bom reviewer procura: lógica incorreta, casos de borda não tratados, problemas de performance, falta de testes para lógica crítica, e inconsistências com as convenções do projeto. Um bom reviewer NÃO procura impor preferências pessoais de estilo que o time não convencionou."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Exemplos de comentários de code review construtivos:\n\n// BOM — aponta problema específico com sugestão:\n// \"Essa função faz três coisas distintas (buscar, transformar, salvar).\n//  Separar em funções menores facilitaria o teste de cada parte\"\n\n// BOM — pergunta genuína que pode revelar intenção:\n// \"Isso usa ! aqui — tem certeza de que imageCache nunca é nil nesse ponto?\n//  Se sim, vale um comentário explicando a garantia\"\n\n// EVITE — preferência de estilo sem convenção do time:\n// \"Eu prefiro guard let em vez de if let aqui\" (sem razão técnica)\n\n// EVITE — crítica sem proposta:\n// \"Isso está errado\" (sem explicar o que está errado ou como corrigir)"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Convenções que reduzem atrito"
+        },
+        {
+          "type": "text",
+          "text": "Times produtivos automatizam o que pode ser automatizado: formatação de código com SwiftFormat ou swift-format, análise estática com SwiftLint, e checagens básicas no CI antes de qualquer review humano. Isso libera os revisores para focar em lógica e arquitetura — não em espaços e vírgulas.\n\nConvenções importantes para iOS: nomenclatura de branches, template de PR (o que, por quê, como testar), critério para criar testes, e processo de aprovação (quantos revisores, quem aprova). Documente essas convenções — novos membros do time não devem aprendê-las por osmose."
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Comunicar decisões técnicas",
+          "body": "Quando você propõe uma mudança de arquitetura, não descreva apenas o que muda — explique o problema atual, as alternativas consideradas, e os trade-offs. ADRs (Architecture Decision Records) são documentos curtos que registram essas decisões com contexto. São inestimáveis 6 meses depois quando ninguém lembra por que foi escolhida aquela abordagem."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Dou feedback em code reviews como perguntas ou sugestões, não como críticas.",
+            "Separo preferências pessoais de problemas técnicos reais em reviews.",
+            "Uso SwiftLint no projeto para automatizar checagens de estilo.",
+            "Documento decisões arquiteturais importantes com contexto e alternativas consideradas."
+          ]
+        }
       ],
-      "commonMistakes": ["Portfólio só com tutorial copiado sem mudança sua", "Um commit gigante que ninguém consegue revisar"],
-      "tradeoffs": "Polir portfólio compete com tempo de estudo — use blocos curtos semanais.",
-      "miniChallenge": "Reescreva o README: problema, solução, como rodar, o que aprendeu.",
+      "commonMistakes": [
+        "Aprovar PRs sem ler o código porque o CI passou — CI não substitui review humano.",
+        "Fazer reviews linha por linha sem avaliar o design geral — perder a floresta pelas árvores.",
+        "Não comentar nada positivo em reviews — feedback só negativo desmotiva."
+      ],
+      "tradeoffs": "Reviews mais rigorosos atrasam merges mas aumentam qualidade. O equilíbrio certo depende do tamanho do time, da criticidade do código e do prazo. Para código de produção crítico, reviews lentos valem a pena.",
+      "miniChallenge": "Peça para alguém revisar um PR seu com a perspectiva: 'se eu nunca vi esse código, consigo entender o que muda e por quê?' Use o feedback para melhorar o PR description e os nomes de variáveis.",
+      "notes": [
+        {
+          "id": "codereview",
+          "text": "Code review é o processo de revisão de mudanças de código por pares antes de integrar ao codebase principal. Combina verificação técnica com transferência de conhecimento."
+        }
+      ],
       "glossary": [
-        { "term": "PR (Pull Request)", "definition": "Proposta de merge com diff e discussão antes de integrar ao principal." }
+        { "term": "Code review", "definition": "Revisão de código por pares para garantir qualidade, compartilhar conhecimento e detectar problemas." },
+        { "term": "ADR", "definition": "Architecture Decision Record — documento curto que registra uma decisão técnica com contexto e alternativas." },
+        { "term": "SwiftLint", "definition": "Ferramenta de análise estática para Swift que verifica convenções de código configuráveis." }
       ],
       "sources": [
-        { "label": "GitHub Docs — About pull requests", "url": "https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests" }
+        { "label": "Google — Code Review Guidelines", "url": "https://google.github.io/eng-practices/review/" }
       ]
     }
   ]

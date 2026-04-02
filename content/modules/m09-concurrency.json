@@ -1,56 +1,255 @@
 {
   "id": "m09-concurrency",
-  "title": "Concorrência",
+  "title": "Concorrência com Swift Concurrency",
   "level": "pleno",
-  "lastReviewed": "2025-03-22",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "async-await-intro",
-      "title": "async/await e chamadas de rede na UI",
-      "estimatedMinutes": 34,
-      "objective": "Você vai escrever funções async (podem pausar sem travar), usar await (esperar resultado) em URLSession (API de rede) e atualizar estado de tela no lugar certo.",
-      "prerequisites": ["Swift básico", "SwiftUI state"],
+      "id": "async-await",
+      "title": "async/await — código assíncrono sem callback hell",
+      "estimatedMinutes": 55,
+      "objective": "Você vai entender por que async/await existe, o que significa uma função ser suspensa, como o Swift gerencia a thread pool com cooperative scheduling, como tratar erros assíncronos com throws, e quando usar Task para executar código assíncrono de contextos síncronos.[^async][^task-concurrency]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "async marca uma função que pode suspender (pausar de forma segura e liberar a thread). await é onde você espera outra operação async terminar. O compilador ajuda a não fazer trabalho pesado na main thread (fila principal onde a UI atualiza)." },
-        { "type": "code", "language": "swift", "code": "func load() async throws -> String {\n    let (data, _) = try await URLSession.shared.data(from: url)\n    return String(decoding: data, as: UTF8.self)\n}" },
-        { "type": "callout", "variant": "info", "title": ".task na View", "body": "O modificador .task { } inicia trabalho async ligado à View: quando ela some, o sistema pode cancelar a Task (comportamento documentado — leia a página oficial)." },
-        { "type": "checklist", "items": ["Uso Task { } ou .task para sair de callback síncrono e ir para async", "Trato erro com throws ou mostro estado de erro na UI", "Não uso Thread.sleep na main para \"esperar\""] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O problema que async/await resolve"
+        },
+        {
+          "type": "text",
+          "text": "Antes do async/await, código assíncrono em Swift usava callbacks — closures que eram chamadas quando a operação terminava. O problema: callbacks aninhados criam o famoso \"callback hell\" — código que cresce para a direita com múltiplos níveis de indentação, onde rastrear erros e o fluxo de dados é extremamente difícil.\n\nAlém da legibilidade, callbacks têm problemas sérios: você precisa lembrar de chamar o callback mesmo em casos de erro, tratamento de erros é inconsistente (às vezes é um parâmetro opcional, às vezes uma convenção), e cancelamento requer infraestrutura manual.\n\n`async/await` resolve tudo: código assíncrono parece código síncrono, erros são tratados com `try/catch`, e o Swift gerencia suspensão e retomada automaticamente."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// ANTES — callback hell:\nfunc carregarPerfil(id: UUID, completion: @escaping (Result<Perfil, Error>) -> Void) {\n    buscarUsuario(id: id) { resultado in\n        switch resultado {\n        case .success(let usuario):\n            buscarFoto(url: usuario.fotoURL) { fotoResultado in\n                switch fotoResultado {\n                case .success(let foto):\n                    completion(.success(Perfil(usuario: usuario, foto: foto)))\n                case .failure(let erro):\n                    completion(.failure(erro))\n                }\n            }\n        case .failure(let erro):\n            completion(.failure(erro))\n        }\n    }\n}\n\n// DEPOIS — async/await, legível como código síncrono:\nfunc carregarPerfil(id: UUID) async throws -> Perfil {\n    let usuario = try await buscarUsuario(id: id)\n    let foto = try await buscarFoto(url: usuario.fotoURL)\n    return Perfil(usuario: usuario, foto: foto)\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O que 'suspensão' significa — sem bloquear a thread"
+        },
+        {
+          "type": "text",
+          "text": "Quando o Swift encontra um `await`, ele pode **suspender** a função — colocar em pausa — e liberar a thread para fazer outro trabalho. Quando o resultado chega, a função é **retomada**, possivelmente em uma thread diferente.\n\nEsso é fundamentalmente diferente de `Thread.sleep()` ou bloqueio de thread. Com sleep, a thread fica parada sem fazer nada. Com await, a thread fica livre para processar outros trabalhos enquanto aguarda. É por isso que await não trava a UI — a thread principal pode processar eventos e renderizar enquanto espera a rede."
+        },
+        {
+          "type": "trace",
+          "title": "O que acontece durante um await",
+          "steps": [
+            {
+              "label": "Função inicia na Thread Principal",
+              "detail": "Código executa normalmente na thread principal.",
+              "output": "Thread: main | executando carregarPerfil()"
+            },
+            {
+              "label": "await encontrado — função suspende",
+              "detail": "Swift salva o estado da função e libera a thread.",
+              "output": "Thread: main LIBERADA — pode processar eventos"
+            },
+            {
+              "label": "Rede processa em background",
+              "detail": "URLSession executa o request em thread de background.",
+              "output": "Thread: background | network request em andamento"
+            },
+            {
+              "label": "Dados chegam — função retoma",
+              "detail": "Swift retoma a função com o resultado. Pode ser mesma ou outra thread.",
+              "output": "Thread: background | let usuario = <Usuario>"
+            },
+            {
+              "label": "@MainActor garante retorno à main",
+              "detail": "Se a função é @MainActor, retoma sempre na thread principal.",
+              "output": "Thread: main | atualizando UI com dados"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "async throws — erros assíncronos com try/catch"
+        },
+        {
+          "type": "text",
+          "text": "Funções async que podem falhar são marcadas com `async throws`. Na chamada, você usa `try await`. O tratamento de erros é idêntico ao código síncrono com `do/catch` — sem callbacks separados para sucesso e erro."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Função assíncrona que pode falhar:\nfunc buscarTarefas() async throws -> [Tarefa] {\n    let url = URL(string: \"https://api.app.com/tarefas\")!\n    let (data, response) = try await URLSession.shared.data(from: url)\n\n    guard let httpResponse = response as? HTTPURLResponse,\n          httpResponse.statusCode == 200 else {\n        throw APIError.respostaInvalida\n    }\n\n    return try JSONDecoder().decode([Tarefa].self, from: data)\n}\n\n// Chamada com tratamento de erro:\nfunc carregarDados() async {\n    do {\n        let tarefas = try await buscarTarefas()\n        self.tarefas = tarefas  // atualiza o estado\n    } catch APIError.respostaInvalida {\n        self.erro = \"Servidor retornou resposta inválida\"\n    } catch {\n        self.erro = error.localizedDescription\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Task — executando async de contexto síncrono"
+        },
+        {
+          "type": "text",
+          "text": "Você não pode chamar uma função `async` de um contexto síncrono diretamente. `Task` é o bridge: ele cria um contexto assíncrono onde você pode usar `await`.\n\nTarefas criadas com `Task { }` são disparadas imediatamente. É responsabilidade do desenvolvedor cancelá-las se necessário com `.cancel()`. Por isso o modificador `.task` do SwiftUI é preferível — ele cancela automaticamente quando a View desaparece."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Executando async de um contexto síncrono:\nButton(\"Carregar\") {\n    // Button action é síncrona — precisa de Task:\n    Task {\n        await carregarDados()\n    }\n}\n\n// Cancelamento manual:\nvar tarefaAtual: Task<Void, Never>?\n\nfunc iniciarBusca() {\n    tarefaAtual?.cancel()  // cancela a anterior se houver\n    tarefaAtual = Task {\n        await buscar()\n    }\n}\n\n// async let — executar múltiplos awaits em paralelo:\nfunc carregarTudo() async throws {\n    // Sequencial — cada await espera o anterior:\n    // let usuario = try await buscarUsuario()\n    // let config = try await buscarConfig()\n\n    // Paralelo — ambas executam ao mesmo tempo:\n    async let usuario = buscarUsuario()\n    async let config = buscarConfig()\n\n    // Aguarda ambas ao mesmo tempo:\n    let (u, c) = try await (usuario, config)\n}"
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Entendo que await suspende a função sem bloquear a thread — diferente de sleep.",
+            "Trato erros assíncronos com try await e do/catch — não com callbacks separados.",
+            "Uso Task { } para chamar async de contextos síncronos (como onAppear ou Button actions).",
+            "Prefiro .task em Views SwiftUI — cancela automaticamente quando a View desaparece.",
+            "Sei usar async let para executar múltiplas tarefas em paralelo."
+          ]
+        }
       ],
-      "commonMistakes": ["Atualizar @Observable/@State fora do MainActor quando a UI exige main", "Ignorar cancelamento (usuário saiu da tela e o fetch continua)"],
-      "tradeoffs": "async/await lê linear; fluxos de eventos contínuos podem usar AsyncSequence (sequência assíncrona).",
-      "miniChallenge": "Tela com .task: estado loading → sucesso ou mensagem de erro.",
+      "commonMistakes": [
+        "Chamar função async sem await — o compilador avisa, mas é tentador ignorar em closures.",
+        "Criar Task {} sem cancelamento em onAppear — a tarefa continua mesmo após a View desaparecer.",
+        "Confundir suspensão (libera thread) com bloqueio (paralisa thread) — são opostos."
+      ],
+      "tradeoffs": "async/await lineariza o código mas oculta que a execução pode retomar em thread diferente. @MainActor garante retorno à thread principal para atualizações de UI — essencial quando o modelo é @Observable.",
+      "miniChallenge": "Escreva uma função que busca dois recursos em paralelo com async let e mede o tempo total. Compare com a versão sequencial. Quantos segundos de diferença com dois requests de 1 segundo cada?",
+      "notes": [
+        {
+          "id": "async",
+          "text": "async marca uma função como assíncrona — ela pode ser suspensa em pontos await. O runtime do Swift gerencia a retomada automaticamente, possivelmente em thread diferente."
+        },
+        {
+          "id": "task-concurrency",
+          "text": "Task (de Swift Concurrency) é a unidade básica de trabalho assíncrono. Diferente de Thread, Tasks são cooperativamente escaladas pelo runtime — o sistema decide qual thread cada Task usa."
+        }
+      ],
       "glossary": [
-        { "term": "Suspender", "definition": "Pausar a função async sem bloquear a thread por espera ocupada." }
+        { "term": "async", "definition": "Marca uma função como assíncrona — pode ser suspensa em pontos await." },
+        { "term": "await", "definition": "Ponto de suspensão onde o Swift pode liberar a thread e retomar depois." },
+        { "term": "Task", "definition": "Unidade de trabalho assíncrono em Swift Concurrency." },
+        { "term": "async let", "definition": "Sintaxe para executar múltiplas operações assíncronas em paralelo." }
       ],
       "sources": [
-        { "label": "Apple — Concurrency (Swift Book)", "url": "https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html" },
-        { "label": "Apple — task modifier", "url": "https://developer.apple.com/documentation/swiftui/view/task(priority:_:)" }
+        { "label": "Apple — Swift Concurrency", "url": "https://developer.apple.com/documentation/swift/concurrency" },
+        { "label": "Hacking with Swift — async/await", "url": "https://www.hackingwithswift.com/swift/5.5/async-await" }
       ]
     },
     {
-      "id": "mainactor-task",
-      "title": "@MainActor, actors e Task",
-      "estimatedMinutes": 36,
-      "objective": "Você vai garantir que mudanças de UI rodem no MainActor (actor global da thread principal) e usar actor (tipo que serializa acesso) para dados compartilhados.",
-      "prerequisites": ["async/await (seção anterior)"],
-      "blocks": [
-        { "type": "text", "text": "@MainActor força o código daquele tipo ou função a rodar na thread principal (onde SwiftUI espera tocar interface). Muitas APIs de UI já são MainActor implicitamente — leia a assinatura no Xcode (autocomplete)." },
-        { "type": "code", "language": "swift", "code": "@MainActor\nfinal class ViewModel {\n    var text = \"\"\n}" },
-        { "type": "heading", "level": 3, "text": "actor" },
-        { "type": "text", "text": "actor é um tipo que só permite uma chamada por vez ao seu estado interno — evita data race (duas threads escrevendo ao mesmo tempo). Não é a mesma coisa que MainActor: um actor pode rodar em background; MainActor é sempre a fila de UI." },
-        { "type": "callout", "variant": "warn", "title": "Task.detached", "body": "Task.detached cria trabalho desconectado da hierarquia — use só quando a doc ou medição pedir; na maioria dos apps Task normal basta." },
-        { "type": "checklist", "items": ["Sei quando anotar @MainActor em tipo próprio", "Entendo actor vs class normal", "Uso Task { await … } a partir de botão ou onAppear"] }
+      "id": "mainactor-and-actors",
+      "title": "@MainActor e actors — segurança de thread sem locks",
+      "estimatedMinutes": 50,
+      "objective": "Você vai entender por que atualizações de UI na thread errada causam crashes, como @MainActor garante execução na thread principal, o que é um actor e como ele resolve data races, e quando você precisa de um actor customizado para estado compartilhado.[^mainactor][^actor]",
+      "prerequisites": [
+        "async/await (seção anterior)"
       ],
-      "commonMistakes": ["await entre actors de forma que trave tudo (deadlock)", "Achar que DispatchQueue.main.async substitui modelar async/await"],
-      "tradeoffs": "MainActor simplifica a cabeça na UI; testes podem precisar de dublês (mocks) com mesmo isolamento.",
-      "miniChallenge": "Um actor Contador com método async que incrementa; View mostra o valor após await.",
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O problema: atualizações de UI na thread errada"
+        },
+        {
+          "type": "text",
+          "text": "UIKit e SwiftUI processam atualizações de UI na thread principal (main thread). Se você tentar atualizar um @Published ou @State de uma thread de background — por exemplo, de um completion handler de URLSession — você vai receber um warning em Xcode e possivelmente um crash ou comportamento visual corrompido.\n\nO motivo técnico: a thread principal tem um RunLoop que processa eventos de input e renderização em sequência. Se múltiplas threads tentarem alterar o estado da UI simultaneamente, o resultado é imprevisível — não tem garantia de ordem de execução."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// PROBLEMA — atualiza UI de thread errada:\nURLSession.shared.dataTask(with: url) { data, _, _ in\n    // URLSession callback é em background thread!\n    self.tarefas = parsear(data)  // WARNING: Publishing changes from background thread\n}.resume()\n\n// Solução legada — DispatchQueue.main:\nURLSession.shared.dataTask(with: url) { data, _, _ in\n    DispatchQueue.main.async {\n        self.tarefas = parsear(data)  // agora na main thread\n    }\n}.resume()"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "@MainActor — garantia automática de execução na main thread"
+        },
+        {
+          "type": "text",
+          "text": "Com Swift Concurrency, `@MainActor` resolve o problema de forma elegante e **verificada em compilação**. Ao marcar uma classe ou função com @MainActor, o Swift garante que todo acesso a suas propriedades e toda execução do código acontece na thread principal.\n\nVocê não precisa de `DispatchQueue.main.async` — o compilador faz isso. E diferente do DispatchQueue, uma violação @MainActor é um erro de compilação, não um crash em runtime."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// @MainActor na classe — todas as propriedades e métodos são na main thread:\n@MainActor\n@Observable\nclass TarefasViewModel {\n    var tarefas: [Tarefa] = []\n    var carregando = false\n\n    // Mesmo sendo async, executa na main thread:\n    func carregar() async throws {\n        carregando = true\n        // await libera a main thread durante a espera:\n        tarefas = try await TarefaService.buscar()\n        // Retoma na main thread automaticamente:\n        carregando = false  // atualização de UI — seguro!\n    }\n}\n\n// @MainActor em função individual:\nfunc atualizarUI() {\n    Task {\n        await MainActor.run {\n            self.titulo = \"Atualizado\"  // garante main thread\n        }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "actor — proteção de estado compartilhado em concorrência"
+        },
+        {
+          "type": "text",
+          "text": "Um `actor` é um tipo de referência (como class) com uma diferença crucial: ele protege seu estado interno contra acesso concorrente. Apenas uma Task pode executar código do actor por vez — as outras ficam suspensas esperando.\n\nIsso elimina data races — a categoria de bug onde duas threads leem e escrevem no mesmo dado simultaneamente, produzindo resultados imprevisíveis. Com actor, o compilador impõe que todo acesso ao estado compartilhado passa pela fila serializada do actor."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// actor — estado thread-safe sem locks manuais:\nactor Cache {\n    private var dados: [String: Data] = [:]\n\n    func salvar(chave: String, data: Data) {\n        dados[chave] = data  // thread-safe — actor garante serialização\n    }\n\n    func buscar(chave: String) -> Data? {\n        dados[chave]\n    }\n\n    func limpar() {\n        dados.removeAll()\n    }\n}\n\n// Acessando um actor — precisa de await:\nlet cache = Cache()\n\nTask {\n    await cache.salvar(chave: \"foto-1\", data: imagemData)\n}\n\nTask {\n    if let data = await cache.buscar(chave: \"foto-1\") {\n        print(\"Cache hit!\")\n    }\n}"
+        },
+        {
+          "type": "trace",
+          "title": "Como o actor serializa acessos concorrentes",
+          "steps": [
+            {
+              "label": "Task A chama cache.salvar()",
+              "detail": "Task A entra no actor — executa imediatamente.",
+              "output": "Actor: executando Task A — dados[\"foto-1\"] = data"
+            },
+            {
+              "label": "Task B chama cache.salvar() ao mesmo tempo",
+              "detail": "Task B encontra o actor ocupado — suspende e aguarda.",
+              "output": "Task B: await — suspensa, aguardando actor"
+            },
+            {
+              "label": "Task A termina",
+              "detail": "Task A libera o actor.",
+              "output": "Actor: Task A concluída — dados tem 1 entrada"
+            },
+            {
+              "label": "Task B retoma",
+              "detail": "Task B entra no actor e executa.",
+              "output": "Actor: executando Task B — dados[\"foto-2\"] = data"
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Quando usar actor vs @MainActor",
+          "body": "@MainActor é para código que atualiza a UI — garante execução na main thread. actor é para estado compartilhado entre múltiplas Tasks em background — cache, contador thread-safe, pool de conexões. Use @MainActor nas ViewModels e actor para serviços de background com estado."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Entendo por que atualizações de UI precisam ser na main thread.",
+            "Marco ViewModels com @MainActor para garantir que propriedades são atualizadas na thread certa.",
+            "Sei que await libera a main thread durante chamadas de rede — não bloqueia a UI.",
+            "Uso actor para estado compartilhado entre Tasks — sem locks manuais ou DispatchQueue."
+          ]
+        }
+      ],
+      "commonMistakes": [
+        "Não marcar ViewModel com @MainActor e receber warnings sobre publicação em background thread.",
+        "Pensar que await bloqueia a main thread — ele suspende e LIBERA a thread.",
+        "Usar DispatchQueue.main.async dentro de código async/await — é redundante e mistura os dois sistemas."
+      ],
+      "tradeoffs": "actor elimina data races mas adiciona overhead de await em cada acesso externo. Para dados acessados só pela main thread, @MainActor é mais simples. Para dados genuinamente compartilhados entre threads, actor é a solução correta.",
+      "miniChallenge": "Crie um actor ImageCache que armazena UIImages por URL. Implemente buscar() que retorna da cache ou baixa a imagem. Mostre que múltiplas Tasks podem chamar o actor concorrentemente sem data race.",
+      "notes": [
+        {
+          "id": "mainactor",
+          "text": "@MainActor é um actor global que representa a thread principal. Marcar uma classe ou função com @MainActor garante que o código executa na main thread — verificado em compilação."
+        },
+        {
+          "id": "actor",
+          "text": "actor é um tipo de referência que serializa acesso ao seu estado — apenas uma Task executa por vez. Isso elimina data races sem locks ou DispatchQueues manuais."
+        }
+      ],
       "glossary": [
-        { "term": "MainActor", "definition": "Actor global ligado à thread principal para trabalho de interface." },
-        { "term": "Task", "definition": "Unidade de trabalho assíncrono que pode ser cancelada." }
+        { "term": "@MainActor", "definition": "Actor global que representa a thread principal — garante execução de UI na thread correta." },
+        { "term": "actor", "definition": "Tipo de referência que serializa acessos ao seu estado, prevenindo data races." },
+        { "term": "Data race", "definition": "Bug onde duas threads leem e escrevem no mesmo dado simultaneamente — resultado imprevisível." }
       ],
       "sources": [
-        { "label": "Apple — MainActor", "url": "https://developer.apple.com/documentation/swift/mainactor" },
-        { "label": "Apple — Actors", "url": "https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html#ID645" }
+        { "label": "Apple — Actors", "url": "https://docs.swift.org/swift-book/documentation/the-swift-programming-language/concurrency/#Actors" },
+        { "label": "Hacking with Swift — Actors", "url": "https://www.hackingwithswift.com/swift/5.5/actors" }
       ]
     }
   ]

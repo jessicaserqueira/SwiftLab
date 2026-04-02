@@ -2,372 +2,429 @@
   "bySection": {
     "m01-swift-essentials/optionals-and-types-for-ui": [
       {
-        "title": "Nil coalescing",
-        "prompt": "O que será impresso?\n\nlet apelido: String? = nil\nprint(apelido ?? \"visitante\")",
+        "title": "Qual técnica usar aqui?",
+        "prompt": "Você tem uma função que recebe um nome de usuário opcional e precisa:\n1. Exibir uma mensagem de boas-vindas com o nome\n2. Retornar imediatamente se não houver nome\n\nQual técnica é mais adequada — if let, guard let, ?? ou ?.?\n\nfunc saudar(nome: String?) {\n    // complete aqui\n}",
         "hints": [
-          "?? só usa o lado direito quando o optional é nil."
+          "Quando o valor é obrigatório para continuar, existe uma técnica de 'saída antecipada'.",
+          "guard let sai da função se o valor não existir — o restante do código fica linear."
         ],
-        "solution": "Imprime: visitante\n\nO operador ?? (nil coalescing) devolve \"visitante\" porque apelido é nil."
+        "solution": "guard let — é a escolha certa quando o valor é obrigatório para continuar.\n\nfunc saudar(nome: String?) {\n    guard let nome else {\n        return  // sai se nil\n    }\n    print(\"Bem-vindo, \\(nome)!\")  // nome é String aqui, não String?\n}\n\nif let seria válido mas exigiria indentar o restante do código.\n?? serve apenas para fornecer um fallback inline, não para lógica condicional."
       },
       {
-        "title": "Optional encadeado",
-        "prompt": "Se nomeCompleto for nil, quantas vezes \"Olá\" pode ser montado sem crash?\n\nlet nomeCompleto: String? = nil\nlet saudacao = nomeCompleto.map { \"Olá, \\($0)\" }",
+        "title": "Trace mental — optional chaining",
+        "prompt": "Sem rodar no Xcode, o que é impresso?\n\nstruct Endereco {\n    var cidade: String\n}\nstruct Usuario {\n    var endereco: Endereco?\n}\n\nlet usuario: Usuario? = Usuario(endereco: nil)\nlet resultado = usuario?.endereco?.cidade ?? \"Desconhecida\"\nprint(resultado)",
         "hints": [
-          "map em optional vazio não executa o closure."
+          "Siga a cadeia passo a passo: usuario tem valor? endereco tem valor?",
+          "Se qualquer parte da cadeia ?. for nil, o resultado inteiro é nil."
         ],
-        "solution": "saudacao será nil (tipo String?). Não há crash: map não roda o closure quando o optional é nil."
+        "solution": "Imprime: Desconhecida\n\nPasso a passo:\n1. usuario? → tem valor (Usuario com endereco: nil)\n2. .endereco? → é nil!\n3. Toda a cadeia retorna nil\n4. ?? \"Desconhecida\" → usa o fallback\n\nNão há crash porque ?. interrompe silenciosamente em nil."
+      },
+      {
+        "title": "Force unwrap — encontre o bug",
+        "prompt": "Este código tem um bug latente. Identifique e corrija:\n\nfunc exibirEmail(usuario: [String: String]) {\n    let email = usuario[\"email\"]!\n    print(\"Email: \\(email)\")\n}",
+        "hints": [
+          "Dicionários retornam Optional — o valor pode não existir para uma chave.",
+          "O que acontece se a chave 'email' não estiver no dicionário?"
+        ],
+        "solution": "Bug: usuario[\"email\"] retorna String? e o ! vai crashar se a chave não existir.\n\n// Correção com guard let:\nfunc exibirEmail(usuario: [String: String]) {\n    guard let email = usuario[\"email\"] else {\n        print(\"Usuário sem email\")\n        return\n    }\n    print(\"Email: \\(email)\")\n}\n\n// Ou com ?? para fallback simples:\nfunc exibirEmail(usuario: [String: String]) {\n    let email = usuario[\"email\"] ?? \"não informado\"\n    print(\"Email: \\(email)\")\n}"
       }
     ],
     "m01-swift-essentials/protocols-and-generics-bridge": [
       {
-        "title": "Identifiable e id",
-        "prompt": "Este struct viola a ideia de Identifiable para lista estável?\n\nstruct Item: Identifiable {\n    var id = UUID()\n    let titulo: String\n}",
+        "title": "Identifiable instável — diagnóstico",
+        "prompt": "Este struct conforma Identifiable mas causa problemas em ForEach. O que está errado?\n\nstruct Tarefa: Identifiable {\n    var id: UUID { UUID() }  // computed property!\n    var titulo: String\n}",
         "hints": [
-          "Novo UUID() a cada inicialização muda o id."
+          "Computed property recalcula a cada acesso.",
+          "UUID() gera um novo UUID a cada chamada."
         ],
-        "solution": "Sim. Cada vez que você cria Item, id é novo → ForEach pode tratar como outro item. Melhor: id estável (ex.: vindo do servidor) ou init que recebe id."
+        "solution": "O problema: id é uma computed property que retorna UUID() — um UUID NOVO a cada acesso.\n\nA cada renderização do SwiftUI, o id muda. O framework pensa que são itens diferentes, causando animações erradas, flicker e perda de estado.\n\nCorreção: id deve ser uma propriedade armazenada (stored property):\n\nstruct Tarefa: Identifiable {\n    let id: UUID  // stored property — fixo após criação\n    var titulo: String\n\n    init(titulo: String) {\n        self.id = UUID()  // gerado UMA vez no init\n        self.titulo = titulo\n    }\n}"
       },
       {
-        "title": "Protocolo como tipo",
-        "prompt": "Em Swift, pode escrever `let p: Protocol = StructQueConforma()` quando Protocol tem init? (pense: existencial)",
+        "title": "some View vs AnyView — por que importa",
+        "prompt": "Qual é a diferença e qual tem melhor performance?\n\n// Versão A:\nfunc icone(ativo: Bool) -> some View {\n    // AVISO: não compila com if/else retornando tipos diferentes\n    // sem @ViewBuilder\n}\n\n// Versão B:\nfunc icone(ativo: Bool) -> AnyView {\n    if ativo {\n        return AnyView(Image(systemName: \"star.fill\"))\n    } else {\n        return AnyView(Image(systemName: \"star\"))\n    }\n}",
         "hints": [
-          "Protocolos com Self ou associated types têm limitações."
+          "AnyView apaga o tipo — o SwiftUI não consegue otimizar o que não conhece.",
+          "@ViewBuilder permite some View com condicionais."
         ],
-        "solution": "Depende do protocolo. Protocolos \"existenciais\" simples funcionam; com requisitos especiais o compilador pede tipo concreto ou any Protocol (Swift 5.7+). O importante: saber que \"protocol como tipo\" nem sempre é livre."
+        "solution": "AnyView apaga o tipo concreto em runtime — o SwiftUI não pode otimizar atualizações porque não sabe o que está dentro.\n\nA versão com melhor performance usa @ViewBuilder com some View:\n\n@ViewBuilder\nfunc icone(ativo: Bool) -> some View {\n    if ativo {\n        Image(systemName: \"star.fill\")\n    } else {\n        Image(systemName: \"star\")\n    }\n}\n\n@ViewBuilder transforma o bloco condicional em um tipo concreto que o SwiftUI conhece — pode otimizar animações e atualizações."
       }
     ],
-    "m02-app-swiftui/app-entry-scene-window": [
+    "m02-app-swiftui/app-scene-windowgroup": [
       {
-        "title": "Ponto de entrada",
-        "prompt": "Por que não pode haver dois @main no mesmo target?",
+        "title": "Onde inicializar o banco de dados",
+        "prompt": "Você precisa criar um ModelContainer para o SwiftData.\nQual das opções abaixo é CORRETA e por quê?\n\n// Opção A:\nstruct MeuAppApp: App {\n    var body: some Scene {\n        WindowGroup {\n            ContentView()\n        }\n        .modelContainer(for: Tarefa.self)\n    }\n}\n\n// Opção B:\nstruct ContentView: View {\n    let container = try! ModelContainer(for: Tarefa.self)\n    var body: some View { ... }\n}",
         "hints": [
-          "O sistema precisa de um único início de programa."
+          "Quantas vezes cada lugar é executado?",
+          "O que acontece se body de ContentView for recalculado?"
         ],
-        "solution": "O atributo @main indica qual tipo o sistema executa primeiro. Dois @main deixariam ambíguo onde o app começa."
+        "solution": "Opção A é correta.\n\nO .modelContainer no WindowGroup é configurado uma única vez quando a Scene é criada. O container é injetado em toda a hierarquia de Views automaticamente.\n\nOpção B tem um problema grave: ContentView é uma struct que pode ser recriada múltiplas vezes pelo SwiftUI. Cada recriação cria um novo ModelContainer — possivelmente novos arquivos de banco — causando comportamento imprevisível e perda de dados.\n\nInicializações de banco, serviços e singletons pertencem ao App — não a Views."
       },
       {
-        "title": "App e Scene",
-        "prompt": "WindowGroup é um tipo de quê, no template SwiftUI?",
+        "title": "Hierarquia App → Scene → View",
+        "prompt": "Ordene corretamente e explique o papel de cada camada:\n\n[ WindowGroup, @main struct App, ContentView, View ]",
         "hints": [
-          "App define cenas (Scene)."
+          "Existe uma ordem hierárquica: o que contém o quê?",
+          "View é o componente mais granular."
         ],
-        "solution": "WindowGroup conforma Scene: descreve janelas com a mesma raiz de conteúdo."
+        "solution": "Hierarquia do mais amplo para o mais granular:\n\n1. @main struct App — ponto de entrada. Existe uma instância por processo. Define as Scenes.\n\n2. WindowGroup — um tipo de Scene. Descreve o conteúdo de cada janela. No iPhone há uma janela; no iPad/Mac podem haver múltiplas.\n\n3. ContentView (root View) — a View raiz dentro da Scene. Composta por outras Views.\n\n4. View — qualquer componente visual. HStack, Text, Button, componentes customizados."
       }
     ],
-    "m02-app-swiftui/lifecycle-basics": [
+    "m02-app-swiftui/lifecycle-events": [
       {
-        "title": "body de novo",
-        "prompt": "Se @State var n muda, o que acontece com body?",
+        "title": ".task vs Task {} em onAppear",
+        "prompt": "O que está errado com esta abordagem e como corrigir?\n\nstruct ListaView: View {\n    @State private var itens: [Item] = []\n\n    var body: some View {\n        List(itens) { item in Text(item.nome) }\n            .onAppear {\n                Task {\n                    itens = await buscarItens()\n                }\n            }\n    }\n}",
         "hints": [
-          "Estado → SwiftUI invalida e recalcula."
+          "Se o usuário sai da tela antes da busca terminar, o que acontece com a Task?",
+          "Existe um modificador que cancela automaticamente."
         ],
-        "solution": "body é avaliado de novo para refletir o novo valor de n (e outras dependências)."
+        "solution": "O problema: Task {} dentro de onAppear não tem cancelamento automático.\n\nSe o usuário navega para outra tela antes da busca terminar, a Task continua executando e tentará atualizar itens de uma View que pode não existir mais.\n\nCorreção com .task:\n\nstruct ListaView: View {\n    @State private var itens: [Item] = []\n\n    var body: some View {\n        List(itens) { item in Text(item.nome) }\n            .task {\n                // Cancelado automaticamente quando a View desaparece\n                itens = await buscarItens()\n            }\n    }\n}"
       },
       {
-        "title": "onAppear",
-        "prompt": "onAppear garante que o código roda exatamente uma vez no tempo de vida do app?",
+        "title": "Trace de ciclo de vida",
+        "prompt": "Em que ordem os prints aparecem ao navegar para esta View e depois voltar?\n\nstruct MinhaView: View {\n    @State private var dados = \"\"\n\n    var body: some View {\n        Text(dados)\n            .onAppear { print(\"apareceu\") }\n            .onDisappear { print(\"sumiu\") }\n            .task { print(\"task iniciou\") }\n    }\n}",
         "hints": [
-          "A view pode sair e voltar."
+          "onAppear e .task disparam quando a View entra na tela.",
+          "onDisappear dispara quando sai."
         ],
-        "solution": "Não. onAppear roda quando a view entra na hierarquia visível; pode repetir se você navegar e voltar."
+        "solution": "Ao navegar PARA a View:\n1. 'apareceu'\n2. 'task iniciou'\n(a ordem entre onAppear e .task pode variar, mas ambos disparam ao aparecer)\n\nAo navegar PARA FORA:\n3. 'sumiu'\n(e a task é cancelada automaticamente)\n\nSe o usuário VOLTAR para a View:\n4. 'apareceu'\n5. 'task iniciou'\n(onAppear pode ser chamado MÚLTIPLAS vezes — não é como viewDidLoad)"
       }
     ],
-    "m02-app-swiftui/preview-and-structure": [
+    "m02-app-swiftui/previews-organization": [
       {
-        "title": "Preview sem dados",
-        "prompt": "Por que Preview pode falhar se ContentView() precisa de @EnvironmentObject?",
+        "title": "Preview que falha — diagnóstico",
+        "prompt": "Este Preview falha no canvas. Por quê e como corrigir?\n\nstruct PerfilView: View {\n    var body: some View {\n        Text(SessaoAtual.shared.usuario?.nome ?? \"Sem nome\")\n    }\n}\n\n#Preview {\n    PerfilView()\n}",
         "hints": [
-          "Preview não injeta tudo automaticamente."
+          "SessaoAtual.shared existe no app em execução, mas o Preview é isolado.",
+          "Como fazer a View receber os dados que precisa sem depender de estado global?"
         ],
-        "solution": "Falta o objeto no ambiente. Solução: .environmentObject(mock) no #Preview ou wrapper de preview."
+        "solution": "O problema: PerfilView acessa SessaoAtual.shared — um singleton que não está configurado no contexto do canvas.\n\nA solução é injetar dependências:\n\nstruct PerfilView: View {\n    let usuario: Usuario  // recebe por parâmetro\n\n    var body: some View {\n        Text(usuario.nome)\n    }\n}\n\nextension Usuario {\n    static let preview = Usuario(nome: \"Jessica\", email: \"j@email.com\")\n}\n\n#Preview {\n    PerfilView(usuario: .preview)  // funciona no canvas\n}\n\nBônus: essa mudança também facilita testes unitários — sem dependência de singleton."
       }
     ],
-    "m03-views-composition/view-protocol-modifiers": [
+    "m03-views-composition/building-views-with-primitives": [
       {
-        "title": "Ordem do modificador",
-        "prompt": "Qual ocupa mais espaço visual: padding depois background ou background depois padding no mesmo retângulo?",
+        "title": "Ordem de modificadores — preveja o resultado",
+        "prompt": "Qual a diferença visual entre as duas versões? Trace o que cada uma renderiza:\n\n// Versão A:\nText(\"Olá\")\n    .padding()\n    .background(Color.blue)\n\n// Versão B:\nText(\"Olá\")\n    .background(Color.blue)\n    .padding()",
         "hints": [
-          "O último modificador envolve o resultado anterior."
+          "Cada modificador cria uma nova View que envolve a anterior.",
+          "background() cobre a área da View que recebe — que área é essa em cada caso?"
         ],
-        "solution": "Background depois do padding pinta só a área do conteúdo já com padding interno; a ordem muda o retângulo colorido. Teste no Xcode — não decore, observe."
-      }
-    ],
-    "m03-views-composition/viewbuilder": [
-      {
-        "title": "if sem else",
-        "prompt": "Em alguns contextos ViewBuilder, if sem else exige que ambos os lados existam. Por quê?",
-        "hints": [
-          "O tipo de retorno do builder precisa ser inferível."
-        ],
-        "solution": "O compilador precisa combinar os tipos das ramificações em um único tipo opaco some View; sem else, às vezes falta um ramo compatível."
-      }
-    ],
-    "m04-layout/stacks-grids": [
-      {
-        "title": "Spacer",
-        "prompt": "Spacer() empurra vizinhos. O que acontece se o pai não tiver altura definida em um VStack só com Text + Spacer?",
-        "hints": [
-          "Layout precisa de proposta de tamanho."
-        ],
-        "solution": "Pode haver ambiguidade ou o Spacer absorver o que o pai oferecer; em scroll views o comportamento muda. Regra prática: garanta cadeia de tamanho ou use minLength."
-      }
-    ],
-    "m04-layout/sizing-and-limits": [
-      {
-        "title": "infinity",
-        "prompt": "maxWidth: .infinity pede largura máxima ao pai. O que o pai precisa ter?",
-        "hints": [
-          "Proposta finita ou eixo definido."
-        ],
-        "solution": "O pai precisa oferecer largura (ou o eixo precisa estar resolvido). Caso contrário você pode ver avisos de layout ou comportamento inesperado."
-      }
-    ],
-    "m05-state-data-flow/state-binding-intro": [
-      {
-        "title": "Contador",
-        "prompt": "Sem rodar no Xcode: o botão aumenta count?\n\nstruct V: View {\n    @State private var count = 0\n    var body: some View {\n        Button(\"+\") { count += 1 }\n    }\n}",
-        "hints": [
-          "@State mutável na closure do Button é permitido."
-        ],
-        "solution": "Sim. count é @State; a closure captura a mutação e SwiftUI atualiza a view."
+        "solution": "Versão A — padding() depois background():\nO texto recebe padding primeiro, criando uma View maior.\nO background azul cobre o texto + o padding.\nResultado: retângulo azul cobrindo toda a área com padding.\n\nVersão B — background() antes do padding():\nO background azul cobre apenas o texto (sem padding).\nDepois o padding adiciona espaço transparente em volta do retângulo azul.\nResultado: retângulo azul cobrindo só o texto, com espaço transparente em volta.\n\nDica: visualize como caixas aninhadas — cada modificador é uma caixa que envolve a anterior."
       },
       {
-        "title": "Binding",
-        "prompt": "Filho com @Binding var texto — o pai passa TextField(\"\", text: ???). O que vai no text:?",
+        "title": "Construa um card de contato",
+        "prompt": "Complete esta View usando Text, Image e HStack para criar um card de contato com:\n- Avatar (SF Symbol 'person.circle.fill') à esquerda\n- Nome e email em VStack à direita\n- Padding e background arredondado\n\nstruct ContatoCard: View {\n    let nome: String\n    let email: String\n\n    var body: some View {\n        // complete aqui\n    }\n}",
         "hints": [
-          "$ cria Binding a partir de @State."
+          "HStack para dispor horizontal. VStack(alignment: .leading) para o texto.",
+          "Image(systemName:) para SF Symbol. .clipShape(RoundedRectangle(cornerRadius:)) para bordas."
         ],
-        "solution": "$textoDoPai (ou $stateProperty) — o prefixo $ converte @State em Binding."
+        "solution": "struct ContatoCard: View {\n    let nome: String\n    let email: String\n\n    var body: some View {\n        HStack(spacing: 12) {\n            Image(systemName: \"person.circle.fill\")\n                .font(.title)\n                .foregroundStyle(.blue)\n\n            VStack(alignment: .leading, spacing: 4) {\n                Text(nome)\n                    .font(.headline)\n                Text(email)\n                    .font(.caption)\n                    .foregroundStyle(.secondary)\n            }\n\n            Spacer()  // empurra conteúdo para a esquerda\n        }\n        .padding()\n        .background(.secondarySystemBackground)\n        .clipShape(RoundedRectangle(cornerRadius: 12))\n    }\n}"
       }
     ],
-    "m05-state-data-flow/observable-and-migration": [
+    "m03-views-composition/composing-complex-views": [
       {
-        "title": "Onde criar o modelo",
-        "prompt": "Por que não fazer `@Observable class M {}` e depois `let m = M()` dentro de body toda vez?",
+        "title": "Extrair componente — quando e como",
+        "prompt": "Este body está longo. Identifique o melhor candidato para extração e mostre como fazer:\n\nstruct TarefaView: View {\n    let tarefa: Tarefa\n    @State private var expandida = false\n\n    var body: some View {\n        VStack(alignment: .leading) {\n            HStack {\n                Image(systemName: tarefa.concluida ? \"checkmark.circle.fill\" : \"circle\")\n                    .foregroundStyle(tarefa.concluida ? .green : .gray)\n                Text(tarefa.titulo).font(.headline)\n                Spacer()\n            }\n            if expandida {\n                Text(tarefa.notas ?? \"Sem notas\")\n                    .font(.body)\n                    .foregroundStyle(.secondary)\n                    .padding(.top, 4)\n            }\n        }\n        .onTapGesture { expandida.toggle() }\n    }\n}",
         "hints": [
-          "body roda várias vezes."
+          "O HStack do cabeçalho não precisa de @State próprio — candidato a propriedade computada.",
+          "A parte das notas também não tem @State próprio — pode ser outra propriedade computada."
         ],
-        "solution": "Recriaria o modelo a cada render, perdendo estado. Instancie em @State na raiz ou injete via environment conforme o padrão da Apple."
+        "solution": "O HStack do cabeçalho e a seção de notas são bons candidatos para extração.\n\nComo não precisam de @State próprio, propriedades computadas são suficientes:\n\nstruct TarefaView: View {\n    let tarefa: Tarefa\n    @State private var expandida = false\n\n    // Propriedade computada — sem estado próprio:\n    private var cabecalho: some View {\n        HStack {\n            Image(systemName: tarefa.concluida ? \"checkmark.circle.fill\" : \"circle\")\n                .foregroundStyle(tarefa.concluida ? .green : .gray)\n            Text(tarefa.titulo).font(.headline)\n            Spacer()\n        }\n    }\n\n    private var notas: some View {\n        Text(tarefa.notas ?? \"Sem notas\")\n            .font(.body)\n            .foregroundStyle(.secondary)\n            .padding(.top, 4)\n    }\n\n    var body: some View {\n        VStack(alignment: .leading) {\n            cabecalho\n            if expandida { notas }\n        }\n        .onTapGesture { expandida.toggle() }\n    }\n}"
       }
     ],
-    "m05-state-data-flow/environment-object": [
+    "m04-layout/stacks-and-spacer": [
       {
-        "title": "Ambiente ausente",
-        "prompt": "Se uma View usa @Environment(\\.minhaChave) mas ninguém definiu .environment(\\.minhaChave, …) acima, o que ocorre?",
+        "title": "Botão fixo no fundo da tela",
+        "prompt": "O botão 'Confirmar' deve sempre ficar na parte inferior da tela. Complete a View:\n\nstruct CheckoutView: View {\n    var body: some View {\n        VStack {\n            // conteúdo rolável aqui\n            Text(\"Resumo do pedido\")\n            Text(\"Total: R$ 149,90\")\n            // Como fazer o botão sempre ficar no fundo?\n            Button(\"Confirmar\") { confirmar() }\n                .buttonStyle(.borderedProminent)\n        }\n    }\n}",
         "hints": [
-          "Valor default ou crash depende da API."
+          "Spacer() dentro de VStack expande para preencher o espaço disponível.",
+          "O que acontece com o botão quando o Spacer está entre o conteúdo e ele?"
         ],
-        "solution": "Depende: algumas chaves têm default; customizadas podem precisar default no EnvironmentValues. Sempre teste Preview e app."
+        "solution": "struct CheckoutView: View {\n    var body: some View {\n        VStack {\n            Text(\"Resumo do pedido\")\n            Text(\"Total: R$ 149,90\")\n\n            Spacer()  // expande — empurra o botão para o fundo\n\n            Button(\"Confirmar\") { confirmar() }\n                .buttonStyle(.borderedProminent)\n                .frame(maxWidth: .infinity)  // ocupa toda a largura\n        }\n        .padding()\n    }\n}"
+      },
+      {
+        "title": "Diagnóstico de layout — por que o texto está centralizado?",
+        "prompt": "A View abaixo deveria ter o texto alinhado à esquerda, mas está centralizado. Encontre o problema:\n\nVStack {\n    Text(\"Título\").font(.headline)\n    Text(\"Subtítulo\").font(.body)\n}",
+        "hints": [
+          "VStack tem um parâmetro de alinhamento.",
+          "Qual é o alinhamento padrão de VStack?"
+        ],
+        "solution": "O VStack usa alignment: .center por padrão — centraliza todos os filhos horizontalmente.\n\nCorreção:\n\nVStack(alignment: .leading) {  // alinha filhos à esquerda\n    Text(\"Título\").font(.headline)\n    Text(\"Subtítulo\").font(.body)\n}\n\nDica: Se quiser que os textos também se alinhem internamente à esquerda:\n\nVStack(alignment: .leading) {\n    Text(\"Título\").font(.headline)\n    Text(\"Subtítulo\").font(.body)\n}\n.frame(maxWidth: .infinity, alignment: .leading)  // frame se alinha à esquerda no pai"
       }
     ],
-    "m06-navigation/navigationstack": [
+    "m04-layout/adaptive-layout": [
       {
-        "title": "Destino",
-        "prompt": "Para que serve .navigationDestination(for: T.self) { … }?",
+        "title": "VStack vs LazyVStack — quando troca",
+        "prompt": "Você tem uma lista de 500 Posts. Qual é o problema e a correção?\n\nScrollView {\n    VStack(spacing: 8) {\n        ForEach(posts) { post in\n            PostCard(post: post)\n        }\n    }\n}",
         "hints": [
-          "Mapeia valor → tela na pilha."
+          "VStack cria todos os filhos imediatamente.",
+          "Qual é o equivalente 'lazy' que cria Views sob demanda?"
         ],
-        "solution": "Quando um NavigationLink empurra um valor do tipo T, o closure constrói a view de detalhe correspondente."
+        "solution": "Problema: VStack cria todos os 500 PostCards imediatamente ao aparecer — mesmo os que não estão visíveis. Isso usa memória e tempo de inicialização desnecessários.\n\nCorreção com LazyVStack:\n\nScrollView {\n    LazyVStack(spacing: 8) {  // apenas troque VStack por LazyVStack\n        ForEach(posts) { post in\n            PostCard(post: post)\n        }\n    }\n    .padding()\n}\n\nLazyVStack cria PostCards apenas quando estão próximos da área visível. Ao rolar para baixo, novos são criados; os que saíram da tela são liberados da memória."
       }
     ],
-    "m06-navigation/sheets-and-links": [
+    "m05-state-data-flow/state-and-binding": [
       {
-        "title": "Fechar sheet",
-        "prompt": "sheet(isPresented: $mostrar) — ao fechar o sheet, o que deve acontecer com mostrar?",
+        "title": "O botão não atualiza a tela — por quê?",
+        "prompt": "O botão é clicado mas o Text não atualiza. Encontre e corrija o bug:\n\nstruct ContadorView: View {\n    var contador = 0  // sem @State!\n\n    var body: some View {\n        VStack {\n            Text(\"\\(contador)\")\n            Button(\"+\") {\n                contador += 1  // ERRO de compilação\n            }\n        }\n    }\n}",
         "hints": [
-          "Binding controla visibilidade."
+          "Structs não podem mutar propriedades em closures não-mutating.",
+          "Existe um property wrapper que armazena o valor externamente e dispara recálculo do body."
         ],
-        "solution": "O sistema define mostrar como false ao dismiss; você também pode setar false no botão Concluir."
+        "solution": "Dois problemas:\n1. var contador = 0 dentro de struct View não compila — closures do Button não são mutating\n2. Mesmo que compilasse, a View não seria recalculada porque SwiftUI não observa var comuns\n\nCorreção com @State:\n\nstruct ContadorView: View {\n    @State private var contador = 0  // armazenado externamente pelo SwiftUI\n\n    var body: some View {\n        VStack {\n            Text(\"\\(contador)\")\n            Button(\"+\") {\n                contador += 1  // muta o armazenamento externo → SwiftUI recalcula body\n            }\n        }\n    }\n}"
+      },
+      {
+        "title": "Binding — conectando pai e filha",
+        "prompt": "Complete o código para que o toggle na filha atualize o estado da pai:\n\nstruct Pai: View {\n    @State private var ativo = false\n\n    var body: some View {\n        Filha(/* como passar? */)\n    }\n}\n\nstruct Filha: View {\n    /* como receber? */ var ativo: Bool\n\n    var body: some View {\n        Toggle(\"Ativar\", isOn: /* ? */)\n    }\n}",
+        "hints": [
+          "$ antes de @State cria um Binding.",
+          "@Binding na filha recebe a referência sem copiar o valor."
+        ],
+        "solution": "struct Pai: View {\n    @State private var ativo = false\n\n    var body: some View {\n        Filha(ativo: $ativo)  // $ cria Binding ao @State\n    }\n}\n\nstruct Filha: View {\n    @Binding var ativo: Bool  // referência ao @State da pai\n\n    var body: some View {\n        Toggle(\"Ativar\", isOn: $ativo)  // Toggle escreve no Binding → atualiza pai\n    }\n}\n\nQuando o usuário toggle a chave na Filha, ela escreve no Binding, que escreve no @State da Pai, que causa recálculo de ambas as Views."
       }
     ],
-    "m07-architecture/managing-model-data": [
+    "m05-state-data-flow/observable-and-environment": [
       {
-        "title": "View gorda",
-        "prompt": "Nomeie um problema de colocar 200 linhas de parsing JSON dentro de body.",
+        "title": "Criando @Observable no lugar errado",
+        "prompt": "Qual é o problema grave neste código?\n\nstruct AppView: View {\n    var body: some View {\n        let sessao = SessaoUsuario()  // criado no body!\n        ContentView()\n            .environment(sessao)\n    }\n}",
         "hints": [
-          "body reroda; lógica misturada com UI."
+          "body pode ser recalculado várias vezes.",
+          "O que acontece com o objeto SessaoUsuario a cada recálculo?"
         ],
-        "solution": "Performance e leitura ruins; difícil testar. Extraia para função async ou serviço e injete resultado no modelo."
+        "solution": "Problema: SessaoUsuario() é criado a cada vez que body é recalculado. Cada recálculo cria um objeto NOVO, perdendo todo o estado anterior (usuário logado, configurações, etc.).\n\nCorreção — instancie em @State:\n\nstruct AppView: View {\n    @State private var sessao = SessaoUsuario()  // criado UMA vez, persistido pelo SwiftUI\n\n    var body: some View {\n        ContentView()\n            .environment(sessao)\n    }\n}\n\n@State garante que o objeto é criado uma vez e sobrevive a recálculos do body."
       }
     ],
-    "m07-architecture/composition-vs-templates": [
+    "m06-navigation/navigation-stack-and-link": [
       {
-        "title": "Acoplamento",
-        "prompt": "Módulo A importa B e B importa A. Por que SPM/tooling reclama?",
+        "title": "navigationDestination no lugar errado",
+        "prompt": "Existe um erro sutil neste código que pode causar comportamento imprevisível. Encontre:\n\nNavigationStack {\n    List(tarefas) { tarefa in\n        NavigationLink(tarefa.titulo, value: tarefa)\n            .navigationDestination(for: Tarefa.self) { t in\n                DetalheTarefa(tarefa: t)\n            }\n    }\n}",
         "hints": [
-          "Dependência circular."
+          ".navigationDestination deve ser aplicado próximo à raiz do NavigationStack.",
+          "O que acontece quando cada célula registra seu próprio destino?"
         ],
-        "solution": "Import circular impede ordem de compilação clara. Quebre com protocolo em módulo terceiro ou reorganize camadas."
+        "solution": "Problema: .navigationDestination está dentro do ForEach/List — cada célula registra um destino separado. Isso pode causar comportamento imprevisível com múltiplos destinos registrados para o mesmo tipo.\n\nCorreção — mova para a raiz do NavigationStack:\n\nNavigationStack {\n    List(tarefas) { tarefa in\n        NavigationLink(tarefa.titulo, value: tarefa)\n    }\n    .navigationDestination(for: Tarefa.self) { tarefa in\n        DetalheTarefa(tarefa: tarefa)  // um único destino registrado\n    }\n}"
+      },
+      {
+        "title": "Voltar para a raiz programaticamente",
+        "prompt": "Complete o código para que o botão 'Início' na tela de detalhe volte para a raiz:\n\nstruct AppView: View {\n    @State private var caminho = NavigationPath()\n\n    var body: some View {\n        NavigationStack(path: $caminho) {\n            Lista(caminho: $caminho)\n                .navigationDestination(for: Tarefa.self) { t in\n                    Detalhe(tarefa: t, caminho: /* ? */)\n                }\n        }\n    }\n}\n\nstruct Detalhe: View {\n    let tarefa: Tarefa\n    @Binding var caminho: NavigationPath\n\n    var body: some View {\n        Button(\"Início\") {\n            // como voltar para a raiz?\n        }\n    }\n}",
+        "hints": [
+          "NavigationPath é um valor — pode ser substituído por um novo.",
+          "Um path vazio significa: nenhuma tela empilhada."
+        ],
+        "solution": "struct Detalhe: View {\n    let tarefa: Tarefa\n    @Binding var caminho: NavigationPath\n\n    var body: some View {\n        Button(\"Início\") {\n            caminho = NavigationPath()  // path vazio = volta para a raiz\n        }\n    }\n}\n\n// Na chamada:\nDetalhe(tarefa: t, caminho: $caminho)"
       }
     ],
-    "m08-swiftdata/modelcontainer-schema": [
+    "m06-navigation/modals-and-sheets": [
       {
-        "title": "@Model e struct",
-        "prompt": "Por que @Model é aplicado a class e não a struct típica de valor?",
+        "title": "Fechar sheet corretamente",
+        "prompt": "Corrija o problema neste código:\n\nstruct FormularioSheet: View {\n    @Binding var mostrar: Bool\n\n    var body: some View {\n        Button(\"Fechar\") {\n            mostrar = false  // funciona, mas existe forma mais idiomática\n        }\n    }\n}",
         "hints": [
-          "Identidade e persistência de referência."
+          "Existe um valor de ambiente específico para fechar modais.",
+          "@Environment(\\.dismiss) não precisa de @Binding externo."
         ],
-        "solution": "SwiftData trabalha com objetos gerenciados por contexto; o modelo persistente é referenciado e rastreado — uso de class alinhado à doc."
+        "solution": "Funciona, mas o padrão idiomático é usar @Environment(\\.dismiss):\n\nstruct FormularioSheet: View {\n    @Environment(\\.dismiss) private var fechar\n\n    var body: some View {\n        Button(\"Fechar\") {\n            fechar()  // fecha sem precisar de @Binding\n        }\n    }\n}\n\nVantagem: a View não precisa mais do @Binding var mostrar — reduz o acoplamento. Funciona para sheet, fullScreenCover e qualquer modal."
       }
     ],
-    "m08-swiftdata/fetch-save": [
+    "m07-architecture/separation-of-concerns": [
       {
-        "title": "Salvar",
-        "prompt": "Depois de modelContext.insert(novo), quando as mudanças vão para o disco?",
+        "title": "Refatore para baixo acoplamento",
+        "prompt": "Refatore este ViewModel para depender de protocolo em vez de URLSession diretamente:\n\nclass TarefasViewModel {\n    var tarefas: [Tarefa] = []\n\n    func carregar() async throws {\n        let url = URL(string: \"https://api.app.com/tarefas\")!\n        let (data, _) = try await URLSession.shared.data(from: url)\n        tarefas = try JSONDecoder().decode([Tarefa].self, from: data)\n    }\n}",
         "hints": [
-          "save() persiste."
+          "Crie um protocolo com um método buscarTodas() async throws -> [Tarefa].",
+          "O ViewModel deve receber a implementação pelo init."
         ],
-        "solution": "Quando você chama try modelContext.save() (ou autosave conforme configuração). Leia a doc atual para batching."
+        "solution": "// Protocolo de dependência:\nprotocol TarefaRepositorio {\n    func buscarTodas() async throws -> [Tarefa]\n}\n\n// Implementação de produção:\nstruct TarefaAPI: TarefaRepositorio {\n    func buscarTodas() async throws -> [Tarefa] {\n        let url = URL(string: \"https://api.app.com/tarefas\")!\n        let (data, _) = try await URLSession.shared.data(from: url)\n        return try JSONDecoder().decode([Tarefa].self, from: data)\n    }\n}\n\n// ViewModel desacoplado:\n@Observable\nclass TarefasViewModel {\n    var tarefas: [Tarefa] = []\n    private let repositorio: TarefaRepositorio\n\n    init(repositorio: TarefaRepositorio = TarefaAPI()) {\n        self.repositorio = repositorio\n    }\n\n    func carregar() async throws {\n        tarefas = try await repositorio.buscarTodas()\n    }\n}\n\nAgora você pode testar com TarefaFake() sem rede."
       }
     ],
-    "m09-concurrency/async-await-intro": [
+    "m07-architecture/project-organization": [
       {
-        "title": "await",
-        "prompt": "O que await faz em relação à thread?",
+        "title": "Feature-first na prática",
+        "prompt": "Reorganize esta estrutura layer-first para feature-first:\n\n// Atual (layer-first):\nModels/\n  Tarefa.swift\n  Usuario.swift\nViews/\n  TarefaListaView.swift\n  TarefaDetalheView.swift\n  PerfilView.swift\nViewModels/\n  TarefasViewModel.swift\n  PerfilViewModel.swift\nServices/\n  TarefaService.swift\n  AuthService.swift",
         "hints": [
-          "Suspender ≠ bloquear ocupado."
+          "Agrupe por funcionalidade: tudo de Tarefas junto, tudo de Perfil junto.",
+          "Código compartilhado por múltiplas features vai em Core/"
         ],
-        "solution": "Marca ponto onde a função async pode suspender esperando trabalho assíncrono sem busy-wait; a thread pode fazer outras coisas."
+        "solution": "// Feature-first:\nFeatures/\n  Tarefas/\n    TarefaModel.swift\n    TarefasViewModel.swift\n    TarefaService.swift\n    Views/\n      TarefaListaView.swift\n      TarefaDetalheView.swift\n\n  Perfil/\n    UsuarioModel.swift\n    PerfilViewModel.swift\n    PerfilView.swift\n\nCore/\n  Auth/\n    AuthService.swift\n  Extensions/\n  Components/\n\nVantagem: ao trabalhar em Tarefas, tudo que você precisa está em Features/Tarefas/. Não precisa pular entre Models/, Views/ e Services/."
       }
     ],
-    "m09-concurrency/mainactor-task": [
+    "m08-swiftdata/swiftdata-model-and-container": [
       {
-        "title": "MainActor",
-        "prompt": "Por que atualizar UI de @State em tipo não-MainActor pode gerar warning ou bug?",
+        "title": "Container in-memory para Preview",
+        "prompt": "Complete o código para criar um ModelContainer seguro para Preview:\n\nstruct TarefaListaView: View {\n    @Query private var tarefas: [Tarefa]\n    // ...\n}\n\n// Como criar um Preview com dados de teste\n// sem misturar com o banco de produção?\n#Preview {\n    // complete aqui\n}",
         "hints": [
-          "UI na main thread."
+          "ModelConfiguration tem um parâmetro isStoredInMemoryOnly.",
+          "Adicione dados de teste no mainContext do container."
         ],
-        "solution": "Interface deve ser tocada na main actor; @MainActor ou MainActor.assumed garante isolamento conforme regras do compilador."
+        "solution": "extension ModelContainer {\n    static var preview: ModelContainer {\n        let config = ModelConfiguration(isStoredInMemoryOnly: true)\n        let container = try! ModelContainer(for: Tarefa.self, configurations: config)\n        let contexto = container.mainContext\n        contexto.insert(Tarefa(titulo: \"Revisar PR\"))\n        contexto.insert(Tarefa(titulo: \"Escrever testes\"))\n        return container\n    }\n}\n\n#Preview {\n    TarefaListaView()\n        .modelContainer(.preview)  // dados de teste, isolados da produção\n}"
+      },
+      {
+        "title": "Editar um @Model — o que é necessário?",
+        "prompt": "Qual das abordagens está CORRETA para editar uma Tarefa no SwiftData?\n\n// Opção A:\ntarefa.titulo = \"Novo título\"\n\n// Opção B:\ncontexto.update(tarefa, titulo: \"Novo título\")\n\n// Opção C:\ntarefa.titulo = \"Novo título\"\ntry contexto.save()",
+        "hints": [
+          "@Model rastreia mudanças automaticamente.",
+          "save() é necessário para persistir? Quando?"
+        ],
+        "solution": "Opção A está CORRETA para a maioria dos casos.\n\n@Model rastreia automaticamente qualquer mutação de propriedade. Simplesmente atribuir um novo valor é suficiente — não existe um método update() no SwiftData.\n\ntarefa.titulo = \"Novo título\"  // SwiftData rastreia essa mudança\n\nO contexto persiste automaticamente em pontos determinísticos (app indo para background, etc.).\n\nOpção C também funciona se você quiser garantir persistência imediata:\ntarefa.titulo = \"Novo título\"\ntry contexto.save()  // persiste agora mesmo\n\nOpção B não existe — não há API update() no SwiftData."
       }
     ],
-    "m10-combine/publishers-subscribers": [
+    "m09-concurrency/async-await": [
       {
-        "title": "Cancelar",
-        "prompt": "Por que guardar AnyCancellable ao assinar um Publisher com sink?",
+        "title": "Paralelo vs sequencial — qual é mais rápido?",
+        "prompt": "Estas duas funções fazem a mesma coisa mas com performance diferente. Qual é mais rápida e por quê?\n\n// Versão A — sequencial:\nfunc carregarDados() async throws {\n    let usuario = try await buscarUsuario()    // aguarda\n    let config = try await buscarConfig()     // aguarda o anterior\n    exibir(usuario, config)\n}\n\n// Versão B — paralelo:\nfunc carregarDados() async throws {\n    async let usuario = buscarUsuario()\n    async let config = buscarConfig()\n    let (u, c) = try await (usuario, config)\n    exibir(u, c)\n}",
         "hints": [
-          "Sem retenção, a assinatura morre."
+          "Na versão A, quanto tempo total se cada chamada leva 2 segundos?",
+          "Na versão B, as duas chamadas começam ao mesmo tempo."
         ],
-        "solution": "sink retorna token cancelável; se não armazenar, o objeto pode ser desalocado e o stream para."
+        "solution": "Versão B é mais rápida.\n\nVersão A (sequencial): 2s + 2s = ~4 segundos\nbuscarUsuario() aguarda 2s, depois buscarConfig() aguarda 2s.\n\nVersão B (paralelo): ~2 segundos\nasync let inicia AMBAS as chamadas imediatamente.\ntry await (usuario, config) aguarda as duas — o total é o tempo da mais lenta, não a soma.\n\nUse async let sempre que duas operações forem independentes entre si."
+      },
+      {
+        "title": "Tratamento de erro async — complete o código",
+        "prompt": "Complete a função para tratar erros corretamente:\n\n@MainActor\nfunc carregarPerfil(id: UUID) async {\n    // carregando = true\n    // tente buscar o perfil\n    // se erro, mostre a mensagem\n    // garanta que carregando = false no final\n}",
+        "hints": [
+          "defer garante execução no final, independente de erro.",
+          "do { try await ... } catch { ... } é o padrão para async throws."
+        ],
+        "solution": "@MainActor\nfunc carregarPerfil(id: UUID) async {\n    carregando = true\n    defer { carregando = false }  // executa SEMPRE no final\n\n    do {\n        perfil = try await PerfilService.buscar(id: id)\n        erro = nil\n    } catch {\n        self.erro = error.localizedDescription\n        perfil = nil\n    }\n}\n\ndefer garante que carregando = false executa mesmo se um erro for lançado — evita o estado de loading travado."
       }
     ],
-    "m10-combine/async-sequence-bridge": [
+    "m09-concurrency/mainactor-and-actors": [
       {
-        "title": "Escolha",
-        "prompt": "Um único request HTTP com resposta única — Combine ou async/await?",
+        "title": "Diagnóstico — warning de thread",
+        "prompt": "Este código pode gerar um warning 'Publishing changes from background thread'. Encontre e corrija:\n\nclass PerfilViewModel: ObservableObject {\n    @Published var perfil: Perfil?\n\n    func carregar(id: UUID) {\n        Task {\n            let resultado = try? await APIService.buscar(id: id)\n            perfil = resultado  // <- warning aqui\n        }\n    }\n}",
         "hints": [
-          "Linearidade."
+          "APIService.buscar retorna de uma thread de background.",
+          "@MainActor garante execução na thread principal."
         ],
-        "solution": "Na maioria dos casos async/await é mais simples; Combine brilha em streams contínuos."
+        "solution": "O problema: APIService.buscar executa em background. Quando retorna, a atribuição perfil = resultado ainda está em background thread, mas @Published precisa ser atualizado na main thread.\n\nSolução 1 — @MainActor na classe:\n@MainActor\nclass PerfilViewModel: ObservableObject {\n    @Published var perfil: Perfil?\n\n    func carregar(id: UUID) {\n        Task {\n            // await libera a main thread durante a busca\n            perfil = try? await APIService.buscar(id: id)\n            // retoma na main thread — seguro!\n        }\n    }\n}\n\nSolução 2 — @Observable (moderno, sem @Published):\n@MainActor\n@Observable\nclass PerfilViewModel {\n    var perfil: Perfil?\n    // @Observable + @MainActor resolve sem @Published\n}"
       }
     ],
-    "m11-testing/xctest-units": [
+    "m10-combine/combine-fundamentals": [
       {
-        "title": "Asserção",
-        "prompt": "XCTAssertEqual(2 + 2, 5) — o teste passa?",
+        "title": "Pipeline de busca com debounce",
+        "prompt": "Complete o pipeline Combine para busca em tempo real:\n\nclass BuscaViewModel: ObservableObject {\n    @Published var textoBusca = \"\"\n    @Published var resultados: [Item] = []\n    private var cancelaveis = Set<AnyCancellable>()\n\n    init() {\n        // Monte o pipeline:\n        // 1. Observe textoBusca\n        // 2. Aguarde 300ms de silêncio\n        // 3. Ignore duplicatas\n        // 4. Execute a busca\n    }\n}",
         "hints": [
-          "4 ≠ 5"
+          "$textoBusca é um Publisher de mudanças.",
+          "debounce aguarda silêncio. removeDuplicates ignora repetições."
         ],
-        "solution": "Não; o teste falha e o relatório mostra a diferença."
+        "solution": "init() {\n    $textoBusca\n        .debounce(for: .milliseconds(300), scheduler: RunLoop.main)\n        .removeDuplicates()\n        .sink { [weak self] texto in\n            guard let self else { return }\n            Task {\n                await self.buscar(query: texto)\n            }\n        }\n        .store(in: &cancelaveis)  // guarda o token!\n}\n\nprivate func buscar(query: String) async {\n    resultados = await BuscaService.buscar(query: query)\n}\n\nObserve: [weak self] evita retain cycle, .store(in: &cancelaveis) mantém o subscription vivo."
       }
     ],
-    "m11-testing/ui-testing-basics": [
+    "m11-testing/unit-testing-with-xctest": [
       {
-        "title": "Query",
-        "prompt": "app.buttons[\"OK\"].tap() — o que acontece se o botão estiver com título localizado diferente?",
+        "title": "Escreva um teste unitário",
+        "prompt": "Escreva um teste para verificar que adicionar uma tarefa incrementa a lista:\n\nclass TarefasViewModel {\n    var tarefas: [Tarefa] = []\n\n    func adicionar(titulo: String) {\n        let nova = Tarefa(titulo: titulo, concluida: false)\n        tarefas.append(nova)\n    }\n}\n\n// Escreva o teste:\nfinal class TarefasViewModelTests: XCTestCase {\n    func test_adicionar_??? {\n        // Arrange\n        // Act\n        // Assert\n    }\n}",
         "hints": [
-          "String exata."
+          "Arrange: crie o ViewModel. Act: chame adicionar(). Assert: verifique tarefas.count.",
+          "XCTAssertEqual compara valores iguais."
         ],
-        "solution": "Pode falhar. Por isso accessibilityIdentifier estável é melhor que depender só do texto visível."
+        "solution": "final class TarefasViewModelTests: XCTestCase {\n    func test_adicionar_incrementaLista() {\n        // Arrange:\n        let vm = TarefasViewModel()\n        XCTAssertEqual(vm.tarefas.count, 0)  // estado inicial\n\n        // Act:\n        vm.adicionar(titulo: \"Nova Tarefa\")\n\n        // Assert:\n        XCTAssertEqual(vm.tarefas.count, 1)\n        XCTAssertEqual(vm.tarefas[0].titulo, \"Nova Tarefa\")\n        XCTAssertFalse(vm.tarefas[0].concluida)  // deve iniciar não concluída\n    }\n\n    func test_adicionar_duasTarefas_incrementaDuasVezes() {\n        let vm = TarefasViewModel()\n        vm.adicionar(titulo: \"A\")\n        vm.adicionar(titulo: \"B\")\n        XCTAssertEqual(vm.tarefas.count, 2)\n    }\n}"
       }
     ],
-    "m12-accessibility/labels-hints": [
+    "m11-testing/ui-testing-with-xcuitest": [
       {
-        "title": "Label vs hint",
-        "prompt": "VoiceOver: label diz o quê e hint diz o quê?",
+        "title": "Por que o teste quebrou?",
+        "prompt": "O teste funcionava mas parou após o designer mudar o botão de 'OK' para 'Confirmar'. Qual é o problema e como prevenir?\n\nfunc test_botaoConfirmar() {\n    let botao = app.buttons[\"OK\"]  // busca por texto visível\n    XCTAssertTrue(botao.exists)\n    botao.tap()\n}",
         "hints": [
-          "Nome vs consequência da ação."
+          "Texto visível é mutável — qualquer mudança de copy quebra o teste.",
+          "Existe um identificador estável não visível ao usuário."
         ],
-        "solution": "Label identifica o elemento; hint descreve o que acontece ao ativar (se não for óbvio)."
+        "solution": "Problema: o teste busca pelo texto visível 'OK'. Quando o designer muda para 'Confirmar', o teste não encontra mais o elemento.\n\nPrevenção com accessibilityIdentifier:\n\n// Na View SwiftUI:\nButton(\"Confirmar\") { confirmar() }\n    .accessibilityIdentifier(\"botao-confirmar\")  // estável, não visível\n\n// No teste:\nfunc test_botaoConfirmar() {\n    let botao = app.buttons[\"botao-confirmar\"]  // busca pelo identifier\n    XCTAssertTrue(botao.exists)\n    botao.tap()\n}\n\naccessibilityIdentifier não muda com localização, redesign ou copy changes — é um contrato técnico estável."
       }
     ],
-    "m12-accessibility/dynamic-type": [
+    "m12-accessibility/voiceover-and-semantic-labels": [
       {
-        "title": "Texto grande",
-        "prompt": "Por que .font(.body) costuma ser melhor que .font(.system(size: 14)) para apps acessíveis?",
+        "title": "Melhore a acessibilidade deste botão",
+        "prompt": "Este botão é inacessível para usuários de VoiceOver. Corrija:\n\nButton {\n    favoritar(tarefa)\n} label: {\n    Image(systemName: \"heart\")\n}",
         "hints": [
-          "Dynamic Type."
+          "VoiceOver anuncia o nome do SF Symbol — 'heart, button'. O usuário não sabe o que o botão faz.",
+          "accessibilityLabel sobrescreve o texto anunciado."
         ],
-        "solution": ".body escala com a preferência do usuário; tamanho fixo ignora Dynamic Type."
+        "solution": "Button {\n    favoritar(tarefa)\n} label: {\n    Image(systemName: favorita ? \"heart.fill\" : \"heart\")\n}\n.accessibilityLabel(favorita ? \"Remover dos favoritos\" : \"Adicionar aos favoritos\")\n// VoiceOver anuncia: \"Adicionar aos favoritos, button\"\n\n// Dica extra — valor muda dinamicamente:\n.accessibilityValue(favorita ? \"ativo\" : \"inativo\")\n\n// Se o estado importa:\n.accessibilityAddTraits(favorita ? [.isSelected] : [])"
+      }
+    ],
+    "m13-debug-performance/xcode-shortcuts": [
+      {
+        "title": "Atalho certo para cada situação",
+        "prompt": "Qual atalho você usaria em cada situação?\n\n1. Você quer ir para a definição de uma função que está usando\n2. Você quer abrir o arquivo 'TarefasViewModel.swift' rapidamente\n3. Você quer adicionar um breakpoint na linha atual\n4. Você quer reindentação de um bloco de código bagunçado",
+        "hints": [
+          "Cada ação tem um atalho de teclado dedicado no Xcode.",
+          "Para atalhos de navegação, pense em Cmd + algo."
+        ],
+        "solution": "1. Ir para definição → Cmd + Click no símbolo\n   (ou Ctrl + Cmd + J)\n\n2. Abrir arquivo por nome → Cmd + Shift + O\n   (Quick Open — busca fuzzy por nome de arquivo ou símbolo)\n\n3. Adicionar breakpoint na linha → Cmd + \\\n   (também pode clicar na calha à esquerda do número de linha)\n\n4. Reindentação → Selecione o código + Ctrl + I\n   (selecione o arquivo inteiro com Cmd + A, depois Ctrl + I para formatar tudo)"
+      }
+    ],
+    "m13-debug-performance/xcode-debug-workflow": [
+      {
+        "title": "Use LLDB para inspecionar",
+        "prompt": "O app está pausado num breakpoint dentro desta função. Como você verificaria:\n1. O valor de usuario.nome\n2. A pilha completa de chamadas\n3. Se email é nil antes do guard\n\nfunc processar(usuario: Usuario) {\n    guard let email = usuario.email else { return }\n    // breakpoint aqui ↑\n    enviar(email: email)\n}",
+        "hints": [
+          "O console LLDB aceita comandos quando pausado.",
+          "po, bt e frame variable são os mais úteis."
+        ],
+        "solution": "No console LLDB (aparece quando o app está pausado):\n\n1. Verificar usuario.nome:\n(lldb) po usuario.nome\n\"Jessica\"\n\n2. Ver a pilha completa de chamadas:\n(lldb) bt\nframe #0: processar(usuario:) em TarefaViewModel.swift:42\nframe #1: TarefasViewModel.salvarTarefa() em TarefaViewModel.swift:28\nframe #2: TarefasView.body (closure) em TarefasView.swift:67\n\n3. Ver todas as variáveis locais (inclui email):\n(lldb) frame variable\n(Usuario) usuario = { nome = \"Jessica\", email = nil }\n(String?) email = nil\n\nDica: po permite avaliar expressões complexas:\n(lldb) po usuario.email?.count ?? 0"
+      },
+      {
+        "title": "Exception Breakpoint — encontre o crash",
+        "prompt": "O app crasha com 'Fatal error: Index out of range' mas a mensagem de erro não mostra onde. Qual é a estratégia passo a passo para encontrar a linha exata sem adicionar print() ou comentar código?",
+        "hints": [
+          "Existe um tipo especial de breakpoint que pausa antes de um crash.",
+          "Breakpoint Navigator → botão + → tipo específico."
+        ],
+        "solution": "Passo a passo:\n\n1. Breakpoint Navigator (Cmd + 8 ou o ícone de breakpoint na sidebar)\n2. Clique no botão '+' no canto inferior esquerdo\n3. Escolha 'Exception Breakpoint'\n4. Em 'Exception', selecione 'Swift'\n5. Clique 'Done'\n\nNa próxima execução:\n- Reproduza os passos que causavam o crash\n- O Xcode pausa na LINHA EXATA onde o array foi acessado fora dos limites\n- Use po no console: (lldb) po meuArray.count\n- Veja o índice que estava sendo acessado: (lldb) frame variable\n\nResult: você encontra a causa raiz em segundos, sem tocar no código."
       }
     ],
     "m13-debug-performance/previews-instruments": [
       {
-        "title": "Medir",
-        "prompt": "Por que \"otimizar\" sem Instruments pode ser perda de tempo?",
+        "title": "Medir antes de otimizar",
+        "prompt": "Um desenvolvedor diz: 'Minha lista está lenta — vou trocar List por LazyVStack e adicionar cache de imagens.' Qual é o problema com essa abordagem?",
         "hints": [
-          "Hipótese vs evidência."
+          "Sem medir, como você sabe onde está o gargalo real?",
+          "Qual ferramenta mostra onde o CPU está gastando tempo?"
         ],
-        "solution": "Você pode mudar código que não era gargalo; o profiler mostra onde o CPU/memória realmente gastam."
+        "solution": "Problema: otimização sem evidência.\n\nA lista pode estar lenta por razões completamente diferentes:\n- Parsing JSON pesado no body de cada célula\n- Busca de dados fazendo múltiplos fetches desnecessários\n- Imagens bloqueando o rendering (correto)\n- LazyVStack seria a solução certa (correto)\n- Algo completamente diferente\n\nMudar LazyVStack e adicionar cache pode resolver, não resolver, ou até piorar se a causa for outra.\n\nFluxo correto:\n1. Cmd + I → abre Instruments\n2. Escolha Time Profiler\n3. Reproduza o scroll lento\n4. Veja onde o CPU está gastando tempo (Invert Call Tree)\n5. AGORA você sabe o que otimizar\n6. Meça novamente para confirmar melhora\n\nOtimização sem medição é chute."
       }
     ],
-    "m13-debug-performance/swiftui-performance": [
+    "m14-career/portfolio-and-github": [
       {
-        "title": "ForEach id",
-        "prompt": "ForEach(items, id: \\.self) com struct Item: Hashable onde o hash muda a cada render — problema?",
+        "title": "Avaliando um projeto de portfólio",
+        "prompt": "Você está avaliando um portfólio iOS. Este trecho aparece no código principal. Quais são os red flags?\n\nclass ViewController: UIViewController {\n    let url = URL(string: \"https://api.app.com/dados\")!\n    \n    override func viewDidLoad() {\n        URLSession.shared.dataTask(with: url!) { data, _, _ in\n            let itens = try! JSONDecoder().decode([Item].self, from: data!)\n            self.tableView.reloadData()\n        }.resume()\n    }\n}",
         "hints": [
-          "Identidade instável."
+          "Conte quantos operadores ! existem e o que cada um significa.",
+          "Onde está o tratamento de erros? E o threading?"
         ],
-        "solution": "SwiftUI pode recriar linhas, perder animação e estado de foco. Prefira id estável (ex.: id do modelo)."
+        "solution": "Red flags identificados:\n\n1. URL(string:)! — force unwrap de URL. Crasha se a string for inválida.\n\n2. url! — url já não é Optional (é URL, não URL?). Esse ! é redundante mas indica descuido.\n\n3. try! JSONDecoder().decode — crasha se o JSON for diferente do esperado. Sem tratamento de erro.\n\n4. data! — force unwrap de Data. Crasha se a rede falhou e data é nil.\n\n5. self.tableView.reloadData() em callback de URLSession — atualiza UI de thread de background. Warning + comportamento imprevisível.\n\n6. Lógica de rede dentro de ViewController — sem separação de responsabilidades.\n\nUm portfólio pleno teria: async/await, try/catch, @MainActor, e ViewModel separado."
       }
     ],
-    "m14-career/learning-and-hig": [
+    "m14-career/code-review-and-collaboration": [
       {
-        "title": "Fonte primária",
-        "prompt": "Em dúvida de comportamento de API, qual fonte deve prevalecer sobre tutorial de blog?",
+        "title": "Reescreva o comentário de code review",
+        "prompt": "Este comentário de code review é improdutivo. Reescreva de forma construtiva:\n\nComentário atual:\n'Isso está completamente errado, use guard let sempre.'",
         "hints": [
-          "Autoridade."
+          "Um bom comentário explica o PROBLEMA, propõe uma solução e pode fazer uma pergunta.",
+          "Evite julgamentos de valor ('completamente errado')."
         ],
-        "solution": "Documentação oficial da Apple para aquela versão de OS/SDK; blogs complementam."
+        "solution": "Versão melhorada:\n\n'Com if let aninhados em 3 níveis o código fica difícil de seguir. Que tal usar guard let no início da função para tratar os casos nil cedo e manter o restante do código linear? Algo como:\n\nguard let usuario else { return }\nguard let email = usuario.email else { return }\n\nIsso reduziria a indentação e deixaria o 'happy path' mais claro. Faz sentido para este caso?'\n\nDiferenças:\n- Explica o PROBLEMA concreto (indentação, legibilidade)\n- Sugere uma solução específica com código\n- Faz uma pergunta — abre espaço para contexto\n- Sem julgamento de valor ('completamente errado')"
       }
     ],
-    "m14-career/code-review-portfolio": [
+    "m15-design-system/design-tokens-and-components": [
       {
-        "title": "PR pequeno",
-        "prompt": "Duas vantagens de PR com menos de 400 linhas.",
+        "title": "Crie um token de cor semântico",
+        "prompt": "Este código usa cores hardcoded em múltiplos lugares. Refatore usando tokens:\n\nstruct BotaoSalvar: View {\n    var body: some View {\n        Button(\"Salvar\") { salvar() }\n            .foregroundStyle(Color(red: 0, green: 0.478, blue: 1.0))\n            .background(Color(red: 0, green: 0.478, blue: 1.0).opacity(0.15))\n    }\n}\n\nstruct BotaoCancelar: View {\n    var body: some View {\n        Button(\"Cancelar\") { cancelar() }\n            .foregroundStyle(Color(red: 1.0, green: 0.231, blue: 0.188))\n    }\n}",
         "hints": [
-          "Revisão e risco."
+          "Extensões de Color permitem criar tokens nomeados semanticamente.",
+          "O nome deve descrever o PROPÓSITO, não a cor: primaryAction, destructiveAction."
         ],
-        "solution": "Revisão mais rápida e menos risco de conflito; mais fácil reverter se algo quebrar."
+        "solution": "// Tokens semânticos em extensão de Color:\nextension Color {\n    static let primaryAction = Color(red: 0, green: 0.478, blue: 1.0)\n    static let primaryActionSoft = primaryAction.opacity(0.15)\n    static let destructiveAction = Color(red: 1.0, green: 0.231, blue: 0.188)\n}\n\n// Views refatoradas:\nstruct BotaoSalvar: View {\n    var body: some View {\n        Button(\"Salvar\") { salvar() }\n            .foregroundStyle(.primaryAction)\n            .background(.primaryActionSoft)\n    }\n}\n\nstruct BotaoCancelar: View {\n    var body: some View {\n        Button(\"Cancelar\") { cancelar() }\n            .foregroundStyle(.destructiveAction)\n    }\n}\n\nAgora se a cor mudar, muda em um único lugar. E o nome 'primaryAction' comunica propósito."
       }
     ],
-    "m15-design-system/design-system-hig": [
+    "m15-design-system/hig-principles": [
       {
-        "title": "Token",
-        "prompt": "Em uma frase: por que \"corPrimaria\" como nome é melhor que #FF6B00 espalhado em 20 arquivos?",
+        "title": "Área de toque mínima",
+        "prompt": "Este ícone de fechar tem apenas 16x16 pontos visualmente, mas precisa de área de toque adequada. Corrija:\n\nButton {\n    fechar()\n} label: {\n    Image(systemName: \"xmark\")\n        .font(.system(size: 12))\n}",
         "hints": [
-          "Mudança única."
+          "As HIG recomendam 44x44 pontos como área mínima de toque.",
+          ".frame() pode expandir a área sem mudar o tamanho visual do ícone."
         ],
-        "solution": "Token centraliza: trocar o valor em um lugar atualiza todo o app de forma coerente."
-      }
-    ],
-    "m15-design-system/visual-language": [
-      {
-        "title": "SF Symbol",
-        "prompt": "Image(systemName: \"heart.fill\") — precisa de asset no Asset Catalog?",
-        "hints": [
-          "Sistema."
-        ],
-        "solution": "Não para símbolos do catálogo SF Symbols; o sistema fornece. Nomes inválidos falham em runtime ou mostram placeholder."
-      }
-    ],
-    "m15-design-system/swiftui-como-funciona": [
-      {
-        "title": "UIKit bridge",
-        "prompt": "Quando usar UIViewRepresentable em vez de reescrever tudo em SwiftUI?",
-        "hints": [
-          "Componente UIKit maduro ou requisito pontual."
-        ],
-        "solution": "Quando precisa de UIView existente (mapas, players, views legadas) sem reimplementar do zero."
+        "solution": "Button {\n    fechar()\n} label: {\n    Image(systemName: \"xmark\")\n        .font(.system(size: 12))  // tamanho visual mantido\n        .frame(width: 44, height: 44)  // área de toque mínima das HIG\n        .contentShape(Rectangle())  // garante que toda a área é tocável\n}\n\nAlternativa com padding:\nImage(systemName: \"xmark\")\n    .font(.system(size: 12))\n    .padding(16)  // 12 + 16*2 = 44 de área total\n\nMotivo: dedos têm área de contato de ~44pts. Alvos menores causam erros de toque frequentes — o usuário toca na área errada."
       }
     ]
   }

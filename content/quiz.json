@@ -2,368 +2,632 @@
   "bySection": {
     "m01-swift-essentials/optionals-and-types-for-ui": [
       {
-        "question": "Optional String nunca pode ser nil?",
+        "question": "Você tem uma função que recebe `usuario: Usuario?` e precisa exibir o email. Qual abordagem é a mais correta?",
         "options": [
-          "Verdadeiro",
-          "Falso"
+          "Usar `usuario!.email` porque o usuário quase sempre existe em produção.",
+          "Usar `guard let usuario else { return }` e depois acessar `usuario.email` diretamente.",
+          "Converter para String vazia com `usuario?.email ?? \"\"` em qualquer caso.",
+          "Usar `if usuario != nil` e depois `usuario!.email` dentro do if."
         ],
         "correctIndex": 1,
-        "explanation": "String? pode ser nil; String não pode."
+        "explanation": "guard let sai cedo quando o valor não existe e deixa o restante do código trabalhar com a versão sem ? — mais seguro e mais legível que force unwrap depois de um if nil check."
+      },
+      {
+        "question": "Qual é a diferença prática entre `if let apelido = usuario.apelido` e `usuario.apelido ?? \"Anônimo\"`?",
+        "options": [
+          "Não há diferença — os dois fazem a mesma coisa.",
+          "if let cria uma constante para usar em múltiplas linhas; ?? é ideal para um fallback inline simples.",
+          "?? é mais seguro porque nunca causa crash.",
+          "if let só funciona com String; ?? funciona com qualquer tipo."
+        ],
+        "correctIndex": 1,
+        "explanation": "if let é para quando você precisa usar o valor em múltiplas linhas com lógica adicional. ?? é perfeito para um fallback simples em uma expressão — como dentro de Text()."
+      },
+      {
+        "question": "O que acontece quando você encadeia `usuario?.endereco?.cidade` e `usuario` é nil?",
+        "options": [
+          "O app crasha com Fatal error.",
+          "O resultado é nil — nenhuma parte da cadeia executa.",
+          "Swift lança um erro que você precisa capturar com try/catch.",
+          "Retorna uma string vazia automaticamente."
+        ],
+        "correctIndex": 1,
+        "explanation": "Optional chaining (?.) interrompe a cadeia no primeiro nil e retorna nil para toda a expressão — sem crash, sem erro. Por isso combine com ?? para fornecer um fallback."
       }
     ],
     "m01-swift-essentials/protocols-and-generics-bridge": [
       {
-        "question": "Identifiable exige id estável na vida do item na lista?",
+        "question": "Por que `ForEach` em SwiftUI exige que seus elementos sejam `Identifiable`?",
         "options": [
-          "Sim, em geral",
-          "Não importa"
+          "Por exigência do compilador sem razão técnica real.",
+          "Para que o SwiftUI possa rastrear qual item é qual ao aplicar animações e atualizações de lista.",
+          "Porque Identifiable substitui Hashable em qualquer contexto.",
+          "Porque sem Identifiable a lista não exibe mais de 10 itens."
+        ],
+        "correctIndex": 1,
+        "explanation": "SwiftUI usa a identidade estável do Identifiable para reconciliar mudanças na lista — saber o que foi inserido, removido ou movido. Sem isso, ele trata toda mudança como recriação completa."
+      },
+      {
+        "question": "O que `some View` comunica ao compilador, diferente de `AnyView`?",
+        "options": [
+          "Que a View pode ser qualquer tipo em tempo de execução.",
+          "Que existe um tipo concreto específico, mas o desenvolvedor não precisa nomeá-lo — o compilador o conhece.",
+          "Que o body pode retornar nil quando vazio.",
+          "Que a View não pode ter modificadores."
+        ],
+        "correctIndex": 1,
+        "explanation": "some View (opaque type) diz que existe um tipo concreto fixo que o compilador rastreia internamente. AnyView apaga o tipo completamente, o que tem custo de performance e perde otimizações do SwiftUI."
+      }
+    ],
+    "m02-app-swiftui/app-scene-windowgroup": [
+      {
+        "question": "Onde é o lugar correto para inicializar o ModelContainer do SwiftData e por quê?",
+        "options": [
+          "Em ContentView.onAppear, para inicializar quando a tela aparece.",
+          "Na struct App (init ou modificador .modelContainer), pois executa exatamente uma vez e injeta o container em toda a hierarquia.",
+          "Em cada ViewModel que precisa persistir dados.",
+          "Em uma variável global — é mais simples."
+        ],
+        "correctIndex": 1,
+        "explanation": "O App é o ponto de entrada — seu init roda uma única vez. Se você inicializar em ContentView, o container pode ser criado múltiplas vezes porque o SwiftUI recria Views com frequência."
+      },
+      {
+        "question": "Por que `WindowGroup` foi criado em vez de apenas `Window`?",
+        "options": [
+          "WindowGroup é só um alias — não há diferença técnica.",
+          "WindowGroup permite que o sistema crie múltiplas instâncias da janela no iPadOS e macOS, onde o usuário pode ter várias janelas do mesmo app.",
+          "WindowGroup é necessário apenas para apps com abas.",
+          "WindowGroup substitui UINavigationController em todas as plataformas."
+        ],
+        "correctIndex": 1,
+        "explanation": "No iPhone existe uma janela. No iPad e no Mac, o usuário pode abrir múltiplas janelas do mesmo app. WindowGroup descreve o conteúdo de cada instância — o sistema cuida de criar e gerenciar quantas instâncias forem necessárias."
+      }
+    ],
+    "m02-app-swiftui/lifecycle-events": [
+      {
+        "question": "Por que `.task` é preferível a `Task {}` dentro de `.onAppear`?",
+        "options": [
+          "Não há diferença — os dois têm o mesmo comportamento.",
+          ".task cancela automaticamente a Task quando a View desaparece, evitando atualizações de estado numa View que não existe mais.",
+          ".onAppear não aceita closures assíncronas.",
+          "Task {} dentro de onAppear não compila no Swift moderno."
+        ],
+        "correctIndex": 1,
+        "explanation": "Se o usuário sair da tela antes da Task terminar, .task cancela automaticamente. Task {} dentro de onAppear não tem esse cancelamento — continua executando mesmo após a View sumir, podendo atualizar @State de uma View desalocada."
+      },
+      {
+        "question": "Seu app salva rascunhos quando vai para o segundo plano. Onde colocar essa lógica?",
+        "options": [
+          "Em onAppear de ContentView — roda sempre que a tela aparece.",
+          "No .onChange(of: scenePhase) no App, observando quando scenePhase == .background.",
+          "Em um Timer que dispara a cada 5 segundos.",
+          "Diretamente no body de uma View — é calculado com frequência."
+        ],
+        "correctIndex": 1,
+        "explanation": "scenePhase no App é o lugar certo para reagir a transições de ciclo de vida do app inteiro. onAppear de ContentView pode ser chamado mais de uma vez e não reflete o estado de segundo plano."
+      }
+    ],
+    "m02-app-swiftui/previews-organization": [
+      {
+        "question": "Por que uma View que acessa um singleton via `Sessao.shared` é difícil de usar no Preview?",
+        "options": [
+          "Porque singletons são proibidos em SwiftUI.",
+          "Porque o canvas do Preview não tem o singleton configurado — a View depende de estado global que não existe no contexto isolado do canvas.",
+          "Porque #Preview não suporta classes.",
+          "Porque o compilador rejeita acesso a shared dentro de body."
+        ],
+        "correctIndex": 1,
+        "explanation": "Preview roda a View em isolamento. Se a View depende de um singleton global não configurado, o Preview falha ou mostra estado inválido. A solução é injetar dependências — a mesma prática que facilita testes."
+      }
+    ],
+    "m03-views-composition/building-views-with-primitives": [
+      {
+        "question": "Por que `.padding().background(.blue)` tem resultado diferente de `.background(.blue).padding()`?",
+        "options": [
+          "Não há diferença visual — é só questão de estilo.",
+          "Porque cada modificador envolve a View anterior. Com .padding().background(), o fundo cobre a área com padding. Com .background().padding(), o fundo cobre só o conteúdo e o padding fica fora do fundo.",
+          "Porque .background() deve sempre vir antes de .padding() por uma regra do SwiftUI.",
+          "Porque .padding() e .background() não podem ser usados juntos."
+        ],
+        "correctIndex": 1,
+        "explanation": "Modificadores encadeiam novas Views — cada um envolve o resultado anterior. A ordem define qual área cada modificador afeta."
+      },
+      {
+        "question": "Para um botão que deve ter feedback de toque, suporte a estados desabilitado e label customizado, qual é a abordagem correta em SwiftUI?",
+        "options": [
+          "Usar um ZStack com TapGesture para simular um botão customizado.",
+          "Usar Button com label como @ViewBuilder e .disabled() quando necessário — o sistema cuida do feedback.",
+          "Usar UIButton via UIViewRepresentable para ter controle total.",
+          "Adicionar .onTapGesture diretamente na Image sem envolver num Button."
+        ],
+        "correctIndex": 1,
+        "explanation": "Button em SwiftUI já inclui feedback de toque, estado desabilitado, suporte a acessibilidade e teclado físico. .disabled() propaga para toda a hierarquia interna do label."
+      }
+    ],
+    "m03-views-composition/composing-complex-views": [
+      {
+        "question": "Quando faz sentido criar uma `private struct` em vez de uma propriedade computada `var` para extrair parte de uma View?",
+        "options": [
+          "Nunca — propriedade computada é sempre suficiente.",
+          "Quando o componente precisa de @State próprio ou quando é reutilizado em múltiplos lugares.",
+          "Apenas quando o componente tem mais de 50 linhas.",
+          "Quando você quer esconder o código do revisor."
+        ],
+        "correctIndex": 1,
+        "explanation": "Propriedade computada não pode ter @State próprio — ela roda dentro da struct pai. Para componentes com estado independente ou reutilizáveis, uma struct separada é necessária e permite que o SwiftUI otimize recálculos individualmente."
+      },
+      {
+        "question": "Qual é a diferença prática entre `List` e `ForEach` dentro de `ScrollView + LazyVStack`?",
+        "options": [
+          "São equivalentes — use o que parecer mais legível.",
+          "List adiciona comportamentos nativos de plataforma (swipe-to-delete, reordenação, separadores). ScrollView + LazyVStack dá mais controle sobre aparência.",
+          "ForEach tem scroll embutido; List não.",
+          "List só funciona com dados estáticos."
+        ],
+        "correctIndex": 1,
+        "explanation": "Use List quando quer comportamentos nativos de tabela. Use ScrollView + LazyVStack quando quer controle total do layout sem o comportamento padrão de lista."
+      }
+    ],
+    "m04-layout/stacks-and-spacer": [
+      {
+        "question": "Como o SwiftUI decide o tamanho de uma View — quem tem a palavra final?",
+        "options": [
+          "O desenvolvedor define tudo com .frame().",
+          "O pai propõe um tamanho disponível, a filha responde com o que precisa — a filha tem a palavra final dentro dos limites propostos.",
+          "O sistema operacional define todos os tamanhos em pontos fixos.",
+          "A View com mais modificadores tem precedência."
+        ],
+        "correctIndex": 1,
+        "explanation": "O layout do SwiftUI é uma negociação: o pai propõe, a filha responde. Text responde com o tamanho exato do texto; Color e Spacer pedem tudo disponível. Entender isso explica por que .frame() e Spacer se comportam como se comportam."
+      },
+      {
+        "question": "Você tem um botão 'Confirmar' que deve sempre ficar na parte inferior da tela, independente do conteúdo acima. Qual é a solução correta?",
+        "options": [
+          "Usar position(x:y:) com coordenadas fixas.",
+          "Colocar VStack com ConteudoPrincipal() + Spacer() + Button() — o Spacer empurra o botão para o fundo.",
+          "Usar GeometryReader para calcular a posição exata.",
+          "Colocar o botão num ZStack acima de tudo."
+        ],
+        "correctIndex": 1,
+        "explanation": "Spacer() dentro de VStack expande para preencher o espaço disponível, empurrando o botão para a base. É a solução mais simples e que se adapta a qualquer altura de tela."
+      }
+    ],
+    "m04-layout/adaptive-layout": [
+      {
+        "question": "Por que `GeometryReader` é recomendado dentro de `.overlay()` em vez de diretamente no body?",
+        "options": [
+          "Por convenção de estilo — tecnicamente não faz diferença.",
+          "Porque GeometryReader é guloso (pede todo o espaço disponível). Dentro de .overlay() ele não afeta o layout do elemento principal.",
+          "Porque .overlay() fornece um proxy de tamanho mais preciso.",
+          "Porque GeometryReader não compila fora de .overlay()."
+        ],
+        "correctIndex": 1,
+        "explanation": "GeometryReader expande para o tamanho máximo proposto pelo pai, como Color. Se usada diretamente no body, empurra ou deforma outros elementos. Em .overlay(), informa o tamanho sem alterar o layout principal."
+      },
+      {
+        "question": "Uma lista com 2.000 itens usando `VStack + ForEach` dentro de `ScrollView` está lenta. Qual é a causa e a solução?",
+        "options": [
+          "O problema é o ForEach — substitua por List.",
+          "VStack cria todas as 2.000 Views de uma vez. Trocar por LazyVStack resolve: cria Views só quando estão próximas da área visível.",
+          "ScrollView não suporta mais de 500 itens — use paginação.",
+          "O problema é de rede — otimize a busca de dados."
+        ],
+        "correctIndex": 1,
+        "explanation": "VStack (não lazy) cria todos os filhos imediatamente, consumindo memória e tempo de inicialização. LazyVStack cria e destrói conforme o scroll, mantendo apenas o visível na memória."
+      }
+    ],
+    "m05-state-data-flow/state-and-binding": [
+      {
+        "question": "Por que Views SwiftUI (structs) precisam de `@State` para ter valores mutáveis?",
+        "options": [
+          "Porque Swift proíbe structs de ter propriedades — precisa de @State para contornar.",
+          "Porque @State armazena o valor fora da struct, em memória gerenciada pelo SwiftUI. Quando muda, o sistema recria a struct com o novo valor.",
+          "Porque sem @State o compilador não permite usar o valor em body.",
+          "Porque struct não pode ter var — só let."
+        ],
+        "correctIndex": 1,
+        "explanation": "Structs não podem mutar propriedades em métodos não-mutating. @State contorna isso armazenando o valor externamente. Quando o valor muda, o SwiftUI cria uma nova instância da struct e recalcula body — a struct em si é efêmera."
+      },
+      {
+        "question": "Uma View filha recebe um valor `let tarefa: Tarefa` mas precisa que o usuário possa editá-lo. O que deve mudar?",
+        "options": [
+          "Trocar para `var tarefa: Tarefa` na filha.",
+          "Passar `@Binding var tarefa: Tarefa` na filha e `$tarefa` no call site — a filha escreve diretamente no @State da pai.",
+          "Criar um @State na filha com `@State var tarefaLocal = tarefa` e sincronizar manualmente.",
+          "Usar @Environment para a tarefa."
+        ],
+        "correctIndex": 1,
+        "explanation": "@Binding é uma referência bidirecional ao @State da pai. Quando a filha escreve no @Binding, está escrevendo no @State original — sem duplicação, sem sincronização manual."
+      }
+    ],
+    "m05-state-data-flow/observable-and-environment": [
+      {
+        "question": "Qual é a principal vantagem do `@Observable` sobre `ObservableObject + @Published`?",
+        "options": [
+          "@Observable funciona em mais versões do iOS.",
+          "@Observable rastreia quais propriedades cada View usa e recalcula só as Views que dependem da propriedade que mudou — mais eficiente.",
+          "@Observable não precisa ser uma class.",
+          "ObservableObject foi removido no Swift 5.9."
+        ],
+        "correctIndex": 1,
+        "explanation": "ObservableObject notifica TODAS as Views que observam o objeto quando QUALQUER propriedade muda. @Observable rastreia granularmente — só a View que leu a propriedade que mudou é recalculada."
+      },
+      {
+        "question": "Você injetou um objeto `@Observable SessaoUsuario` com `.environment(sessao)` na raiz do app. Como uma View 5 níveis abaixo acessa esse objeto?",
+        "options": [
+          "Precisa receber por parâmetro em cada nível intermediário.",
+          "@Environment(SessaoUsuario.self) private var sessao — acessa direto, sem passar por Views intermediárias.",
+          "Precisa usar uma variável global.",
+          "Só é possível se a View for filha direta da View que injetou."
+        ],
+        "correctIndex": 1,
+        "explanation": "@Environment busca o objeto em qualquer nível da hierarquia acima — é justamente isso que elimina o prop drilling. Nenhuma View intermediária precisa saber do objeto."
+      }
+    ],
+    "m06-navigation/navigation-stack-and-link": [
+      {
+        "question": "Por que `NavigationLink(value:)` com `.navigationDestination(for:)` é preferível ao `NavigationLink` com destino inline?",
+        "options": [
+          "Não há diferença técnica — é só estilo.",
+          "NavigationLink com value só cria a View de destino quando o usuário navega. O destino inline é criado junto com o NavigationLink, mesmo sem o usuário ter tocado.",
+          "NavigationLink com value é mais rápido para compilar.",
+          "O destino inline foi removido no iOS 16."
+        ],
+        "correctIndex": 1,
+        "explanation": "Em listas com muitos itens, criar todos os destinos antecipadamente consome memória e tempo de inicialização. NavigationLink com value é lazy — o destino só é criado quando a navegação acontece."
+      },
+      {
+        "question": "Qual é a forma correta de navegar de volta para a tela raiz programaticamente usando `NavigationPath`?",
+        "options": [
+          "Chamar dismiss() do @Environment.",
+          "Atribuir um NavigationPath vazio: `caminho = NavigationPath()` — remove todos os itens da pilha.",
+          "Chamar caminho.removeAll() — mas essa função não existe.",
+          "Usar NavigationView.popToRootViewController()."
+        ],
+        "correctIndex": 1,
+        "explanation": "NavigationPath é um valor que você controla. Atribuir um novo path vazio limpa a pilha e retorna para a raiz. `caminho.removeLast(caminho.count)` também funciona, mas substituir por um novo path vazio é mais direto."
+      }
+    ],
+    "m06-navigation/modals-and-sheets": [
+      {
+        "question": "Por que `.sheet(item: $tarefaParaEditar)` é preferível a `.sheet(isPresented: $mostrarSheet)` quando precisa editar um item específico?",
+        "options": [
+          "item-based sheet tem melhor performance de animação.",
+          "Com item-based, o item é passado diretamente para o conteúdo do sheet — sem precisar de uma variável separada para o item selecionado + um booleano de controle.",
+          "isPresented sheet não funciona com modelos customizados.",
+          "Não há diferença — os dois são equivalentes."
+        ],
+        "correctIndex": 1,
+        "explanation": "isPresented precisa de duas variáveis (@State Bool + @State Item?). item-based sheet usa um @State Item? — nil fecha o sheet, não-nil abre e fornece o item. Mais limpo e menos propenso a dessincronização."
+      },
+      {
+        "question": "Por que botões destrutivos devem ter `role: .destructive` + um `alert` de confirmação, em vez de executar diretamente?",
+        "options": [
+          "Por exigência do App Store — apps sem confirmação são rejeitados.",
+          "role: .destructive faz o botão aparecer em vermelho (seguindo HIG). O alert evita erro acidental em ações irreversíveis — o sistema espera essa proteção para ações que não podem ser desfeitas.",
+          "Alert é mais rápido que executar diretamente.",
+          "Apenas por questão visual — sem impacto real no UX."
+        ],
+        "correctIndex": 1,
+        "explanation": "As HIG recomendam confirmação para ações destrutivas irreversíveis. role: .destructive aplica a cor correta automaticamente e o alert garante que o usuário confirma intenção antes de perder dados."
+      }
+    ],
+    "m07-architecture/separation-of-concerns": [
+      {
+        "question": "Uma View faz chamada direta a `URLSession.shared.data(from:)`. Qual é o principal problema disso?",
+        "options": [
+          "URLSession não funciona em Views SwiftUI.",
+          "A View fica acoplada à implementação de rede — impossível testar sem rede real, difícil de trocar a implementação, e a View acumula responsabilidades além de layout.",
+          "É apenas um problema de performance.",
+          "URLSession deve ser usado só em AppDelegate."
+        ],
+        "correctIndex": 1,
+        "explanation": "Acoplamento direto à implementação concreta (URLSession) impede testes unitários, dificulta refatoração e mistura responsabilidades. O padrão correto é depender de um protocolo de repositório — testável, substituível."
+      },
+      {
+        "question": "Quando NÃO criar um ViewModel para uma View?",
+        "options": [
+          "Nunca — toda View deve ter seu próprio ViewModel.",
+          "Quando a View tem estado simples (@State de um toggle ou campo de texto) sem lógica de negócio — @State direto é mais simples sem perda de qualidade.",
+          "Quando a View usa ForEach.",
+          "Quando o app tem menos de 3 telas."
+        ],
+        "correctIndex": 1,
+        "explanation": "ViewModel agrega valor quando há lógica de apresentação complexa, chamadas de rede ou estado compartilhado. Para Views simples, adicionar ViewModel é overhead arquitetural sem benefício — @State é suficiente."
+      }
+    ],
+    "m07-architecture/project-organization": [
+      {
+        "question": "O que torna a organização feature-first mais escalável que layer-first em projetos maiores?",
+        "options": [
+          "Feature-first tem menos arquivos no total.",
+          "Ao trabalhar numa feature, todos os arquivos relevantes (model, view, service) estão na mesma pasta — sem pular entre Models/, Views/ e Services/.",
+          "Feature-first é exigência do App Store.",
+          "Layer-first cria erros de compilação em projetos grandes."
+        ],
+        "correctIndex": 1,
+        "explanation": "Feature-first alinha a estrutura de pastas com a forma como o trabalho acontece: por feature. Você abre a pasta Tarefas e encontra tudo que precisa. Layer-first dispersa uma feature por múltiplas pastas, aumentando o custo de navegação."
+      }
+    ],
+    "m08-swiftdata/swiftdata-model-and-container": [
+      {
+        "question": "Por que `@Model` exige `class` em vez de `struct`?",
+        "options": [
+          "Por uma limitação arbitrária do Swift.",
+          "SwiftData precisa rastrear objetos específicos em múltiplos contextos — semântica de referência (class) é necessária para que mudanças num lugar sejam vistas em outros.",
+          "Struct não pode ter propriedades opcionais.",
+          "Class compila mais rápido que struct no SwiftData."
+        ],
+        "correctIndex": 1,
+        "explanation": "Persistência requer identidade e rastreamento de mudanças em objetos específicos. Structs são copiadas — não há como rastrear 'este objeto específico mudou'. Classes são referências — múltiplos contextos apontam para o mesmo objeto."
+      },
+      {
+        "question": "Qual é a diferença entre `@Query` e `ModelContext` na prática?",
+        "options": [
+          "@Query é só um alias mais simples para ModelContext.",
+          "@Query lê dados reativamente (View atualiza quando banco muda). ModelContext é usado para escrever — inserir, deletar, salvar.",
+          "@Query pode escrever; ModelContext só lê.",
+          "Os dois são iguais — use o que for mais conveniente."
+        ],
+        "correctIndex": 1,
+        "explanation": "@Query é a leitura declarativa e reativa — a View se atualiza automaticamente quando os dados mudam. ModelContext é o canal de escrita — você chama insert(), delete() e o sistema persiste."
+      },
+      {
+        "question": "Por que usar um `ModelContainer` in-memory em Previews e testes?",
+        "options": [
+          "Porque o container de produção não compila no simulador.",
+          "Para não misturar dados de teste com dados reais do app — o container in-memory descarta tudo quando o processo termina.",
+          "Porque @Query não funciona com o container de produção em testes.",
+          "Por questão de performance — in-memory é 10x mais rápido."
+        ],
+        "correctIndex": 1,
+        "explanation": "O container de produção persiste em disco. Se testes e Previews usam o mesmo banco, dados de teste contaminam os dados reais do app no simulador. In-memory garante isolamento e estado limpo a cada execução."
+      }
+    ],
+    "m09-concurrency/async-await": [
+      {
+        "question": "O que acontece à thread principal quando o Swift encontra um `await` durante execução de uma função `@MainActor`?",
+        "options": [
+          "A thread principal fica bloqueada até o resultado chegar.",
+          "A função é suspensa e a thread principal é liberada para processar outros eventos. Quando o resultado chega, a função retoma na thread principal.",
+          "A função é cancelada e precisa ser chamada novamente.",
+          "A thread principal é destruída e recriada."
+        ],
+        "correctIndex": 1,
+        "explanation": "Essa é a diferença fundamental entre await e Thread.sleep(). sleep bloqueia a thread. await suspende a função e LIBERA a thread — ela pode processar toques, animações e outros eventos enquanto espera."
+      },
+      {
+        "question": "Você tem duas chamadas independentes de rede que cada uma leva 2 segundos. Como executá-las em paralelo com async/await?",
+        "options": [
+          "Chamar `await funcao1()` e depois `await funcao2()` — elas rodam em paralelo automaticamente.",
+          "Usar `async let r1 = funcao1(); async let r2 = funcao2()` e depois `let (a, b) = try await (r1, r2)` — inicia as duas antes de esperar.",
+          "Criar duas Tasks separadas e usar DispatchGroup para sincronizar.",
+          "Não é possível com async/await — use DispatchQueue.concurrent."
+        ],
+        "correctIndex": 1,
+        "explanation": "await sequencial espera cada chamada antes de iniciar a próxima — 4 segundos no total. async let inicia as duas imediatamente, aguarda as duas juntas — aproximadamente 2 segundos no total."
+      }
+    ],
+    "m09-concurrency/mainactor-and-actors": [
+      {
+        "question": "Um `@Observable` ViewModel busca dados na rede com async/await. Ele deve ser marcado com `@MainActor`?",
+        "options": [
+          "Não — @MainActor torna a rede mais lenta por rodar na thread principal.",
+          "Sim — @MainActor garante que as propriedades são atualizadas na thread principal, sem precisar de DispatchQueue.main. O await durante a rede libera a thread principal normalmente.",
+          "Apenas se usar @Published em vez de @Observable.",
+          "Somente se o ViewModel tiver mais de 5 propriedades."
+        ],
+        "correctIndex": 1,
+        "explanation": "@MainActor garante que as propriedades do ViewModel são sempre atualizadas na thread correta — verificado em compilação. O await durante a chamada de rede ainda libera a thread principal. A combinação é segura e eficiente."
+      },
+      {
+        "question": "Quando um `actor` é mais adequado que `@MainActor` para proteger estado compartilhado?",
+        "options": [
+          "Quando o estado será acessado por múltiplas Tasks em background — um cache de imagens, pool de conexões, contador compartilhado.",
+          "Quando quer substituir todas as classes do projeto.",
+          "@MainActor é sempre preferível — actor é mais complexo sem vantagem.",
+          "Quando o app tem mais de 10 telas."
         ],
         "correctIndex": 0,
-        "explanation": "id instável quebra diff e animações."
+        "explanation": "@MainActor é o actor especial da thread principal — para UI. actor customizado é para estado compartilhado entre Tasks em background, onde você quer serialização sem forçar execução na main thread."
       }
     ],
-    "m02-app-swiftui/app-entry-scene-window": [
+    "m10-combine/combine-fundamentals": [
       {
-        "question": "Vários @main no mesmo target é válido?",
+        "question": "Você tem um campo de busca e quer chamar a API só 300ms depois da última tecla. Qual operador Combine resolve isso?",
         "options": [
-          "Sim",
-          "Não"
+          ".delay() — atrasa todos os valores pelo mesmo tempo.",
+          ".debounce(for: .milliseconds(300), scheduler: RunLoop.main) — aguarda 300ms de silêncio antes de emitir.",
+          ".throttle() — limita a um evento por segundo.",
+          ".filter() — filtra os valores repetidos."
         ],
         "correctIndex": 1,
-        "explanation": "Deve haver um único ponto @main."
-      }
-    ],
-    "m02-app-swiftui/lifecycle-basics": [
+        "explanation": "debounce aguarda um período sem novos valores antes de emitir o último. Perfeito para busca em tempo real — o usuário digita rápido e a API só é chamada quando ele pausa."
+      },
       {
-        "question": "body deve conter trabalho de rede pesado?",
+        "question": "O que acontece se você não guardar o `AnyCancellable` retornado por `.sink()`?",
         "options": [
-          "Sim",
-          "Não"
+          "A subscription continua indefinidamente em segundo plano.",
+          "A subscription é cancelada imediatamente — o token é desalocado ao fim da linha e a Combine para de emitir.",
+          "Xcode lança um warning mas o código funciona normalmente.",
+          "O publisher entra em loop infinito."
         ],
         "correctIndex": 1,
-        "explanation": "Prefira .task ou camadas assíncronas."
+        "explanation": "AnyCancellable cancela a subscription quando é desalocado. Se você não guardar o token numa propriedade, ele vive apenas dentro da linha onde foi criado e é desalocado imediatamente — a subscription não funciona."
       }
     ],
-    "m02-app-swiftui/preview-and-structure": [
+    "m11-testing/unit-testing-with-xctest": [
       {
-        "question": "Preview substitui testes automatizados?",
+        "question": "Por que usar um `TarefaFake` (implementação em memória) em vez da implementação real de banco nos testes?",
         "options": [
-          "Sim",
-          "Não"
+          "Porque o banco real não compila em targets de teste.",
+          "Para isolar o componente testado — o teste verifica a lógica do ViewModel sem depender de banco real, disco, rede ou estado externo. Os testes ficam rápidos e determinísticos.",
+          "Por questão de performance — banco real é mais lento que memória.",
+          "Porque SwiftData não funciona em testes."
         ],
         "correctIndex": 1,
-        "explanation": "Preview ajuda design; testes validam comportamento."
-      }
-    ],
-    "m03-views-composition/view-protocol-modifiers": [
+        "explanation": "Isolamento é o princípio central dos testes unitários. O Fake remove variáveis externas — agora o teste falha apenas quando a lógica do componente testado está errada, não por estado do banco ou disponibilidade de rede."
+      },
       {
-        "question": "some View expõe o tipo exato do body?",
+        "question": "Você escreve um teste que passa hoje mas falha amanhã sem nenhuma mudança de código. Qual é provavelmente a causa?",
         "options": [
-          "Sim",
-          "Não"
+          "Bug no compilador do Xcode.",
+          "O teste depende de estado externo não controlado — hora atual, dados reais de banco ou rede. Testes unitários devem ser determinísticos.",
+          "Swift mudou o comportamento de XCTAssert entre versões.",
+          "O teste estava escrito errado desde o início."
         ],
         "correctIndex": 1,
-        "explanation": "Opaque type esconde o tipo concreto."
+        "explanation": "Determinismo é requisito de testes unitários — o mesmo input deve produzir sempre o mesmo resultado. Dependências de hora atual, rede ou banco introduzem variáveis que o teste não controla."
       }
     ],
-    "m03-views-composition/viewbuilder": [
+    "m11-testing/ui-testing-with-xcuitest": [
       {
-        "question": "AnyView é a primeira solução para erros de tipo?",
+        "question": "Por que localizar elementos por `accessibilityIdentifier` é mais robusto que por texto visível em XCUITest?",
         "options": [
-          "Sim",
-          "Não"
+          "accessibilityIdentifier compila mais rápido.",
+          "Texto visível muda quando o app é traduzido ou quando o copy é revisado. accessibilityIdentifier é estável — não muda com localização ou redesign de texto.",
+          "Texto visível não pode ser localizado por XCUITest.",
+          "Por convenção — tecnicamente os dois funcionam igual."
         ],
         "correctIndex": 1,
-        "explanation": "Evite AnyView; prefira Group/@ViewBuilder."
+        "explanation": "Testes por texto são frágeis — quebram a cada mudança de copy ou tradução. accessibilityIdentifier é um contrato técnico estável entre a View e o teste, independente de localização ou redesign visual."
       }
     ],
-    "m04-layout/stacks-grids": [
+    "m12-accessibility/voiceover-and-semantic-labels": [
       {
-        "question": "LazyVStack cria todos os filhos de uma vez?",
+        "question": "Um botão de favoritar tem só uma Image(systemName: 'heart'). O VoiceOver anuncia 'heart, button'. Como corrigir?",
         "options": [
-          "Sim",
-          "Não"
+          "Adicionar um Text('') invisível ao lado.",
+          "Adicionar .accessibilityLabel('Favoritar [nome do item]') — o VoiceOver anuncia esse texto em vez do nome do símbolo.",
+          "Trocar Image por Label — Label já tem acessibilidade embutida.",
+          "Não há como corrigir — SF Symbols sempre anunciam o nome do ícone."
         ],
         "correctIndex": 1,
-        "explanation": "Lazy cria sob demanda na medida do necessário."
-      }
-    ],
-    "m04-layout/sizing-and-limits": [
+        "explanation": ".accessibilityLabel sobrescreve o texto anunciado pelo VoiceOver com uma descrição semântica útil. O usuário de VoiceOver precisa saber o que o botão faz, não o nome do ícone."
+      },
       {
-        "question": "GeometryReader deve ser usado em todo layout?",
+        "question": "Por que usar `.font(.headline)` em vez de `.font(.system(size: 17, weight: .semibold))` é importante para acessibilidade?",
         "options": [
-          "Sim",
-          "Não"
+          ".headline tem melhor performance de renderização.",
+          "Text styles semânticos (.headline, .body) escalam automaticamente com a preferência Dynamic Type do usuário. Tamanhos fixos ignoram essa preferência.",
+          "Tamanhos fixos só funcionam em iPad.",
+          "Não há diferença — o tamanho visual é idêntico."
         ],
         "correctIndex": 1,
-        "explanation": "Use quando stacks/frames não bastarem."
+        "explanation": "Dynamic Type permite que usuários com deficiência visual configurem texto maior. Font styles semânticos respeitam essa configuração. Tamanhos fixos em pontos travam o texto num tamanho único, ignorando a preferência do usuário."
       }
     ],
-    "m05-state-data-flow/state-binding-intro": [
+    "m13-debug-performance/xcode-shortcuts": [
       {
-        "question": "@Binding duplica a fonte da verdade?",
+        "question": "Qual atalho do Xcode mais economiza tempo para navegar para um arquivo específico pelo nome?",
         "options": [
-          "Sim",
-          "Não"
+          "Cmd + 1 para abrir o Project Navigator e rolar até encontrar.",
+          "Cmd + Shift + O — abre o Quick Open com busca fuzzy pelo nome do arquivo ou símbolo.",
+          "Cmd + F para busca dentro do arquivo atual.",
+          "Ctrl + Cmd + ← para voltar no histórico de navegação."
         ],
         "correctIndex": 1,
-        "explanation": "Binding aponta para fonte existente."
+        "explanation": "Cmd + Shift + O é o atalho mais impactante para navegar — busca fuzzy por nome de arquivo, classe, função ou símbolo em qualquer lugar do projeto. Elimina o uso do mouse para abrir arquivos."
       }
     ],
-    "m05-state-data-flow/observable-and-migration": [
+    "m13-debug-performance/xcode-debug-workflow": [
       {
-        "question": "@Observable substitui toda UIKit?",
+        "question": "Seu app crasha com 'Fatal error: unexpectedly found nil'. Qual é a estratégia mais eficiente para encontrar a linha exata?",
         "options": [
-          "Sim",
-          "Não"
+          "Adicionar print() em cada linha suspeita manualmente.",
+          "Adicionar um Exception Breakpoint (Swift) no Breakpoint Navigator — o Xcode vai pausar na linha exata antes do crash na próxima execução.",
+          "Comentar metade do código e testar por eliminação.",
+          "Reinstalar o app no simulador — limpa o estado corrompido."
         ],
         "correctIndex": 1,
-        "explanation": "É sobre modelo Swift e SwiftUI; UIKit é outra camada."
-      }
-    ],
-    "m05-state-data-flow/environment-object": [
+        "explanation": "Exception Breakpoint pausa a execução no momento exato em que a exceção é lançada — antes do crash. Você vê a linha, inspeciona as variáveis com 'po' no LLDB e encontra a causa em segundos."
+      },
       {
-        "question": "Environment valores são globais do processo?",
+        "question": "Qual é a vantagem de usar um breakpoint com 'Log Message action' em vez de adicionar `print()` no código?",
         "options": [
-          "Sim para sempre",
-          "Propagados na subárvore"
+          "Log Message é mais rápido de escrever.",
+          "Breakpoints com ação podem ser desabilitados todos de uma vez com Cmd+Y. Prints ficam no código e precisam ser removidos manualmente — contaminam o codebase.",
+          "Log Message do breakpoint aparece em cores diferentes no console.",
+          "print() é mais lento em runtime do que breakpoints."
         ],
         "correctIndex": 1,
-        "explanation": "Valem onde injetados."
-      }
-    ],
-    "m06-navigation/navigationstack": [
-      {
-        "question": "Path tipado pode misturar tipos sem wrapper?",
-        "options": [
-          "Depende do design",
-          "Sempre proibido"
-        ],
-        "correctIndex": 0,
-        "explanation": "Enums ou tipos homogêneos ajudam consistência."
-      }
-    ],
-    "m06-navigation/sheets-and-links": [
-      {
-        "question": "sheet e fullScreenCover são idênticos?",
-        "options": [
-          "Sim",
-          "Não"
-        ],
-        "correctIndex": 1,
-        "explanation": "fullScreen cobre a tela inteira; apresentação mais intrusiva."
-      }
-    ],
-    "m07-architecture/managing-model-data": [
-      {
-        "question": "Views devem ser a única fonte de regras?",
-        "options": [
-          "Sim",
-          "Não"
-        ],
-        "correctIndex": 1,
-        "explanation": "Modelos testáveis carregam regras."
-      }
-    ],
-    "m07-architecture/composition-vs-templates": [
-      {
-        "question": "Pastas por feature e por camada são iguais?",
-        "options": [
-          "Sim",
-          "Não"
-        ],
-        "correctIndex": 1,
-        "explanation": "São estratégias diferentes; escolha consistente."
-      }
-    ],
-    "m08-swiftdata/modelcontainer-schema": [
-      {
-        "question": "SwiftData substitui necessidade de pensar em concorrência?",
-        "options": [
-          "Sim",
-          "Não"
-        ],
-        "correctIndex": 1,
-        "explanation": "Ainda há regras de thread/MainActor."
-      }
-    ],
-    "m08-swiftdata/fetch-save": [
-      {
-        "question": "@Query substitui ModelContext?",
-        "options": [
-          "Sim totalmente",
-          "Não — writes usam context"
-        ],
-        "correctIndex": 1,
-        "explanation": "Leitura reativa vs mutações no context."
-      }
-    ],
-    "m09-concurrency/async-await-intro": [
-      {
-        "question": "Task herda cancelamento do pai?",
-        "options": [
-          "Em muitos casos hierárquicos, sim",
-          "Nunca"
-        ],
-        "correctIndex": 0,
-        "explanation": "Task filha pode cancelar junto; ver doc."
-      }
-    ],
-    "m09-concurrency/mainactor-task": [
-      {
-        "question": "Todo struct SwiftUI já é MainActor?",
-        "options": [
-          "Sempre automaticamente",
-          "Muitas APIs assumem MainActor para UI"
-        ],
-        "correctIndex": 1,
-        "explanation": "UI é main actor; leia assinaturas."
-      }
-    ],
-    "m10-combine/publishers-subscribers": [
-      {
-        "question": "Combine é obrigatório em apps SwiftUI novos?",
-        "options": [
-          "Sim",
-          "Não"
-        ],
-        "correctIndex": 1,
-        "explanation": "Muitos fluxos usam async/await."
-      }
-    ],
-    "m10-combine/async-sequence-bridge": [
-      {
-        "question": "AsyncSequence só existe em Linux?",
-        "options": [
-          "Sim",
-          "Não"
-        ],
-        "correctIndex": 1,
-        "explanation": "É parte do Swift moderno nas plataformas Apple."
-      }
-    ],
-    "m11-testing/xctest-units": [
-      {
-        "question": "Testes devem depender da hora real sempre?",
-        "options": [
-          "Sim",
-          "Não"
-        ],
-        "correctIndex": 1,
-        "explanation": "Injete relógio fake para determinismo."
-      }
-    ],
-    "m11-testing/ui-testing-basics": [
-      {
-        "question": "UI tests são normalmente mais rápidos que unitários?",
-        "options": [
-          "Sim",
-          "Não"
-        ],
-        "correctIndex": 1,
-        "explanation": "UI tests são mais lentos."
-      }
-    ],
-    "m12-accessibility/labels-hints": [
-      {
-        "question": "Esconder decoração visual de acessibilidade é válido?",
-        "options": [
-          "Às vezes, com hidden",
-          "Nunca"
-        ],
-        "correctIndex": 0,
-        "explanation": "Imagens puramente decorativas podem ser hidden."
-      }
-    ],
-    "m12-accessibility/dynamic-type": [
-      {
-        "question": "Font(.system(size: 12)) respeita Dynamic Type?",
-        "options": [
-          "Sempre",
-          "Nem sempre — prefira estilos semânticos"
-        ],
-        "correctIndex": 1,
-        "explanation": "Estilos semânticos escalam melhor."
+        "explanation": "Breakpoints são temporários e externos ao código-fonte. Com Cmd+Y você desabilita todos de uma vez. Prints exigem busca no código e remoção manual — e frequentemente são esquecidos no commit."
       }
     ],
     "m13-debug-performance/previews-instruments": [
       {
-        "question": "print em body é boa prática contínua?",
+        "question": "Por que você NUNCA deve medir performance com o app em modo Debug?",
         "options": [
-          "Sim",
-          "Não"
+          "Debug não tem acesso à rede.",
+          "Em Debug, o compilador não aplica otimizações — o resultado é 5-10x mais lento que em produção. Use Instruments (Cmd+I) que compila em configuração Profile/Release.",
+          "Debug mode desativa o GPU.",
+          "Instruments não funciona com builds Debug."
         ],
         "correctIndex": 1,
-        "explanation": "Polui e pode mascarar problemas — use debugger."
+        "explanation": "Debug mantém informações de símbolo e desabilita otimizações para facilitar o debug — isso é intencional, mas torna o código significativamente mais lento. Para medir performance real, sempre use o perfil de compilação Profile ou Release."
       }
     ],
-    "m13-debug-performance/swiftui-performance": [
+    "m14-career/portfolio-and-github": [
       {
-        "question": "ForEach(0..<n, id: \\.self) com índice é sempre ideal?",
+        "question": "O que mais diferencia um projeto de portfólio de um desenvolvedor pleno de um projeto júnior?",
         "options": [
-          "Sim",
-          "Não"
+          "Número de telas e funcionalidades implementadas.",
+          "Arquitetura clara, tratamento de erros consistente, testes cobrindo lógica principal, e commits que narram a evolução com contexto.",
+          "Uso de frameworks de terceiros populares.",
+          "Interface visual mais elaborada e animações."
         ],
         "correctIndex": 1,
-        "explanation": "IDs estáveis de modelo são melhores que índice mutável."
+        "explanation": "Recrutadores técnicos procuram evidência de boas práticas: separação de responsabilidades, ausência de force unwrap irresponsável, testes que provam que o código funciona como esperado, e histórico de commits que mostra raciocínio."
       }
     ],
-    "m14-career/learning-and-hig": [
+    "m14-career/code-review-and-collaboration": [
       {
-        "question": "HIG substitui decisões de produto da sua equipe?",
+        "question": "Qual tipo de comentário em code review é mais construtivo?",
         "options": [
-          "Sempre",
-          "Serve de guia, não lei absoluta"
+          "'Eu prefiro guard let aqui' — comunica preferência pessoal.",
+          "'Esse if let aninhado ficou com 4 níveis de indentação — guard let ao início da função tornaria o fluxo mais linear. O que acha?' — aponta problema, propõe solução, pergunta.",
+          "'Isso está errado' — direto ao ponto.",
+          "Não comentar nada nos casos duvidosos — deixar passar para não atrasar o merge."
         ],
         "correctIndex": 1,
-        "explanation": "Adapte com contexto e testes com usuários."
+        "explanation": "Bons comentários de code review explicam o problema técnico, sugerem uma solução e abrem espaço para discussão — não impõem preferências. A pergunta 'o que acha?' reconhece que pode haver contexto que você não viu."
       }
     ],
-    "m14-career/code-review-portfolio": [
+    "m15-design-system/design-tokens-and-components": [
       {
-        "question": "Commits gigantes facilitam review?",
+        "question": "Por que usar `Color.primaryAction` (extensão) em vez de `Color(hex: \"#007AFF\")` em cada View?",
         "options": [
-          "Sim",
-          "Não"
+          "Extensões de Color são mais performáticas.",
+          "Tokens semânticos centralizam a decisão de cor. Se a cor mudar, muda em um lugar. O nome 'primaryAction' comunica propósito — '#007AFF' é só um valor sem semântica.",
+          "Color(hex:) não funciona em modo escuro.",
+          "Por convenção da Apple — não há razão técnica real."
         ],
         "correctIndex": 1,
-        "explanation": "PRs menores revisam melhor."
+        "explanation": "Tokens de design são a base de qualquer design system. O nome semântico (primaryAction vs primaryBackground) documenta a intenção. A centralização permite refatoração de tema sem buscar todos os usos."
+      },
+      {
+        "question": "Qual é o benefício de um componente `PrimaryButton` customizado em vez de usar Button com modificadores diretos em cada tela?",
+        "options": [
+          "PrimaryButton compila mais rápido.",
+          "Encapsula a decisão de design (cor, padding, fonte, estado loading) em um lugar. Todas as telas ficam visualmente consistentes automaticamente.",
+          "Button padrão não suporta estado loading.",
+          "Apenas questão de reduzir linhas de código."
+        ],
+        "correctIndex": 1,
+        "explanation": "Componentes do design system garantem que a mesma decisão de design se aplica consistentemente em todas as telas — sem que cada desenvolvedor precise lembrar os valores corretos ou possa introduzir variações."
       }
     ],
-    "m15-design-system/design-system-hig": [
+    "m15-design-system/hig-principles": [
       {
-        "question": "HIG é opcional para app na App Store?",
+        "question": "Por que botões precisam de pelo menos 44×44 pontos de área de toque mesmo quando o ícone é menor?",
         "options": [
-          "Sim, Apple proíbe consultar",
-          "Não — é referência oficial forte de UX; ignorar pode confundir usuários",
-          "Só para apps pagos"
+          "Por requisito técnico do UIKit que se propagou para SwiftUI.",
+          "Dedos humanos têm área de contato de aproximadamente 44×44 pontos. Alvos menores causam erros de toque — o usuário toca na área errada frequentemente.",
+          "44×44 é o tamanho mínimo para aparecer no App Store.",
+          "Apenas para dispositivos com tela pequena."
         ],
         "correctIndex": 1,
-        "explanation": "O HIG descreve expectativas de usuários Apple; não é lei literal de cada pixel, mas é a base oficial."
-      }
-    ],
-    "m15-design-system/visual-language": [
-      {
-        "question": "SF Symbols combinam com Dynamic Type?",
-        "options": [
-          "Não",
-          "Sim — são pensados para alinhar com texto e escalas do sistema",
-          "Só no watchOS"
-        ],
-        "correctIndex": 1,
-        "explanation": "A Apple documenta SF Symbols como integrados ao sistema de tipografia e aparência."
-      }
-    ],
-    "m15-design-system/swiftui-como-funciona": [
-      {
-        "question": "UIViewRepresentable serve para quê?",
-        "options": [
-          "Converter Swift em Objective-C",
-          "Embutir UIView (UIKit) dentro de uma hierarquia SwiftUI",
-          "Desenhar Metal manualmente"
-        ],
-        "correctIndex": 1,
-        "explanation": "É o protocolo SwiftUI para integrar views UIKit; o inverso comum é UIHostingController."
+        "explanation": "44×44 pontos é a recomendação das HIG baseada no tamanho real de contato do dedo. Ignorar isso resulta em interface que frustra o usuário e gera erros de interação — especialmente em elementos pequenos como ícones de navegação."
       }
     ]
   }

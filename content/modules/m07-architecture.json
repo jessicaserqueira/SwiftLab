@@ -1,51 +1,170 @@
 {
   "id": "m07-architecture",
-  "title": "Arquitetura",
+  "title": "Arquitetura de Apps SwiftUI",
   "level": "pleno",
-  "lastReviewed": "2025-03-22",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "managing-model-data",
-      "title": "Gerenciar dados de modelo (guia Apple)",
-      "estimatedMinutes": 35,
-      "objective": "Você vai separar View (só interface e reação a estado) de modelo (dados + regras + persistência), usando tipos observáveis e injeção — alinhado ao guia oficial da Apple.",
-      "prerequisites": ["State, Observation, Environment (módulos anteriores)"],
+      "id": "separation-of-concerns",
+      "title": "Separação de responsabilidades e MVVM em SwiftUI",
+      "estimatedMinutes": 50,
+      "objective": "Você vai entender por que separar View de lógica é importante, como MVVM se encaixa no contexto SwiftUI (e onde ele atrapalha), como criar modelos independentes de UI, e o que é acoplamento — o inimigo da manutenibilidade.[^mvvm][^coupling]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "A Apple descreve assim: Views são declarativas (você descreve o que mostrar) e recriadas com frequência; modelos vivem mais tempo e carregam/salvam dados. O artigo \"Managing model data in your app\" junta isso com SwiftData (persistência) e Observation (mudanças rastreadas)." },
-        { "type": "callout", "variant": "info", "title": "MVVM e outros nomes", "body": "MVVM (Model-View-ViewModel) é um rótulo comum na comunidade. O que importa é fronteira clara: View reage a estado; modelo encapsula regras e IO (entrada/saída: rede, disco)." },
-        { "type": "list", "ordered": true, "items": ["Separe estado de UI (abrir sheet) de estado de domínio (lista de pedidos)", "Mova regras para tipos que você consegue testar sem simulador", "Injete serviços (rede, banco) em vez de singleton global escondido"] },
-        { "type": "checklist", "items": ["Consigo testar modelo sem montar SwiftUI", "View não faz parse JSON enorme sozinha", "Sei dizer em voz alta onde está a fonte da verdade"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O problema da View que faz tudo"
+        },
+        {
+          "type": "text",
+          "text": "Pensa numa View que busca dados da rede, os transforma para exibição, valida formulário, salva no banco e ainda manda analytics. Funciona? No começo sim. Mas com o tempo:\n\n- Testar qualquer coisa exige rodar a View inteira\n- Reutilizar a lógica de outra tela é impossível\n- Entender o que a View faz leva minutos, não segundos\n- Um bug num lugar pode afetar partes sem relação\n\nSeparação de responsabilidades resolve isso: cada parte do código tem uma função clara e bem delimitada."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "MVVM — o padrão, suas vantagens e seus limites"
+        },
+        {
+          "type": "text",
+          "text": "MVVM (Model-View-ViewModel) separa:\n\n- **Model**: dados puros, sem lógica de UI. Struct ou class que representa o domínio.\n- **ViewModel**: lógica de apresentação. Transforma o Model para o que a View precisa exibir. Faz chamadas de rede, valida dados, prepara texto formatado.\n- **View**: apenas descreve o layout. Lê do ViewModel, não sabe nada sobre rede ou banco.\n\nEm UIKit isso era essencial porque as Views tinham muito estado implícito. Em SwiftUI, Views já são muito mais leves e o @Observable facilita o modelo reativo. Não force MVVM em Views simples — use para lógica complexa que vale a camada extra."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Model — dado puro, sem UI:\nstruct Tarefa: Identifiable, Codable {\n    let id: UUID\n    var titulo: String\n    var concluida: Bool\n    var prazo: Date?\n}\n\n// ViewModel — lógica de apresentação:\n@Observable\nclass TarefasViewModel {\n    var tarefas: [Tarefa] = []\n    var carregando = false\n    var erro: String?\n\n    // Propriedade derivada — transforma dado para a View:\n    var tarefasPendentes: [Tarefa] {\n        tarefas.filter { !$0.concluida }\n    }\n\n    // Lógica de negócio fora da View:\n    func carregarTarefas() async {\n        carregando = true\n        defer { carregando = false }\n        do {\n            tarefas = try await TarefaService.buscarTodas()\n        } catch {\n            self.erro = error.localizedDescription\n        }\n    }\n}\n\n// View — só layout:\nstruct TarefasView: View {\n    @State private var vm = TarefasViewModel()\n\n    var body: some View {\n        List(vm.tarefasPendentes) { tarefa in\n            Text(tarefa.titulo)\n        }\n        .task { await vm.carregarTarefas() }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Acoplamento — o que é e por que é o inimigo"
+        },
+        {
+          "type": "text",
+          "text": "Acoplamento é quando dois componentes dependem diretamente um do outro ao ponto que mudar um exige mudar o outro. Alto acoplamento é o principal inimigo de código manutenível.\n\nExemplo: uma View que chama `URLSession.shared.data(from:)` diretamente está acoplada à implementação de rede. Para testar, você precisa de rede real. Para trocar de URLSession para Alamofire, você muda a View. Para reutilizar em outro app, você carrega junto toda a dependência de rede.\n\nA solução é depender de protocolos (abstrações) em vez de implementações concretas — isso é o Dependency Inversion Principle."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// ALTO ACOPLAMENTO — View conhece URLSession:\nclass TarefasViewModel {\n    func carregar() async throws -> [Tarefa] {\n        let (data, _) = try await URLSession.shared.data(from: URL(string: \"https://api.app.com/tarefas\")!)\n        return try JSONDecoder().decode([Tarefa].self, from: data)\n    }\n}\n\n// BAIXO ACOPLAMENTO — depende de protocolo:\nprotocol TarefaRepositorio {\n    func buscarTodas() async throws -> [Tarefa]\n}\n\n// Implementação real para produção:\nstruct TarefaAPI: TarefaRepositorio {\n    func buscarTodas() async throws -> [Tarefa] {\n        let (data, _) = try await URLSession.shared.data(from: URL(string: \"https://api.app.com/tarefas\")!)\n        return try JSONDecoder().decode([Tarefa].self, from: data)\n    }\n}\n\n// Implementação falsa para testes:\nstruct TarefaFake: TarefaRepositorio {\n    func buscarTodas() async throws -> [Tarefa] {\n        return [Tarefa(id: UUID(), titulo: \"Fake\", concluida: false)]\n    }\n}\n\n// ViewModel usa o protocolo:\n@Observable\nclass TarefasViewModel {\n    private let repositorio: TarefaRepositorio\n\n    init(repositorio: TarefaRepositorio = TarefaAPI()) {\n        self.repositorio = repositorio\n    }\n}"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Quando NÃO usar ViewModel",
+          "body": "Views simples com @State para um formulário ou toggle não precisam de ViewModel. A camada extra adiciona indireção sem benefício. Crie ViewModel quando a lógica é complexa o suficiente para ter testes, quando é reutilizada em múltiplas Views, ou quando envolve transformações de dados não triviais."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Meus modelos (structs) não têm imports de SwiftUI — são independentes de UI.",
+            "Minha View não chama URLSession ou banco de dados diretamente.",
+            "Minhas ViewModels dependem de protocolos, não de implementações concretas.",
+            "Sei quando NÃO criar ViewModel — para Views simples, @State é suficiente."
+          ]
+        }
       ],
-      "commonMistakes": ["God View (uma View gigante com tudo)", "Copiar os mesmos dados em duas camadas sem motivo"],
-      "tradeoffs": "Mais arquivos exige navegar mais no Xcode; em app médio/grande compensa em testes e manutenção.",
-      "miniChallenge": "Extraia de uma View um UserLoader (busca JSON) que alimenta um modelo @Observable.",
+      "commonMistakes": [
+        "Criar um ViewModel para toda e qualquer View, mesmo as simples — overhead sem benefício.",
+        "Importar SwiftUI no Model — sinal de que o modelo está acoplado à UI.",
+        "Injetar URLSession.shared direto no ViewModel — impossibilita testes sem rede."
+      ],
+      "tradeoffs": "Mais camadas = mais testabilidade e manutenibilidade, mas também mais arquivos e indireção. O equilíbrio está em criar camadas onde há complexidade real, não por dogma de padrão.",
+      "miniChallenge": "Pegue uma View que faz chamada de rede diretamente. Extraia a lógica para um ViewModel com um protocolo de repositório. Crie uma implementação fake e confirme que a View pode ser instanciada sem rede.",
+      "notes": [
+        {
+          "id": "mvvm",
+          "text": "MVVM (Model-View-ViewModel) é um padrão arquitetural que separa dados (Model), lógica de apresentação (ViewModel) e interface (View). Não é obrigatório em SwiftUI — use quando agrega valor real."
+        },
+        {
+          "id": "coupling",
+          "text": "Acoplamento é o grau de dependência direta entre dois componentes. Alto acoplamento significa que mudar um exige mudar o outro. Baixo acoplamento é desejável — permite mudar implementações sem afetar consumidores."
+        }
+      ],
       "glossary": [
-        { "term": "Domain model", "definition": "Representação dos conceitos do problema (usuário, pedido) com regras associadas." }
+        { "term": "MVVM", "definition": "Padrão de separação: Model (dados), ViewModel (lógica), View (interface)." },
+        { "term": "Acoplamento", "definition": "Grau de dependência entre componentes. Alto acoplamento dificulta testes e mudanças." },
+        { "term": "Dependency Inversion", "definition": "Princípio que diz que módulos devem depender de abstrações (protocolos), não de implementações concretas." }
       ],
       "sources": [
-        { "label": "Apple — Managing model data in your app", "url": "https://developer.apple.com/documentation/swiftui/managing-model-data-in-your-app" },
-        { "label": "Apple — Data essentials", "url": "https://developer.apple.com/documentation/swiftui/data-and-storage" }
+        { "label": "Hacking with Swift — MVVM in SwiftUI", "url": "https://www.hackingwithswift.com/books/ios-swiftui/introducing-mvvm-into-your-swiftui-project" }
       ]
     },
     {
-      "id": "composition-vs-templates",
-      "title": "Composição, módulos e dependências",
-      "estimatedMinutes": 28,
-      "objective": "Você vai organizar pastas por feature (funcionalidade) ou por camada e reduzir acoplamento (mudança num lugar não quebra tudo).",
+      "id": "project-organization",
+      "title": "Organização de projeto, SPM e feature modules",
+      "estimatedMinutes": 40,
+      "objective": "Você vai aprender a organizar arquivos de projetos reais, quando usar Swift Package Manager para modularizar, e por que separar features em módulos independentes acelera compilação e melhora o limite de responsabilidade.[^spm][^feature-module]",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "Composição significa juntar telas grandes a partir de Views e modelos pequenos. Evite copiar \"arquitetura de blog\" sem entender o problema do seu app (cada time e app tem ritmo diferente)." },
-        { "type": "callout", "variant": "tip", "title": "Fronteiras", "body": "Uma feature pode ter pasta própria: Views + Model + serviços só dela. Só mova para \"compartilhado\" o que outra feature realmente precisa." },
-        { "type": "checklist", "items": ["Escolho pastas por feature OU por camada e mantenho o padrão", "Evito import circular (A importa B e B importa A em módulos SPM)"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Feature-first vs Layer-first"
+        },
+        {
+          "type": "text",
+          "text": "Em projetos pequenos (< 30 arquivos), qualquer organização funciona. Em projetos médios e grandes, a organização é crucial para velocidade de navegação e entendimento.\n\n**Layer-first** (por camada):\n```\nModels/\n  Tarefa.swift\n  Usuario.swift\nViews/\n  TarefaView.swift\n  UsuarioView.swift\nViewModels/\n  TarefaViewModel.swift\nServices/\n  TarefaService.swift\n```\n\n**Feature-first** (por feature):\n```\nTarefas/\n  TarefaModel.swift\n  TarefaView.swift\n  TarefaViewModel.swift\n  TarefaService.swift\nPerfil/\n  PerfilModel.swift\n  PerfilView.swift\n```\n\nFeature-first escala melhor: quando você trabalha em uma feature, todos os arquivos relevantes estão na mesma pasta. Não precisa saltar entre Models/, Views/ e ViewModels/ para entender o fluxo de uma feature."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Estrutura de projeto feature-first recomendada:\n// App/\n//   MeuAppApp.swift          ← ponto de entrada\n//   ContentView.swift         ← raiz de navegação\n//\n// Features/\n//   Tarefas/\n//     TarefaModel.swift\n//     TarefaViewModel.swift\n//     Views/\n//       TarefasListaView.swift\n//       TarefaDetalheView.swift\n//       TarefaFormView.swift\n//   Autenticacao/\n//     AuthModel.swift\n//     AuthViewModel.swift\n//     Views/\n//       LoginView.swift\n//\n// Core/                        ← compartilhado entre features\n//   Extensions/\n//   Components/\n//   Services/"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Swift Package Manager — modularização"
+        },
+        {
+          "type": "text",
+          "text": "Para projetos maiores (múltiplas equipes, dezenas de features), SPM permite separar features em pacotes independentes. Cada pacote tem suas próprias dependências, testes e controle de visibilidade (internal vs public).\n\nOs benefícios são concretos: compilação incremental muito mais rápida (só recompila o módulo que mudou), fronteiras de API explícitas (o que é público e o que é interno), e testabilidade por módulo. O custo é overhead de configuração inicial."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Package.swift de um módulo de feature:\nimport PackageDescription\n\nlet package = Package(\n    name: \"TarefasFeature\",\n    platforms: [.iOS(.v17)],\n    products: [\n        .library(name: \"TarefasFeature\", targets: [\"TarefasFeature\"])\n    ],\n    dependencies: [\n        .package(url: \"https://github.com/apple/swift-collections\", from: \"1.0.0\")\n    ],\n    targets: [\n        .target(\n            name: \"TarefasFeature\",\n            dependencies: [.product(name: \"OrderedCollections\", package: \"swift-collections\")]\n        ),\n        .testTarget(\n            name: \"TarefasFeatureTests\",\n            dependencies: [\"TarefasFeature\"]\n        )\n    ]\n)"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Começar simples e modularizar depois",
+          "body": "Para a maioria dos projetos, começar com feature-first numa única target é suficiente. Só crie módulos SPM separados quando sentir a necessidade concreta: compilação lenta, times diferentes trabalhando em features distintas, ou necessidade de reutilizar uma feature em outro app."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Organizo arquivos por feature, não por tipo/camada.",
+            "Arquivos de uma feature ficam na mesma pasta — View, Model e ViewModel juntos.",
+            "Componentes reutilizados por múltiplas features ficam em Core/.",
+            "Sei quando criar um pacote SPM e quando é overhead desnecessário."
+          ]
+        }
       ],
-      "commonMistakes": ["Criar pasta UseCase vazia só porque viu em vídeo", "Shared virar depósito de tudo que sobra"],
-      "tradeoffs": "Pacotes SPM (Swift Package Manager) isolam código e podem acelerar build incremental; app minúsculo pode viver num target só.",
-      "miniChallenge": "No papel: três caixas UI, Domínio, Infra — setas mostrando quem pode chamar quem.",
+      "commonMistakes": [
+        "Criar módulos SPM para cada View ou serviço pequeno — overhead de configuração supera os benefícios.",
+        "Misturar concerns: um arquivo que tem Model, ViewModel e View ao mesmo tempo.",
+        "Colocar tudo em Core/ por preguiça de categorizar — Core deve ser pequeno e genuinamente compartilhado."
+      ],
+      "tradeoffs": "Feature-first cria convenção clara de onde cada arquivo vive. O tradeoff é que arquivos parecidos (dois ViewModels) ficam em pastas diferentes. Para projetos pequenos, a distinção importa menos; para projetos grandes, feature-first é essencial.",
+      "miniChallenge": "Reorganize um projeto existente de layer-first para feature-first. Documente quais arquivos ficaram mais fáceis de encontrar e quais ficaram mais difíceis.",
+      "notes": [
+        {
+          "id": "spm",
+          "text": "Swift Package Manager é o gerenciador de dependências e sistema de modularização oficial do Swift. Permite dividir um app em múltiplos targets com controle de visibilidade de API."
+        },
+        {
+          "id": "feature-module",
+          "text": "Feature module é um target SPM que encapsula uma funcionalidade completa do app — seus modelos, views e serviços — com APIs públicas bem definidas e internals ocultos."
+        }
+      ],
       "glossary": [
-        { "term": "Acoplamento", "definition": "Quanto uma mudança num módulo obriga mudança em outro." }
+        { "term": "SPM", "definition": "Swift Package Manager — sistema de dependências e modularização do Swift." },
+        { "term": "Feature-first", "definition": "Organização onde todos os arquivos de uma feature ficam na mesma pasta." },
+        { "term": "Target", "definition": "Unidade de compilação no Xcode — pode ser app, framework, pacote ou test." }
       ],
       "sources": [
-        { "label": "Apple — Adding package dependencies", "url": "https://developer.apple.com/documentation/xcode/adding-package-dependencies-to-your-app" }
+        { "label": "Apple — Swift Package Manager", "url": "https://swift.org/package-manager/" }
       ]
     }
   ]

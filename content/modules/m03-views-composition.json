@@ -1,55 +1,237 @@
 {
   "id": "m03-views-composition",
-  "title": "Views e composição",
-  "level": "junior",
-  "lastReviewed": "2025-03-22",
+  "title": "Views e Composição",
+  "level": "junior-plus",
+  "lastReviewed": "2026-04-01",
   "sections": [
     {
-      "id": "view-protocol-modifiers",
-      "title": "Protocolo View e modificadores",
-      "estimatedMinutes": 28,
-      "objective": "Você vai ver que View (protocolo da tela SwiftUI) descreve um pedaço de interface, e que modificadores (funções como .padding) devolvem uma nova descrição encadeada, não alteram a view \"no lugar\".",
+      "id": "building-views-with-primitives",
+      "title": "Construindo Views com componentes primitivos",
+      "estimatedMinutes": 45,
+      "objective": "Você vai entender os blocos de construção fundamentais do SwiftUI — Text, Image, Button, TextField — como eles se comportam em relação a tamanho e espaço, e por que a composição de componentes pequenos é a principal habilidade para criar interfaces complexas.[^primitive][^modifier]",
       "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "View é um protocolo com um tipo interno associado chamado Body (o que essa view retorna). Na prática você escreve var body: some View (\"algum tipo que é View\", escondido pelo compilador) com uma composição de outras Views." },
-        { "type": "code", "language": "swift", "code": "struct TitleView: View {\n    var body: some View {\n        Text(\"SwiftLab\")\n            .font(.title)\n            .foregroundStyle(.orange)\n    }\n}" },
-        { "type": "heading", "level": 3, "text": "Ordem dos modificadores" },
-        { "type": "text", "text": "A ordem importa: .padding depois de .background muda o visual em relação a .background depois de .padding (porque cada passo envolve a view anterior). Se o layout estranhar, troque a ordem e compare." },
-        { "type": "callout", "variant": "info", "title": "some View", "body": "some View esconde o nome exato do tipo retornado (opaque return type, retorno opaco). Assim o compilador aceita cadeias longas de modificadores sem você escrever o tipo gigante." },
-        { "type": "checklist", "items": ["Sei que cada modificador devolve outra View (nova descrição)", "Testo ordem quando o layout surpreende", "Extraio subviews (Views menores) quando body fica longo"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Text — muito mais que apenas mostrar string"
+        },
+        {
+          "type": "text",
+          "text": "À primeira vista `Text(\"Olá\")` parece trivial. Mas Text é sofisticado: suporta interpolação de tipos especiais como datas e medidas com formatação localizada, aceita atributos de formatação ricos via AttributedString e lida automaticamente com Dynamic Type (o tamanho de fonte que o usuário configurou no sistema).\n\nA maior diferença em relação ao UILabel é que Text não tem delegate, não tem callback — ele só mostra texto. Para interação, você usa Button. Para entrada de texto, TextField."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Texto simples:\nText(\"Bom dia\")\n\n// Texto com modificadores encadeados:\nText(\"Título\")\n    .font(.title)\n    .fontWeight(.bold)\n    .foregroundStyle(.blue)\n\n// Interpolação de tipos — formatação automática e localizada:\nlet preco: Double = 49.90\nlet data = Date.now\n\nText(preco, format: .currency(code: \"BRL\"))  // \"R$ 49,90\"\nText(data, format: .dateTime.day().month().year())  // \"1 de abr. de 2026\"\n\n// AttributedString — formatação inline:\nvar atribuido = AttributedString(\"Texto em negrito\")\natribuido[atribuido.range(of: \"negrito\")!].font = .bold\nText(atribuido)"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Image — ícones SF Symbols e imagens de assets"
+        },
+        {
+          "type": "text",
+          "text": "SwiftUI tem duas fontes principais de imagens: SF Symbols (ícones do sistema com mais de 5.000 variações) e o Assets.xcassets do seu projeto. Ambas respondem automaticamente ao modo escuro e ao Dynamic Type.\n\nSF Symbols se comportam como texto: você pode ajustar o tamanho com `.font()`, a cor com `.foregroundStyle()` e até usar variantes como `.fill`, `.circle` ou multicolor. Isso é diferente de uma imagem raster onde você precisaria de múltiplos arquivos para cada tamanho."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// SF Symbol — ícone do sistema:\nImage(systemName: \"heart.fill\")\n    .foregroundStyle(.red)\n    .font(.title)  // controla tamanho como texto\n\n// Variantes de SF Symbols:\nImage(systemName: \"folder\")           // outline\nImage(systemName: \"folder.fill\")      // preenchido\nImage(systemName: \"folder.circle\")    // em círculo\n\n// Imagem de Assets:\nImage(\"logo\")\n    .resizable()\n    .scaledToFit()\n    .frame(width: 100, height: 100)\n\n// Imagem de Assets (SwiftUI 5.5+):\nImage(.logo)  // type-safe, autocompletado\n\n// Acessibilidade — sempre inclua:\nImage(systemName: \"star\")\n    .accessibilityLabel(\"Favorito\")"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Button — a View de interação mais comum"
+        },
+        {
+          "type": "text",
+          "text": "Button no SwiftUI recebe uma ação (closure) e um label (qualquer View). O sistema cuida automaticamente do feedback visual de toque, estados desabilitados e compatibilidade com teclado e acessibilidade.\n\nO label pode ser qualquer coisa: Text, Image, HStack com ícone e texto, um componente customizado. Isso é muito mais flexível que UIButton, onde o label é limitado a título e imagem separados."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Button básico:\nButton(\"Salvar\") {\n    salvarDados()\n}\n\n// Button com label customizado:\nButton {\n    favoritar(item)\n} label: {\n    Label(\"Favoritar\", systemImage: \"heart\")\n}\n\n// Button com estilo:\nButton(\"Confirmar\") {\n    confirmar()\n}\n.buttonStyle(.borderedProminent)\n\n// Button desabilitado condicionalmente:\nButton(\"Enviar\") { enviar() }\n    .disabled(formulario.isEmpty)"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "TextField e SecureField — entrada de texto"
+        },
+        {
+          "type": "text",
+          "text": "TextField exige uma binding (`$`) para uma string de estado — é a principal diferença visual em relação a Button e Text. O binding garante que o texto digitado pelo usuário seja refletido imediatamente na variável `@State`.\n\nSecureField é idêntico ao TextField mas mascara o conteúdo — perfeito para senhas. Ambos aceitam um prompt (placeholder) e modificadores de teclado para otimizar o tipo de teclado mostrado."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct FormularioLogin: View {\n    @State private var email = \"\"\n    @State private var senha = \"\"\n\n    var body: some View {\n        VStack(spacing: 16) {\n            TextField(\"Email\", text: $email)\n                .keyboardType(.emailAddress)      // teclado com @\n                .textInputAutocapitalization(.never)\n                .autocorrectionDisabled()\n\n            SecureField(\"Senha\", text: $senha)    // texto mascarado\n\n            Button(\"Entrar\") { fazerLogin() }\n                .disabled(email.isEmpty || senha.isEmpty)\n        }\n        .padding()\n        .textFieldStyle(.roundedBorder)\n    }\n}"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Modificadores mudam o contexto, não o tipo",
+          "body": "Quando você aplica um modificador como .padding() ou .background(), o resultado é uma nova View que envolve a original. Não é uma mutação. É por isso que a ordem dos modificadores importa: .padding().background() tem um resultado diferente de .background().padding()."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Uso Text com formatos tipados (currency, date) em vez de formatar strings manualmente.",
+            "Sei a diferença entre Image(systemName:) para SF Symbols e Image(_:) para assets.",
+            "Entendo que Button recebe qualquer View como label, não apenas texto.",
+            "Sei que TextField precisa de binding ($) e por que isso é necessário."
+          ]
+        }
       ],
-      "commonMistakes": ["Achar que modificadores mudam a struct original (mutação in-place)", "Deixar body enorme sem dividir em structs menores"],
-      "tradeoffs": "Muitas subviews pequenas melhoram leitura; níveis demais sem plano de estado (quem guarda os dados) complicam passar informação.",
-      "miniChallenge": "Extraia o cabeçalho de uma tela para HeaderView e passe só as strings necessárias (parâmetros).",
+      "commonMistakes": [
+        "Usar Text para mostrar preços formatando string manualmente — perde localização automática.",
+        "Esquecer .resizable() em Image antes de aplicar .frame() — a imagem não escala.",
+        "Não incluir .accessibilityLabel() em imagens decorativas ou SF Symbols com contexto."
+      ],
+      "tradeoffs": "As views primitivas são intencionalmente simples. A riqueza vem da composição. Isso é diferente de UIKit onde um UITableView já embutia muito comportamento.",
+      "miniChallenge": "Crie um card de perfil com Image, Text para nome e bio, e um Button de seguir. A imagem usa SF Symbol. O botão muda de 'Seguir' para 'Seguindo' quando clicado.",
+      "notes": [
+        {
+          "id": "primitive",
+          "text": "Views primitivas são os blocos de construção atômicos do SwiftUI: Text, Image, Button, Shape, etc. Não são compostas por outras Views — são a base da hierarquia."
+        },
+        {
+          "id": "modifier",
+          "text": "Modificador é um método que retorna uma nova View derivada. Cada modificador envolve a View anterior, criando uma cadeia de transformações."
+        }
+      ],
       "glossary": [
-        { "term": "Modifier", "definition": "Função que envolve uma View para mudar aparência ou comportamento, retornando outra View." }
+        { "term": "SF Symbols", "definition": "Biblioteca de ícones da Apple integrada ao sistema, com mais de 5.000 símbolos que escalam com o texto." },
+        { "term": "Binding", "definition": "Referência bidirecional para um @State que permite que Views filhas leiam e alterem o valor." }
       ],
       "sources": [
-        { "label": "Apple — View", "url": "https://developer.apple.com/documentation/swiftui/view" },
-        { "label": "Hacking with Swift — View composition", "url": "https://www.hackingwithswift.com/quick-start/swiftui/what-is-view-composition" }
+        { "label": "Apple — Views and Controls", "url": "https://developer.apple.com/documentation/swiftui/views-and-controls" },
+        { "label": "SF Symbols", "url": "https://developer.apple.com/sf-symbols/" }
       ]
     },
     {
-      "id": "viewbuilder",
-      "title": "ViewBuilder e conteúdo condicional",
-      "estimatedMinutes": 22,
-      "objective": "Você vai ler e escrever blocos com @ViewBuilder (macro que agrupa várias Views em um único resultado) usando if/else.",
-      "prerequisites": ["View e modificadores (seção anterior)"],
+      "id": "composing-complex-views",
+      "title": "Compondo Views complexas",
+      "estimatedMinutes": 45,
+      "objective": "Você vai aprender a extrair subcomponentes de uma View grande, quando criar um novo arquivo vs uma View privada no mesmo arquivo, como usar ViewBuilder para componentes flexíveis, e por que evitar Views monolíticas é importante para performance e manutenção.[^viewbuilder][^body-compute]",
+      "prerequisites": [],
       "blocks": [
-        { "type": "text", "text": "@ViewBuilder é um result builder (recurso do Swift que junta várias linhas em um valor). Ele permite colocar várias Views no mesmo bloco como lista implícita, com if/else em muitos lugares." },
-        { "type": "code", "language": "swift", "code": "Group {\n    if isLoggedIn {\n        Text(\"Olá\")\n    } else {\n        Button(\"Entrar\") { }\n    }\n}" },
-        { "type": "callout", "variant": "warn", "title": "Ramificações", "body": "Cada ramo do if/else precisa ser um tipo de View compatível com o que o compilador espera; erros de tipo aqui são normais no começo — leia a mensagem vermelha com calma." },
-        { "type": "checklist", "items": ["Uso Group (container neutro) ou @ViewBuilder quando preciso misturar tipos", "Evito AnyView (apaga tipos e pode custar performance) salvo caso raro"] }
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Por que extrair subcomponentes"
+        },
+        {
+          "type": "text",
+          "text": "Pensa num body com 200 linhas — stacks aninhadas, condicionals, modificadores. Cada mudança de estado recalcula esse body inteiro. Quanto maior o body, mais trabalho o Swift tem em tempo de compilação e o SwiftUI em tempo de execução.\n\nAlém de performance, há legibilidade: um body com 10 linhas que usa componentes bem nomeados é infinitamente mais fácil de entender e manter do que 200 linhas de layout inline. Cada nome de componente documenta a intenção."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// DIFÍCIL de manter — tudo num body:\nstruct TarefaView: View {\n    let tarefa: Tarefa\n\n    var body: some View {\n        HStack {\n            Image(systemName: tarefa.concluida ? \"checkmark.circle.fill\" : \"circle\")\n                .foregroundStyle(tarefa.concluida ? .green : .secondary)\n                .font(.title2)\n            VStack(alignment: .leading, spacing: 4) {\n                Text(tarefa.titulo)\n                    .font(.headline)\n                    .strikethrough(tarefa.concluida)\n                if let prazo = tarefa.prazo {\n                    Text(prazo, format: .dateTime.day().month())\n                        .font(.caption)\n                        .foregroundStyle(.secondary)\n                }\n            }\n            Spacer()\n        }\n    }\n}\n\n// MAIS FÁCIL — componentes nomeados:\nstruct TarefaView: View {\n    let tarefa: Tarefa\n\n    var body: some View {\n        HStack {\n            StatusIcon(concluida: tarefa.concluida)\n            TarefaTexto(tarefa: tarefa)\n            Spacer()\n        }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Propriedades computadas vs substructs"
+        },
+        {
+          "type": "text",
+          "text": "Duas abordagens para extrair partes do body:\n\n**Propriedade computada** (`var cabecalho: some View { ... }`) — boa para partes da UI relacionadas à mesma struct, sem estado próprio. Fica no mesmo arquivo, sem custo de nova struct.\n\n**Substruct privada** (`private struct TarefaTexto: View`) — para componentes com estado próprio, que precisam de @State ou @Binding independentes. O SwiftUI pode otimizar recalculações porque sabe que é uma View separada.\n\nRegra prática: se o componente precisa de @State ou se é reutilizado em mais de um lugar, faça uma struct. Caso contrário, propriedade computada pode ser suficiente."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct TarefaView: View {\n    let tarefa: Tarefa\n    @State private var expandida = false\n\n    // Propriedade computada — sem estado próprio:\n    private var cabecalho: some View {\n        Text(tarefa.titulo)\n            .font(.headline)\n            .foregroundStyle(tarefa.concluida ? .secondary : .primary)\n    }\n\n    var body: some View {\n        VStack(alignment: .leading) {\n            cabecalho  // sem ()\n            if expandida {\n                DetalheTarefa(tarefa: tarefa)  // substruct separada\n            }\n        }\n        .onTapGesture { expandida.toggle() }\n    }\n}\n\n// Substruct privada — pode ter @State próprio:\nprivate struct DetalheTarefa: View {\n    let tarefa: Tarefa\n    @State private var notasExpandidas = false  // estado próprio\n\n    var body: some View {\n        Text(tarefa.notas ?? \"Sem notas\")\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "ViewBuilder — componentes que aceitam conteúdo flexível"
+        },
+        {
+          "type": "text",
+          "text": "Se você quer criar um componente reutilizável que aceita conteúdo arbitrário como parâmetro (como HStack e VStack fazem), você usa `@ViewBuilder`. Ele é um result builder que permite passar blocos de Views como argumento sem precisar de array.\n\nIsso é como você cria seus próprios containers customizados — um Card, um Banner, um componente de tela cheia que envolve conteúdo."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Componente reutilizável com conteúdo genérico:\nstruct Card<Content: View>: View {\n    let titulo: String\n    @ViewBuilder let conteudo: () -> Content  // qualquer View\n\n    var body: some View {\n        VStack(alignment: .leading, spacing: 12) {\n            Text(titulo)\n                .font(.headline)\n            Divider()\n            conteudo()  // renderiza o que foi passado\n        }\n        .padding()\n        .background(.secondarySystemBackground)\n        .clipShape(RoundedRectangle(cornerRadius: 12))\n    }\n}\n\n// Usando o Card com conteúdo diferente em cada lugar:\nCard(titulo: \"Resumo\") {\n    Text(\"Três tarefas pendentes\")\n    Text(\"Duas concluídas hoje\")\n}\n\nCard(titulo: \"Estatísticas\") {\n    HStack {\n        Text(\"Total\")\n        Spacer()\n        Text(\"\\(total)\")\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "List, ForEach e quando usar cada um"
+        },
+        {
+          "type": "text",
+          "text": "`List` é o componente de tabela do SwiftUI — renderiza apenas as células visíveis, tem scroll embutido, e inclui comportamentos de plataforma como swipe-to-delete e reordenação. Use quando você quer uma lista com interações nativas.\n\n`ForEach` itera uma coleção e produz Views — mas não tem scroll nem o comportamento de tabela. É mais um loop de Views. Use ForEach quando você quer iterar dentro de um VStack, HStack ou Grid customizado.\n\nOs dois aceitam coleções de elementos Identifiable ou um id keypath manual."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// List — tabela nativa com todas as interações:\nList(tarefas) { tarefa in\n    TarefaView(tarefa: tarefa)\n}\n.listStyle(.insetGrouped)\n\n// List com swipe actions:\nList {\n    ForEach(tarefas) { tarefa in\n        TarefaView(tarefa: tarefa)\n            .swipeActions(edge: .trailing) {\n                Button(\"Deletar\", role: .destructive) {\n                    deletar(tarefa)\n                }\n            }\n    }\n    .onDelete(perform: deletarIndexes)  // suporte a edit mode\n    .onMove(perform: moverIndexes)\n}\n\n// ForEach dentro de VStack — sem scroll automático:\nScrollView {\n    VStack(spacing: 8) {\n        ForEach(secoes) { secao in\n            SecaoCard(secao: secao)\n        }\n    }\n}"
+        },
+        {
+          "type": "trace",
+          "title": "Guia de decisão: quando extrair um componente",
+          "steps": [
+            {
+              "label": "Seu body tem mais de 50-80 linhas?",
+              "detail": "Hora de extrair. Identifique blocos visuais lógicos.",
+              "output": "private var cabecalho: some View { ... }"
+            },
+            {
+              "label": "O componente precisa de @State próprio?",
+              "detail": "Faça uma struct privada — propriedade computada não suporta @State.",
+              "output": "private struct TarefaCard: View { @State var expandida = false }"
+            },
+            {
+              "label": "O componente é reutilizado em mais de um lugar?",
+              "detail": "Crie um arquivo próprio para o componente.",
+              "output": "TarefaCard.swift — reutilizado em lista e detalhe"
+            },
+            {
+              "label": "O componente aceita conteúdo genérico?",
+              "detail": "Use @ViewBuilder para aceitar qualquer View como parâmetro.",
+              "output": "struct Card<C: View>: View { @ViewBuilder let conteudo: () -> C }"
+            }
+          ]
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Mantenho bodies menores que 80 linhas extraindo componentes com nomes claros.",
+            "Sei quando usar propriedade computada vs substruct privada.",
+            "Consigo criar um componente reutilizável com @ViewBuilder.",
+            "Sei a diferença prática entre List (tabela nativa) e ForEach (loop de Views)."
+          ]
+        }
       ],
-      "commonMistakes": ["Usar AnyView só para calar o compilador", "if sem else onde o SwiftUI espera os dois lados estáveis"],
-      "tradeoffs": "Group não escolhe eixo de layout; VStack/HStack sim. Escolha o container certo (vertical vs horizontal).",
-      "miniChallenge": "Faça um empty state: se a lista estiver vazia mostre imagem + texto; senão mostre List (lista nativa).",
+      "commonMistakes": [
+        "Criar uma struct separada para cada pequeno componente, mesmo sem estado próprio — overhead desnecessário, propriedade computada seria suficiente.",
+        "Usar ForEach quando quer tabela com swipe-to-delete — isso requer List com ForEach interno.",
+        "Não nomear componentes extraídos de forma descritiva — DetalheView não diz nada, TarefaPrazoDetalhe sim."
+      ],
+      "tradeoffs": "Componentização aumenta o número de arquivos, mas diminui o custo de entender e manter cada um. O ponto de equilíbrio está em extrair quando o componente ganha um nome significativo — não apenas para reduzir linhas.",
+      "miniChallenge": "Pegue uma View com pelo menos 60 linhas no body. Identifique dois componentes com nomes significativos e extraia um como propriedade computada e outro como struct privada. Compare a legibilidade antes e depois.",
+      "notes": [
+        {
+          "id": "viewbuilder",
+          "text": "@ViewBuilder é um result builder que permite passar blocos de código que constroem Views como argumentos de função ou propriedades — sem precisar retornar explicitamente ou usar arrays."
+        },
+        {
+          "id": "body-compute",
+          "text": "SwiftUI otimiza recálculos de body em substructs separadas. Quando o estado de um componente filho não mudou, o sistema pode pular o recálculo do body desse filho."
+        }
+      ],
       "glossary": [
-        { "term": "Result builder", "definition": "Mecanismo do Swift que transforma uma sequência de expressões em um valor combinado (usado em ViewBuilder)." }
+        { "term": "ViewBuilder", "definition": "Result builder que permite construir Views em blocos de código, usado por body, List, VStack, etc." },
+        { "term": "ForEach", "definition": "Loop de Views que itera uma coleção de Identifiable — não adiciona scroll, apenas produz Views." }
       ],
       "sources": [
-        { "label": "Apple — ViewBuilder", "url": "https://developer.apple.com/documentation/swiftui/viewbuilder" },
-        { "label": "Hacking with Swift — Conditional views", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-use-if-else-in-swiftui" }
+        { "label": "Apple — Lists", "url": "https://developer.apple.com/documentation/swiftui/lists" },
+        { "label": "Hacking with Swift — Building reusable Views", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-create-and-compose-custom-views" }
       ]
     }
   ]

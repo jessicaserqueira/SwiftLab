@@ -34,6 +34,17 @@
         "commonMistakes": { "type": "array", "items": { "type": "string" } },
         "tradeoffs": { "type": ["string", "null"] },
         "miniChallenge": { "type": "string" },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "text": { "type": "string" }
+            }
+          }
+        },
         "glossary": {
           "type": "array",
           "items": {
@@ -97,6 +108,27 @@
               "description": "Info string do fenced Markdown (ex.: swift → class language-swift). Padrão: swift."
             },
             "code": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "title", "steps"],
+          "properties": {
+            "type": { "const": "trace" },
+            "title": { "type": "string" },
+            "steps": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["label"],
+                "properties": {
+                  "label": { "type": "string" },
+                  "detail": { "type": "string" },
+                  "output": { "type": "string" }
+                }
+              }
+            }
           }
         },
         {
