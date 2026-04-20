@@ -233,6 +233,118 @@
         { "label": "Apple — Lists", "url": "https://developer.apple.com/documentation/swiftui/lists" },
         { "label": "Hacking with Swift — Building reusable Views", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-create-and-compose-custom-views" }
       ]
+    },
+    {
+      "id": "viewbuilder-and-group",
+      "title": "@ViewBuilder, Group e como as Views formam árvores",
+      "estimatedMinutes": 45,
+      "objective": "Você vai entender como o @ViewBuilder transforma blocos de código em árvores de Views (TupleView), como o Group propaga modificadores para cada filho individualmente, e como escrever componentes reutilizáveis com @ViewBuilder para criar APIs tão flexíveis quanto as do próprio SwiftUI.[^viewbuilder][^tupleview][^group]",
+      "prerequisites": ["m02-app-swiftui/view-trees-and-render-trees"],
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Como um bloco de código vira uma View tree"
+        },
+        {
+          "type": "text",
+          "text": "Quando você escreve várias Views dentro de um HStack, o compilador não vê uma lista — ele vê um TupleView. O `@ViewBuilder` é um result builder que transforma múltiplas expressões de View em um único tipo.\n\nPensa assim: `HStack { Image(...); Text(...) }` vira internamente `HStack { TupleView<(Image, Text)> }`. O HStack não sabe de 'listas de Views' — ele recebe um TupleView e itera seus filhos.\n\nIsso importa por um motivo prático: a maioria dos containers SwiftUI aceita até 10 Views diretamente num @ViewBuilder (por isso o limite de 10 filhos no Xcode antigo, hoje expandido). Para listas maiores, use Group ou ForEach."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Internamente, isso vira TupleView<(Image, Text)>:\nHStack {\n    Image(systemName: \"star\")\n    Text(\"Favorito\")\n}\n\n// Você pode usar @ViewBuilder em propriedades computadas:\nstruct PerfilView: View {\n    @ViewBuilder\n    private var cabecalho: some View {\n        Image(systemName: \"person.circle\").font(.largeTitle)\n        Text(\"Jessica Serqueira\").font(.title2)\n        // Retorna TupleView<(Image, Text)>\n    }\n\n    var body: some View {\n        VStack {\n            cabecalho  // expandido como se os dois filhos fossem diretos\n            Divider()\n            // ...\n        }\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Group — a caixa invisível com comportamento surpresa"
+        },
+        {
+          "type": "text",
+          "text": "Group é um container sem layout próprio — não add padding, não organiza nada, só agrupa Views logicamente. Ele é útil para aplicar o mesmo modificador a múltiplas Views de uma vez.\n\nAqui vem o comportamento surpresa: quando você aplica um modificador num Group, ele é aplicado a **cada View filho individualmente**, não ao Group inteiro. O Group vira um TupleView, e o modificador envolve cada elemento da tupla.\n\nIsso pode ser exatamente o que você quer — ou pode ser confuso se você não entende o que está acontecendo."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Modificador no Group → aplicado a CADA filho:\nGroup {\n    Text(\"Item 1\")\n    Text(\"Item 2\")\n    Text(\"Item 3\")\n}\n.foregroundStyle(.blue)  // todos os 3 textos ficam azuis\n.font(.headline)         // todos os 3 textos ficam headline\n\n// Isso é equivalente a:\nText(\"Item 1\").foregroundStyle(.blue).font(.headline)\nText(\"Item 2\").foregroundStyle(.blue).font(.headline)\nText(\"Item 3\").foregroundStyle(.blue).font(.headline)\n\n// Group NÃO adiciona View ao layout:\nVStack {\n    Group {\n        Text(\"A\")\n        Text(\"B\")\n    }\n    Text(\"C\")\n}\n// O VStack vê 3 filhos diretos (A, B, C) — o Group é transparente para o layout\n\n// CUIDADO — border num Group afeta cada elemento:\nGroup {\n    Image(systemName: \"star\")\n    Text(\"Favorito\")\n}\n.border(.blue)  // DOIS retângulos azuis — um ao redor da Image, um ao redor do Text"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Criando componentes com @ViewBuilder"
+        },
+        {
+          "type": "text",
+          "text": "A maioria dos desenvolvedores usa @ViewBuilder só em `body`. Mas você pode marcar qualquer parâmetro, propriedade ou método com @ViewBuilder para criar APIs tão flexíveis quanto as do SwiftUI.\n\nEssa é a técnica usada pelo SwiftUI internamente — List, VStack, HStack, NavigationStack todos aceitam um @ViewBuilder como trailing closure. Você pode fazer o mesmo nos seus próprios componentes."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Componente que aceita @ViewBuilder — mesma API que o SwiftUI nativo:\nstruct CartaoInfo<Conteudo: View>: View {\n    let titulo: String\n    @ViewBuilder let conteudo: Conteudo  // qualquer View(s) aqui\n\n    var body: some View {\n        VStack(alignment: .leading, spacing: 8) {\n            Text(titulo)\n                .font(.headline)\n                .foregroundStyle(.secondary)\n            conteudo  // renderiza qualquer coisa passada\n        }\n        .padding()\n        .background(.secondarySystemBackground)\n        .clipShape(RoundedRectangle(cornerRadius: 12))\n    }\n}\n\n// Uso — conteúdo pode ser qualquer Views:\nCartaoInfo(titulo: \"Sobre\") {\n    Text(\"Desenvolvedora iOS\")\n    Text(\"SwiftUI entusiasta\")\n    HStack {\n        Image(systemName: \"envelope\")\n        Text(\"jessica@app.com\")\n    }\n}\n\n// Também funciona com lógica condicional dentro:\nCartaoInfo(titulo: \"Status\") {\n    if usuario.premium {\n        Label(\"Premium\", systemImage: \"star.fill\").foregroundStyle(.yellow)\n    } else {\n        Text(\"Plano gratuito\")\n    }\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "ViewBuilder com lógica condicional — como funciona por baixo"
+        },
+        {
+          "type": "text",
+          "text": "Dentro de um @ViewBuilder você pode usar `if`, `if let`, `switch`, `if/else` — todos produzem tipos diferentes na árvore. O SwiftUI lida com isso usando um tipo especial chamado `ConditionalContent<TrueView, FalseView>`.\n\nIsso significa que quando você usa um `if/else` num @ViewBuilder, você cria dois ramos de identidade distintos. Se a condição mudar, o SwiftUI considera que Views diferentes estão no lugar — o @State de dentro é reiniciado e transições acontecem. Se você só quer mudar propriedades sem mudar identidade, use o ternário diretamente no modificador."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// if/else em ViewBuilder → ConditionalContent → duas identidades:\nvar body: some View {\n    if carregando {\n        ProgressView()     // ConditionalContent.trueBranch\n    } else {\n        ConteudoPrincipal()  // ConditionalContent.falseBranch\n    }\n}\n// Quando carregando muda, o SwiftUI cria um novo nodo com identidade nova\n// → animação de fade-in/out automática\n\n// Identidade estável com opacidade — sem troca de nodo:\nvar body: some View {\n    ConteudoPrincipal()\n        .opacity(carregando ? 0 : 1)  // mesmo nodo, só opacity muda\n}\n// Sem animação de transition implícita — transição suave de opacity"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "ViewBuilder em métodos de extensão",
+          "body": "Você pode marcar extensões de View com @ViewBuilder para criar modificadores que retornam múltiplas Views. Por exemplo, um `.withLoadingOverlay()` que condiciona um overlay de loading sem mudar a identidade da View principal."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Entendo que @ViewBuilder transforma múltiplas Views em TupleView.",
+            "Sei que Group propaga modificadores para cada filho individualmente.",
+            "Consigo criar componentes com @ViewBuilder que aceitam conteúdo genérico.",
+            "Entendo a diferença de identidade entre if/else (dois nodos) e modificador ternário (um nodo)."
+          ]
+        }
+      ],
+      "commonMistakes": [
+        "Aplicar .border() num Group esperando um único retângulo — na verdade cada filho recebe uma borda separada.",
+        "Usar if/else quando só quer mudar uma propriedade — isso cria duas identidades e pode causar transições indesejadas.",
+        "Criar componentes genéricos sem @ViewBuilder — impossibilita passar múltiplas Views como conteúdo."
+      ],
+      "tradeoffs": "@ViewBuilder permite APIs muito flexíveis ao custo de tipos complexos gerados pelo compilador. Em projetos grandes, propriedades @ViewBuilder computadas são mais legíveis que Views extractadas separadas — mas extrair em Views separadas com parâmetros específicos é melhor para performance quando o conteúdo muda frequentemente.",
+      "miniChallenge": "Crie um componente `SecaoCollapsavel` que aceita um título String e conteúdo @ViewBuilder. Adicione um @State `expandido` e animate a expansão/colapso. Teste passando diferentes tipos de conteúdo — um Text, um VStack com múltiplos itens, e um conteúdo condicional.",
+      "notes": [
+        {
+          "id": "viewbuilder",
+          "text": "@ViewBuilder é implementado como um Swift result builder. Ele transforma um bloco de expressões de View em um único valor de tipo composto (como TupleView). É o que permite a sintaxe de DSL do SwiftUI."
+        },
+        {
+          "id": "tupleview",
+          "text": "TupleView é o tipo retornado quando um @ViewBuilder contém múltiplas expressões. `TupleView<(Text, Image)>` é diferente de `TupleView<(Image, Text)>` — a ordem importa para o tipo e para a identidade estrutural."
+        },
+        {
+          "id": "group",
+          "text": "Group é um tipo que adota @ViewBuilder mas não tem lógica de layout própria. Ele é layout-neutro: containers como VStack e HStack veem os filhos do Group como se fossem filhos diretos."
+        }
+      ],
+      "glossary": [
+        { "term": "@ViewBuilder", "definition": "Atributo de result builder que transforma blocos de expressões de View em um único valor composto." },
+        { "term": "TupleView", "definition": "Tipo resultante de múltiplas Views num @ViewBuilder. Genérico sobre a tupla de tipos das Views." },
+        { "term": "Group", "definition": "Container sem layout próprio que agrupa Views logicamente. Modificadores se propagam para cada filho." },
+        { "term": "ConditionalContent", "definition": "Tipo que o @ViewBuilder cria para blocos if/else, com dois ramos de identidade distintos." }
+      ],
+      "sources": [
+        { "label": "Thinking in SwiftUI — View Builders (Eidhof & Kugler, 2023)", "url": "https://www.objc.io/books/thinking-in-swiftui/" },
+        { "label": "Apple — ViewBuilder", "url": "https://developer.apple.com/documentation/swiftui/viewbuilder" },
+        { "label": "Hacking with Swift — @ViewBuilder", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-create-modifiers-for-a-swiftui-view" }
+      ]
     }
   ]
 }

@@ -226,6 +226,157 @@
       ]
     },
     {
+      "id": "view-trees-and-render-trees",
+      "title": "View Trees, Render Trees e Identity — o modelo mental do SwiftUI",
+      "estimatedMinutes": 50,
+      "objective": "Você vai entender o modelo mental mais importante do SwiftUI: a diferença entre View tree (blueprint efêmero) e Render tree (nodos persistentes), como o SwiftUI usa identidade estrutural e explícita para rastrear Views, e por que esse modelo é a chave para entender @State, animações e performance.[^view-tree][^render-tree][^identity]",
+      "prerequisites": ["m02-app-swiftui/lifecycle-events"],
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Views são blueprints, não objetos persistentes"
+        },
+        {
+          "type": "text",
+          "text": "Essa é a virada mental mais importante do SwiftUI. Quando você escreve uma struct View, você não está criando um objeto de UI como um UIView — você está criando um blueprint, uma descrição do que deveria aparecer na tela.\n\nO SwiftUI constrói essa árvore de descrições (a View tree) sempre que o estado muda, usa ela como referência para atualizar a árvore persistente de renderização (a Render tree), e então descarta a View tree. Views são criadas e destruídas constantemente. O que persiste são os **nodos** na Render tree.\n\nPensa assim: a View tree é como uma planta de construção. Toda vez que você precisa fazer uma reforma, você produz um novo projeto. O que realmente existe no mundo físico é o edifício (a Render tree) — e a engenheira (o SwiftUI) decide o que demolir e o que construir novo baseada na diferença entre o projeto antigo e o novo."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Toda vez que contador muda, o SwiftUI:\n// 1. Chama body de novo → nova View tree (efêmera)\n// 2. Compara com a Render tree anterior\n// 3. Atualiza apenas o que mudou\n// 4. Descarta a View tree\nstruct ContadorView: View {\n    @State private var contador = 0\n\n    var body: some View {\n        Button(\"\\(contador)\") {  // body é chamado novamente a cada toque\n            contador += 1\n        }\n    }\n}"
+        },
+        {
+          "type": "trace",
+          "title": "Ciclo completo: estado → View tree → Render tree",
+          "steps": [
+            {
+              "label": "Estado muda: contador += 1",
+              "detail": "O @State em memória gerenciado pelo SwiftUI é atualizado para 1.",
+              "output": "contador: 0 → 1 (em memória na Render tree)"
+            },
+            {
+              "label": "SwiftUI chama body novamente",
+              "detail": "Uma nova instância da struct View é criada com o valor atual do @State.",
+              "output": "Nova View tree: Button(\"1\") { ... }"
+            },
+            {
+              "label": "SwiftUI compara com a Render tree",
+              "detail": "O SwiftUI verifica o que mudou. A estrutura é a mesma (Button), mas o texto mudou.",
+              "output": "Diff: label do Button: \"0\" → \"1\""
+            },
+            {
+              "label": "Render tree é atualizada",
+              "detail": "Apenas o texto do botão é atualizado. Nenhuma view é recriada.",
+              "output": "Tela mostra: Button \"1\""
+            },
+            {
+              "label": "View tree é descartada",
+              "detail": "A struct View criada na etapa 2 é destruída. Só a Render tree persiste.",
+              "output": "Struct ContadorView: descartada"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Como o SwiftUI sabe o que é o quê — identidade estrutural"
+        },
+        {
+          "type": "text",
+          "text": "Como o SwiftUI sabe que o Button da etapa 2 é o mesmo Button da Render tree? Ele não tem um `id` único.\n\nA resposta é **identidade estrutural**: cada View é identificada pela sua posição na View tree. O segundo filho do HStack é sempre o segundo filho, independente do conteúdo. O SwiftUI constrói um 'caminho' mental para cada nodo — e esse caminho é a identidade.\n\nIsso tem uma consequência direta e importante: quando você usa `if/else`, você cria dois nodos distintos (um para o ramo `if`, outro para o `else`). Quando a condição muda, o SwiftUI considera que a identidade mudou — e pode disparar transições ou resetar @State. Isso é muito diferente de simplesmente mudar uma propriedade do mesmo nodo."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Identidade DIFERENTE — dois nodos distintos no View tree:\n// Quando ativo muda, o @State do Text é reiniciado!\nHStack {\n    if ativo {\n        Text(\"Ativo\")   // nodo 1.ifBranch — identidade separada\n            .bold()\n    } else {\n        Text(\"Inativo\")  // nodo 1.elseBranch — identidade separada\n    }\n}\n\n// Identidade ESTÁVEL — mesmo nodo, só o conteúdo muda:\n// @State do Text persiste entre as mudanças\nHStack {\n    Text(ativo ? \"Ativo\" : \"Inativo\")  // sempre o mesmo nodo na posição 0\n        .bold(ativo)                    // propriedade muda, identidade não\n}"
+        },
+        {
+          "type": "callout",
+          "variant": "warn",
+          "title": "O anti-padrão applyIf",
+          "body": "Uma extensão popular em código SwiftUI antigo aplica modificadores condicionalmente com um método chamado `applyIf`. O problema: isso introduz uma `ConditionalContent` na View tree, mudando a identidade das Views quando a condição muda — causando perda de estado, transições inesperadas e animações quebradas. Prefira sempre passar a condição como parâmetro do modificador: `.background(ativo ? .blue : .clear)`."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// ANTI-PADRÃO — applyIf cria ConditionalContent:\n// Quando 'destacado' muda, a identidade do Text muda\nextension View {\n    @ViewBuilder\n    func applyIf<V: View>(_ condition: Bool, transform: (Self) -> V) -> some View {\n        if condition {\n            transform(self)  // ramo ifBranch\n        } else {\n            self             // ramo elseBranch\n        }\n    }\n}\n\nText(\"Olá\")\n    .applyIf(destacado) { $0.background(.yellow) }  // identidade instável!\n\n// CORRETO — identidade estável, só o valor muda:\nText(\"Olá\")\n    .background(destacado ? Color.yellow : Color.clear)  // mesmo nodo sempre"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Identidade explícita — o modificador .id()"
+        },
+        {
+          "type": "text",
+          "text": "Além da identidade estrutural (posição na árvore), você pode atribuir identidade explícita com o modificador `.id()`. Isso é usado principalmente em ForEach com tipos Identifiable, mas também pode ser usado diretamente em Views.\n\nQuando você atribui um `.id()` explícito a uma View, o SwiftUI considera que a View mudou completamente quando o id muda — remove o nodo antigo da Render tree e insere um novo. Isso descarta @State local, dispara transições e garante que animações começam do zero.\n\nIsso é útil quando você QUER resetar o estado completo de uma View — como resetar um formulário, ou forçar uma animação de entrada."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// .id() explícito — força recriação completa quando o id muda:\nstruct FormularioView: View {\n    @State private var versaoFormulario = UUID()\n\n    var body: some View {\n        VStack {\n            CamposFormulario()\n                .id(versaoFormulario)  // nova UUID = View nova = @State resetado\n\n            Button(\"Limpar\") {\n                versaoFormulario = UUID()  // reseta TUDO no formulário\n            }\n        }\n    }\n}\n\n// Em ForEach — identidade explícita por item:\nForEach(tarefas) { tarefa in        // usa tarefa.id como identidade explícita\n    TarefaRow(tarefa: tarefa)\n}\n\nForEach(itens, id: \\.nome) { item in  // usa nome como identidade\n    Text(item.nome)\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Lifetime dos nodos — quando @State é criado e destruído"
+        },
+        {
+          "type": "text",
+          "text": "Agora que você entende a Render tree, o comportamento do @State fica óbvio:\n\n@State é armazenado no nodo da Render tree, não na struct View. Quando o nodo é criado (View entra na tela), o @State é inicializado com o `initialValue`. Quando o nodo existe mas a struct View é recriada (estado muda em outro lugar), o @State NÃO é reinicializado — o SwiftUI usa o valor atual do nodo. Quando o nodo é removido (View sai da tela com identidade distinta), o @State some.\n\nIsso explica por que você nunca deve passar @State de fora via init: quando o init é chamado, o View não tem nodo ainda, então o valor passado só é o `initialValue` — depois que o nodo existe, mudanças externas não afetam o @State."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// @State vive no nodo da Render tree:\nstruct Contador: View {\n    @State private var valor = 0  // só é 0 quando o nodo é CRIADO\n\n    // Depois que o nodo existe, o valor persiste:\n    // Se o pai recrear Contador, mas o nodo continua existindo,\n    // valor NÃO volta para 0\n    var body: some View {\n        Button(\"\\(valor)\") { valor += 1 }\n    }\n}\n\n// PROBLEMA: passar @State via init não funciona como esperado\nstruct Contador: View {\n    @State private var valor: Int\n\n    // Só muda o initialValue — não afeta o valor atual no nodo\n    init(inicialWith v: Int = 0) {\n        _valor = State(initialValue: v)\n    }\n\n    // Se o pai mudar 'v' depois que o nodo existe, o botão não atualiza!\n}"
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Entendo que Views são blueprints efêmeros, não objetos persistentes.",
+            "Sei que a Render tree é o que realmente existe e persiste — as structs View são descartadas.",
+            "Entendo identidade estrutural: a posição na árvore identifica cada View.",
+            "Sei que if/else cria identidades diferentes — prefiro condicionar propriedades ao invés de structs.",
+            "Entendo por que @State vive no nodo e não é reinicializado quando a struct View é recriada."
+          ]
+        }
+      ],
+      "commonMistakes": [
+        "Achar que a struct View persiste entre atualizações — ela é recriada constantemente.",
+        "Usar o padrão applyIf para modificadores condicionais — isso cria identidades instáveis.",
+        "Tentar inicializar @State via init com valores externos — o valor só é initialValue; mudanças externas não atualizam.",
+        "Colocar lógica que depende da identidade da View em onAppear pensando que será chamada uma única vez."
+      ],
+      "tradeoffs": "A View tree efêmera permite que o SwiftUI seja extremamente eficiente: só atualiza exatamente o que mudou na Render tree. O custo é o modelo mental incomum para quem vem de UIKit onde objetos eram mutados diretamente. O investimento em entender esse modelo se paga em performance e em código sem bugs de sincronização.",
+      "miniChallenge": "Crie uma View com dois botões: um usa if/else para alternar entre dois Text views diferentes, e outro usa um único Text com valor condicional. Adicione um @State counter em ambos os casos e observe como o counter se comporta quando você alterna. Você vai ver a diferença de identidade em ação.",
+      "notes": [
+        {
+          "id": "view-tree",
+          "text": "View tree é a árvore de structs View construída pela execução dos body. É efêmera — criada como blueprint e descartada após ser usada para atualizar a Render tree."
+        },
+        {
+          "id": "render-tree",
+          "text": "Render tree (tecnicamente o 'attribute graph' na implementação do SwiftUI) é a estrutura persistente que representa o estado atual da UI. Nodos nela têm lifetime — nascem quando Views entram na tela e morrem quando saem."
+        },
+        {
+          "id": "identity",
+          "text": "Identidade em SwiftUI é o que conecta uma View na View tree ao seu nodo na Render tree. Sem identidade estável, @State, animações e transições não funcionam corretamente."
+        }
+      ],
+      "glossary": [
+        { "term": "View tree", "definition": "Estrutura efêmera de blueprints construída pelo body das Views. Descartada após ser usada para atualizar a Render tree." },
+        { "term": "Render tree", "definition": "Estrutura persistente que representa a UI atual. Nodos nela têm lifetime e armazenam @State." },
+        { "term": "Identidade estrutural", "definition": "Identidade implícita de uma View baseada na sua posição na View tree." },
+        { "term": "Identidade explícita", "definition": "Identidade atribuída manualmente via .id() ou pelo Identifiable em ForEach." },
+        { "term": "ConditionalContent", "definition": "Nodo que o SwiftUI cria para blocos if/else na View tree, com dois ramos de identidade distintos." }
+      ],
+      "sources": [
+        { "label": "Thinking in SwiftUI — View Trees (Eidhof & Kugler, 2023)", "url": "https://www.objc.io/books/thinking-in-swiftui/" },
+        { "label": "Apple — Restoring Your App's State", "url": "https://developer.apple.com/documentation/uikit/view_controllers/preserving_your_app_s_ui_across_launches" },
+        { "label": "Hacking with Swift — View identity", "url": "https://www.hackingwithswift.com/books/ios-swiftui/views-and-modifiers-views-as-state" }
+      ]
+    },
+    {
       "id": "previews-organization",
       "title": "Previews e organização do projeto",
       "estimatedMinutes": 30,

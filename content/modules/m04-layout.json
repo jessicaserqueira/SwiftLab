@@ -237,5 +237,169 @@
         { "label": "Hacking with Swift — How to get the size of the screen", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-get-the-size-of-the-screen-using-geometryreader" }
       ]
     }
+  ,
+    {
+      "id": "layout-algorithm-in-depth",
+      "title": "O algoritmo de layout — proposta, resposta e posicionamento",
+      "estimatedMinutes": 55,
+      "objective": "Você vai entender o algoritmo completo de layout do SwiftUI — como pai e filha negociam tamanho com proposta e resposta, por que a filha tem a palavra final sobre seu próprio tamanho, como o HStack distribui espaço usando flexibilidade, e como overlay/background diferem do ZStack em layout.[^proposal][^flexibility][^fixedsize]",
+      "prerequisites": ["m04-layout/stacks-and-spacer", "m02-app-swiftui/view-trees-and-render-trees"],
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "O algoritmo em 4 passos — proposta, resposta, tamanho e posição"
+        },
+        {
+          "type": "text",
+          "text": "O layout do SwiftUI segue um protocolo simples mas com implicações profundas:\n\n1. **O pai propõe um tamanho** disponível para a filha (pode ser nil em algum eixo, significando 'use seu tamanho ideal')\n2. **A filha calcula seu tamanho** com base na proposta, recursivamente fazendo o mesmo com suas filhas\n3. **A filha reporta seu tamanho ao pai** — e esse tamanho é definitivo. O pai **não pode** alterar o tamanho da filha unilateralmente\n4. **O pai posiciona a filha** usando alignment guides\n\nA regra mais importante: **a filha tem a palavra final sobre seu próprio tamanho**. O pai pode propor, mas a filha decide. Text pode reportar um tamanho diferente da proposta se o texto couber em menos espaço. Image por padrão ignora completamente a proposta e reporta seu tamanho intrínseco."
+        },
+        {
+          "type": "trace",
+          "title": "Trace de layout: Text com padding e background",
+          "steps": [
+            {
+              "label": "Sistema propõe 320×480 ao background",
+              "detail": "O background é a raiz da árvore nesse exemplo. Recebe o safe area.",
+              "output": "background recebe proposta: 320×480"
+            },
+            {
+              "label": "Background propõe 320×480 ao padding (sua subview primária)",
+              "detail": "Background repassa a mesma proposta para a View principal.",
+              "output": "padding recebe proposta: 320×480"
+            },
+            {
+              "label": "Padding subtrai 10pts em cada borda → propõe 300×460 ao Text",
+              "detail": "Padding reduz a proposta pelo valor do inset em cada eixo.",
+              "output": "Text recebe proposta: 300×460"
+            },
+            {
+              "label": "Text reporta 51×17 — tamanho necessário para o texto",
+              "detail": "Text não aceita o espaço todo. Reporta exatamente o que precisa.",
+              "output": "Text reporta: 51×17"
+            },
+            {
+              "label": "Padding adiciona 10pts → reporta 71×37 ao background",
+              "detail": "Padding adiciona seus insets de volta ao tamanho reportado pela filha.",
+              "output": "Padding reporta: 71×37"
+            },
+            {
+              "label": "Background propõe 71×37 ao Color (sua subview secundária)",
+              "detail": "Background usa o tamanho da subview primária como proposta para a secundária.",
+              "output": "Color recebe proposta: 71×37"
+            },
+            {
+              "label": "Color aceita e reporta 71×37",
+              "detail": "Color é completamente flexível — aceita qualquer tamanho proposto.",
+              "output": "Background reporta 71×37 ao sistema"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Como o HStack distribui espaço — o algoritmo de flexibilidade"
+        },
+        {
+          "type": "text",
+          "text": "O HStack não divide o espaço igualmente. Ele usa um algoritmo baseado em **flexibilidade**:\n\n1. Determina a flexibilidade de cada filho (diferença entre tamanho mínimo e tamanho máximo)\n2. Ordena os filhos do menos flexível para o mais flexível\n3. Para cada filho (começando pelo menos flexível), propõe: espaço restante ÷ número de filhos restantes\n\nO resultado prático: Text (que tem tamanho máximo, não infinito) é o menos flexível e recebe sua parte do espaço antes dos filhos infinitamente flexíveis como Color. Se o espaço total for pequeno, o Text recebe menos do que precisa para exibir sem quebra de linha — mesmo que haja espaço suficiente.\n\nA solução: use `.layoutPriority(1)` no Text para que ele receba o espaço que precisa antes dos outros filhos. Ou use `.fixedSize()` para que o Text ignore a proposta e use seu tamanho ideal."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Problema: Text quebra linha mesmo com espaço suficiente\nHStack(spacing: 0) {\n    Color.cyan      // flexibilidade infinita\n    Text(\"Texto\")   // menos flexível — recebe espaço dividido\n    Color.teal      // flexibilidade infinita\n}\n// HStack divide 300pts / 3 filhos = 100pts cada\n// Text com 100pts pode não ter espaço suficiente!\n\n// Solução 1 — layoutPriority: Text recebe o que precisa primeiro:\nHStack(spacing: 0) {\n    Color.cyan\n    Text(\"Texto\")\n        .layoutPriority(1)  // processado antes dos outros\n    Color.teal\n}\n\n// Solução 2 — fixedSize: Text ignora a proposta, usa tamanho ideal:\nHStack(spacing: 0) {\n    Color.cyan\n    Text(\"Texto\")\n        .fixedSize()  // usa tamanho intrínseco, pode sair dos limites\n    Color.teal\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "overlay e background vs ZStack — a diferença de layout"
+        },
+        {
+          "type": "text",
+          "text": "Essa diferença é sutil mas importante. Quando você precisa de um elemento visual \"decorativo\" sobre ou sob uma View, existe uma escolha crítica:\n\n**overlay e background**: O tamanho do container é determinado pela **subview primária** (a View em que você aplica o modificador). A subview secundária (o conteúdo do overlay/background) recebe o tamanho da primária como proposta, mas **não influencia o layout de outras Views**. Perfeito para decorações, badges, sombras.\n\n**ZStack**: O tamanho é a **união dos tamanhos de todos os filhos**. Se o ZStack tem um badge grande e uma View pequena, o badge faz o ZStack maior — e isso afeta o layout dos irmãos do ZStack.\n\nRegra prática: para badges, sombras, fundos decorativos → use overlay/background. Para layouts onde todos os filhos contribuem para o tamanho → use ZStack."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// overlay NÃO afeta o tamanho da View principal:\nText(\"Olá\")\n    .padding()\n    .overlay(alignment: .topTrailing) {\n        Circle()\n            .fill(.red)\n            .frame(width: 20, height: 20)\n        // Circle está SOBRE o Text mas não aumenta o tamanho dele\n    }\n// Tamanho reportado: tamanho do Text + padding\n\n// ZStack INCLUI todos os filhos no tamanho:\nZStack(alignment: .topTrailing) {\n    Text(\"Olá\").padding()\n    Circle().fill(.red).frame(width: 20, height: 20)\n}\n// Tamanho reportado: UNIÃO das frames do Text e do Circle\n// Outros elementos ao redor vão se ajustar ao ZStack maior!\n\n// Efeito prático em HStack com alinhamento de base:\nHStack(alignment: .bottom) {\n    Text(\"A\").padding().overlay(alignment: .topTrailing) {\n        Text(\"badge\")  // overlay não afeta alinhamento base\n    }\n    Text(\"B\")  // alinha com a base do Text A\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "fixedSize() — forçando o tamanho ideal"
+        },
+        {
+          "type": "text",
+          "text": "O modificador `.fixedSize()` propõe `nil × nil` para sua subview — o que significa 'use seu tamanho ideal em ambas as dimensões'. Você também pode usar `.fixedSize(horizontal: true, vertical: false)` para fixar só em um eixo.\n\nO caso de uso mais comum é com Text: normalmente o Text faz word wrap e truncação para caber no espaço proposto. Com `.fixedSize()`, ele usa seu tamanho ideal sem word wrap — pode sair dos bounds do container, mas não vai truncar.\n\nOutro uso importante: dentro de um scroll view, shapes tem tamanho ideal padrão de 10×10 porque o scroll view propõe `nil` no eixo de scroll. Se você quer uma shape com altura definida dentro de um ScrollView, use `.frame(height:)` explicitamente."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Sem fixedSize — Text quebra linha em espaço pequeno:\nText(\"Este é um texto bem longo que pode quebrar linha\")\n    .frame(width: 100)\n// Word wrapping em 100pts de largura\n\n// Com fixedSize — Text usa tamanho ideal, pode sair dos bounds:\nText(\"Este é um texto bem longo que pode quebrar linha\")\n    .fixedSize()\n    .frame(width: 100)  // text renderiza além de 100pts!\n\n// Útil em HStack para garantir que Text não quebre:\nHStack {\n    Image(systemName: \"calendar\")\n    Text(\"Seg, 31 de março de 2025\")\n        .fixedSize(horizontal: true, vertical: false)  // não quebra na horizontal\n}\n\n// Shape em ScrollView precisa de altura explícita:\nScrollView {\n    Rectangle()\n        .fill(.blue)\n        .frame(height: 200)  // sem isso, Rectangle seria 10pts de altura\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "frame flexível — maxWidth: .infinity e minWidth"
+        },
+        {
+          "type": "text",
+          "text": "O modificador `.frame(maxWidth:maxHeight:)` é um dos mais usados — mas seu comportamento não é óbvio:\n\n`.frame(maxWidth: .infinity)` faz a View ocupar **pelo menos** a largura proposta. Se a subview interna é menor, o frame expande. Se é maior, o frame respeita o tamanho da subview.\n\n`.frame(minWidth: 0, maxWidth: .infinity)` faz a View ocupar **exatamente** a largura proposta. Não importa o tamanho da subview — o frame toma todo o espaço disponível.\n\nA diferença é sutil mas importa quando a subview é maior que o espaço proposto."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// maxWidth: .infinity — pelo menos tão largo quanto a proposta:\nText(\"Olá\")\n    .frame(maxWidth: .infinity)\n    .background(.blue)\n// Background azul ocupa toda a largura\n// Se Text for maior que a proposta, frame também cresce\n\n// minWidth: 0, maxWidth: .infinity — exatamente a proposta:\nText(\"Olá\")\n    .frame(minWidth: 0, maxWidth: .infinity)\n    .background(.blue)\n// Background azul ocupa exatamente a largura proposta\n// Mesmo se Text for maior, frame respeita o máximo\n\n// Padrão comum para botão full-width:\nButton(\"Continuar\") { continuar() }\n    .buttonStyle(.borderedProminent)\n    .frame(maxWidth: .infinity)  // ocupa toda a largura disponível"
+        },
+        {
+          "type": "callout",
+          "variant": "tip",
+          "title": "Debug de layout: use .border()",
+          "body": "A técnica mais eficaz para debugar layout no SwiftUI é adicionar `.border(.red)` temporariamente às Views. O retângulo mostra exatamente o tamanho reportado pela View — o tamanho real que ela ocupa na tela. Você pode adicionar `.border(.blue)` na View pai e `.border(.red)` na filha para ver como as bordas se relacionam."
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Entendo que a filha tem a palavra final sobre seu tamanho — o pai propõe, a filha decide.",
+            "Sei como o HStack distribui espaço por flexibilidade — e como usar .layoutPriority() quando necessário.",
+            "Entendo a diferença de layout entre overlay/background (não afeta irmãos) e ZStack (afeta).",
+            "Sei usar .fixedSize() para forçar o tamanho ideal e .frame(maxWidth: .infinity) para ocupar todo o espaço."
+          ]
+        }
+      ],
+      "commonMistakes": [
+        "Achar que o pai controla o tamanho da filha — a filha sempre tem a palavra final.",
+        "Usar ZStack para badges e overlays decorativos — afeta o layout dos irmãos desnecessariamente.",
+        "Esquecer que .fixedSize() pode fazer Views renderizar fora dos bounds do container.",
+        "Usar shapes em ScrollView sem .frame(height:) explícito — renderiza como 10×10 por padrão."
+      ],
+      "tradeoffs": "O algoritmo de proposta/resposta é mais previsível que o AutoLayout do UIKit para layouts simples, mas pode ter comportamentos surpreendentes em casos extremos (HStack com múltiplos filhos flexíveis, ScrollView com shapes). A chave é entender que o controle vem de baixo para cima — as Views folha definem os tamanhos e os containers se adaptam.",
+      "miniChallenge": "Crie um HStack com um ícone SF Symbol, um Text no meio e um Color no fim. Observe como o Text quebra linha quando o HStack é estreito. Resolva usando .layoutPriority(1) no Text e observe a diferença. Depois compare o comportamento usando .fixedSize() no Text.",
+      "notes": [
+        {
+          "id": "proposal",
+          "text": "ProposedViewSize é um tipo público no SwiftUI (desde iOS 16) que representa a proposta do pai. width e height são Optional<CGFloat> — nil significa 'use seu tamanho ideal nessa dimensão'."
+        },
+        {
+          "id": "flexibility",
+          "text": "Flexibilidade de uma View é calculada pelo HStack propondo 0 e infinity na mesma dimensão e comparando as respostas. Views com grande diferença (como Color) são mais flexíveis. Views com diferença pequena (como Text) são menos flexíveis."
+        },
+        {
+          "id": "fixedsize",
+          "text": ".fixedSize() internamente propõe nil×nil para a subview, fazendo ela retornar seu tamanho ideal. Para Text, o tamanho ideal é o tamanho sem word wrap — todo o texto em uma linha."
+        }
+      ],
+      "glossary": [
+        { "term": "ProposedViewSize", "definition": "Tamanho proposto pelo pai para a filha. Componentes são Optional — nil significa 'tamanho ideal'." },
+        { "term": "Flexibilidade", "definition": "Medida de quanto uma View pode variar de tamanho. Cores e Spacers são infinitamente flexíveis; Text tem limite superior." },
+        { "term": "fixedSize()", "definition": "Modificador que propõe nil ao filho, forçando ele a usar seu tamanho ideal independente da proposta." },
+        { "term": "layoutPriority", "definition": "Prioridade na distribuição de espaço no HStack/VStack. Filhos com prioridade maior recebem espaço primeiro." }
+      ],
+      "sources": [
+        { "label": "Thinking in SwiftUI — Layout (Eidhof & Kugler, 2023)", "url": "https://www.objc.io/books/thinking-in-swiftui/" },
+        { "label": "Apple — Adapting layouts for different screen sizes", "url": "https://developer.apple.com/documentation/swiftui/composing-swiftui-gestures" },
+        { "label": "Hacking with Swift — How SwiftUI layout works", "url": "https://www.hackingwithswift.com/books/ios-swiftui/how-layout-works-in-swiftui" }
+      ]
+    }
   ]
 }

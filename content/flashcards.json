@@ -489,6 +489,112 @@
         "q": "Quando usar NavigationBar vs TabBar para navegação?",
         "a": "NavigationBar: para hierarquia linear — você navega para um detalhe e volta. TabBar: para seções paralelas do app — Início, Busca, Perfil são irmãs, não hierarquia. NÃO misture — não coloque TabBar dentro de NavigationStack."
       }
+    ],
+    "m02-app-swiftui/view-trees-and-render-trees": [
+      {
+        "q": "Qual é a diferença entre View tree e Render tree no SwiftUI?",
+        "a": "View tree: structs efêmeras criadas pelo body() — são blueprints. São criadas e descartadas constantemente.\nRender tree: nodos persistentes que representam a UI real. Têm lifetime — nascem quando a View entra na tela, morrem quando sai. @State vive aqui, não na struct View."
+      },
+      {
+        "q": "O que é identidade estrutural no SwiftUI?",
+        "a": "Cada View é identificada pela sua posição na View tree. O segundo filho de um HStack é sempre 'o segundo filho' — sem precisar de id explícito. Quando a posição muda (ou a condição de um if/else muda), o SwiftUI considera que é uma View diferente."
+      },
+      {
+        "q": "Por que usar `if/else` com dois Views distintos é diferente de usar um único View com propriedade condicional?",
+        "a": "if/else cria um ConditionalContent com dois ramos de identidade distintos. Quando a condição muda, o nodo antigo é removido e o novo é inserido — @State é resetado, transitions ocorrem. Com um único View e propriedade condicional, o mesmo nodo persiste — só a propriedade muda."
+      },
+      {
+        "q": "Quando um @State é criado, quando é usado e quando é destruído?",
+        "a": "Criado: quando o nodo é inserido na Render tree pela primeira vez (usa o initialValue).\nUsado: a cada execução de body, wrappedValue aponta para o valor real no nodo.\nDestruído: quando o nodo é removido da Render tree (identidade muda ou View sai da tela definitivamente)."
+      },
+      {
+        "q": "Para que serve o modificador `.id()` explícito em uma View?",
+        "a": "Permite atribuir identidade explícita. Quando o id muda, o SwiftUI remove o nodo antigo e insere um novo — resetando @State, @Binding e disparando transições. Útil para forçar recriação completa de uma View (como limpar um formulário)."
+      }
+    ],
+    "m03-views-composition/viewbuilder-and-group": [
+      {
+        "q": "O que o @ViewBuilder faz com múltiplas Views num bloco?",
+        "a": "@ViewBuilder é um result builder que transforma múltiplas expressões de View em um único TupleView. Por exemplo: HStack { Image(...); Text(...) } vira internamente HStack { TupleView<(Image, Text)> }. O container itera os filhos do TupleView."
+      },
+      {
+        "q": "Como o Group propaga modificadores para seus filhos?",
+        "a": "Group é layout-neutro — não adiciona estrutura. Modificadores aplicados a um Group são propagados para CADA filho individualmente. `.border(.blue)` num Group com 3 filhos cria 3 bordas separadas, não uma ao redor do grupo."
+      },
+      {
+        "q": "Como criar um componente que aceita @ViewBuilder como conteúdo?",
+        "a": "Use genérico com View e @ViewBuilder no parâmetro:\nstruct Card<Content: View>: View {\n  @ViewBuilder let content: Content\n  var body: some View { content.padding() }\n}\nIsso permite passar qualquer Views como conteúdo — mesma API que o SwiftUI nativo."
+      },
+      {
+        "q": "Qual é o problema do anti-padrão applyIf?",
+        "a": "applyIf usa if/else internamente para aplicar condicionalmente um modificador. Isso cria ConditionalContent com dois nodos de identidades distintas. Quando a condição muda, o SwiftUI trata como troca de View — @State é resetado e transições disparam. Use modificadores com valores condicionais no lugar."
+      }
+    ],
+    "m04-layout/layout-algorithm-in-depth": [
+      {
+        "q": "Como o algoritmo de layout do SwiftUI funciona em 4 passos?",
+        "a": "1. Pai PROPÕE um tamanho disponível para a filha.\n2. Filha CALCULA seu próprio tamanho (recursivamente para suas subviews).\n3. Filha REPORTA seu tamanho ao pai — DEFINITIVO, o pai não pode alterar.\n4. Pai POSICIONA a filha usando alignment guides."
+      },
+      {
+        "q": "Por que o Text em um HStack pode quebrar linha mesmo com espaço disponível?",
+        "a": "O HStack distribui espaço por flexibilidade. Text tem tamanho máximo definido (não infinito), então é o menos flexível. Ele recebe espaço proposto ÷ número de filhos — o que pode ser insuficiente mesmo com espaço total disponível. Solução: .layoutPriority(1) no Text."
+      },
+      {
+        "q": "Qual é a diferença de layout entre `.overlay{}` e `ZStack{}`?",
+        "a": "overlay: tamanho reportado ao pai é sempre o da View principal. O overlay não afeta o layout de Views irmãs — é puramente decorativo.\nZStack: tamanho é a UNIÃO de todos os filhos. Views com badge grande em ZStack podem deslocar elementos adjacentes."
+      },
+      {
+        "q": "O que `.fixedSize()` faz para uma View?",
+        "a": "Propõe nil×nil para sua subview — fazendo ela usar seu tamanho ideal em ambas as dimensões. Para Text, o tamanho ideal é sem word wrap (todo o texto em uma linha). A View pode renderizar fora dos bounds do container."
+      },
+      {
+        "q": "Qual é a diferença entre `.frame(maxWidth: .infinity)` e `.frame(minWidth: 0, maxWidth: .infinity)`?",
+        "a": "maxWidth: .infinity — PELO MENOS tão largo quanto a proposta. Se subview é maior, frame cresce.\nminWidth: 0, maxWidth: .infinity — EXATAMENTE a largura proposta. Não importa o tamanho da subview — o frame toma todo o espaço proposto e não cresce além."
+      }
+    ],
+    "m05-state-data-flow/state-internals-and-performance": [
+      {
+        "q": "Como o @State armazena o valor internamente?",
+        "a": "@State cria uma propriedade State<T> (com _) com initialValue. Quando o nodo é criado na Render tree, o SwiftUI aloca memória e inicializa com initialValue. wrappedValue aponta para essa memória. Struct View é recriada com initialValue=0, mas wrappedValue aponta para o valor real — que pode ser 42."
+      },
+      {
+        "q": "Por que passar @State via init não funciona para atualizações externas?",
+        "a": "No momento do init, a View não tem nodo na Render tree. O init só pode mudar o initialValue. Se o nodo já existe, mudar o initialValue não afeta o valor real no nodo. Use @Binding para valores que devem responder a mudanças externas."
+      },
+      {
+        "q": "Quando usar @Bindable e quando usar propriedade comum para @Observable?",
+        "a": "@Bindable: quando você precisa de $objeto.propriedade para passar Binding a components como TextField, Toggle, Stepper.\nPropriedade comum (var model: Modelo): quando você só precisa ler ou escrever diretamente sem passar Binding para outros componentes."
+      },
+      {
+        "q": "Como Self._printChanges() ajuda a diagnosticar performance?",
+        "a": "Adicionado ao início do body como `let _ = Self._printChanges()`, imprime no console o que causou o rerender:\n- _propriedade: a propriedade @State que mudou\n- @self: o valor da struct View mudou\n- @identity: primeira vez que a View aparece\nIsso revela rerenders desnecessários para otimização."
+      },
+      {
+        "q": "Qual é a diferença de granularidade entre ObservableObject (@Published) e @Observable ao rastrear mudanças?",
+        "a": "ObservableObject: qualquer mudança em qualquer @Published rerenderiza TODAS as Views que observam o objeto.\n@Observable: rastreia dependências na propriedade individual. Views só rerenderizam quando as propriedades que ELAS usam mudam. Mais eficiente por padrão."
+      }
+    ],
+    "m06-navigation/animations-fundamentals": [
+      {
+        "q": "Qual é a diferença entre property animation e transition em SwiftUI?",
+        "a": "Property animation: mesma View (mesmo nodo na Render tree) existe antes e depois. Apenas uma propriedade muda (largura, cor, opacidade). SwiftUI interpola o valor.\nTransition: a View entra ou sai da Render tree. É aplicada ao nodo que está sendo inserido ou removido."
+      },
+      {
+        "q": "Por que `if expandido { Rect().frame(200) } else { Rect().frame(50) }` não produz interpolação de largura?",
+        "a": "if/else cria ConditionalContent com dois nodos de identidades distintas. Quando 'expandido' muda, o nodo antigo é REMOVIDO e o novo é INSERIDO — isso é uma transition, não uma property animation. Para interpolação, use o mesmo nodo: Rect().frame(width: expandido ? 200 : 50)."
+      },
+      {
+        "q": "Qual é a diferença entre withAnimation (explícita) e .animation(value:) (implícita)?",
+        "a": "withAnimation: anima as mudanças de estado que ocorrem DENTRO da closure. Você controla exatamente quando animar.\n.animation(value:): anima automaticamente quando o 'value' muda, independente da origem da mudança (rede, timer, usuário). Útil para reagir a qualquer fonte de mudança."
+      },
+      {
+        "q": "Por que você deve sempre usar `.animation(_:value:)` e nunca o deprecated `.animation(_:)` sem valor?",
+        "a": ".animation(_:) sem value anima QUALQUER mudança na subárvore — incluindo mudanças causadas por rotação de dispositivo, mudanças de orientação, etc. Causa animações inesperadas em situações que não deveriam animar. Sempre especifique o value para restringir o escopo."
+      },
+      {
+        "q": "Por que .transition() sem withAnimation não produz animação visível?",
+        "a": "Transitions são animadas apenas quando a mudança de estado está dentro de um withAnimation. Sem ele, SwiftUI processa a mudança instantaneamente — a View aparece ou desaparece sem animação, mesmo com .transition() declarado."
+      }
     ]
   }
 }

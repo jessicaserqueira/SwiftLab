@@ -1,5 +1,105 @@
 {
   "bySection": {
+    "m02-app-swiftui/view-trees-and-render-trees": [
+      {
+        "title": "Identidade estável vs instável",
+        "prompt": "Qual versão do código mantém identidade ESTÁVEL para o Text, e qual cria identidades distintas?\n\n// Versão A:\nif mostrarNome {\n    Text(usuario.nome).bold()\n} else {\n    Text(\"Anônimo\").italic()\n}\n\n// Versão B:\nText(mostrarNome ? usuario.nome : \"Anônimo\")\n    .bold(mostrarNome)\n    .italic(!mostrarNome)",
+        "hints": [
+          "if/else cria ConditionalContent com dois ramos distintos na View tree.",
+          "O ternário no conteúdo mantém o mesmo nodo — só as propriedades mudam."
+        ],
+        "solution": "Versão A — identidade INSTÁVEL:\nO if/else cria ConditionalContent. Cada ramo é um nodo de identidade diferente. Quando mostrarNome muda:\n- Nodo antigo é REMOVIDO da Render tree\n- Novo nodo é INSERIDO\n- Qualquer @State dentro dos Text seria resetado\n- Transition é disparada (fade in/out por padrão)\n\nVersão B — identidade ESTÁVEL:\nUm único Text, sempre no mesmo lugar da View tree. Quando mostrarNome muda:\n- O mesmo nodo persiste na Render tree\n- Apenas as propriedades (conteúdo, bold, italic) mudam\n- Sem resetar @State, sem transition\n- Mais eficiente e previsível\n\nRegra: para alternar conteúdo ou estilo SEM mudar identidade, use ternário em propriedades/modificadores."
+      },
+      {
+        "title": "Detecte por que o @State foi resetado",
+        "prompt": "O usuário reporta que o campo de texto perde o conteúdo sempre que o modo muda. Identifique o bug:\n\nstruct FormularioView: View {\n    @State private var modoEdicao = false\n    \n    var body: some View {\n        VStack {\n            if modoEdicao {\n                CampoEdicao()  // tem @State private var texto = \"\"\n                    .background(.blue.opacity(0.1))\n            } else {\n                CampoEdicao()  // exatamente o mesmo componente!\n                    .background(.gray.opacity(0.1))\n            }\n            Toggle(\"Editar\", isOn: $modoEdicao)\n        }\n    }\n}",
+        "hints": [
+          "O if/else cria identidades distintas mesmo que as Views sejam do mesmo tipo.",
+          "O @State de CampoEdicao vive no nodo — e o nodo é destruído quando a condição muda."
+        ],
+        "solution": "Bug: o if/else cria dois nodos de CampoEdicao com identidades estruturais diferentes (um no ifBranch, outro no elseBranch). Quando modoEdicao muda, o SwiftUI remove um nodo e insere outro — destruindo o @State (texto) junto.\n\nCorreção — aplicar o background condicionalmente sem if/else:\n\nstruct FormularioView: View {\n    @State private var modoEdicao = false\n    \n    var body: some View {\n        VStack {\n            CampoEdicao()  // mesmo nodo sempre — @State persiste!\n                .background((modoEdicao ? Color.blue : Color.gray).opacity(0.1))\n            Toggle(\"Editar\", isOn: $modoEdicao)\n        }\n    }\n}\n\nAgora o nodo de CampoEdicao é sempre o mesmo — identidade estável, @State (texto) persiste."
+      }
+    ],
+    "m03-views-composition/viewbuilder-and-group": [
+      {
+        "title": "Quantas bordas aparecem?",
+        "prompt": "Sem rodar no Xcode, quantos retângulos de borda azul aparecem na tela?\n\nGroup {\n    Text(\"A\")\n    Text(\"B\")\n    Image(systemName: \"star\")\n}\n.border(.blue, width: 2)",
+        "hints": [
+          "Group é transparente — não tem layout próprio.",
+          "Modificadores em Group são propagados para cada filho individualmente."
+        ],
+        "solution": "Aparecem 3 retângulos de borda azul — um ao redor de Text(\"A\"), um ao redor de Text(\"B\"), e um ao redor do Image.\n\nO motivo: Group não tem layout próprio. Quando você aplica .border() ao Group, o SwiftUI propaga o modificador para cada filho individualmente, como se você tivesse escrito:\n\nText(\"A\").border(.blue, width: 2)\nText(\"B\").border(.blue, width: 2)\nImage(systemName: \"star\").border(.blue, width: 2)\n\nIsso é diferente de aplicar .border() a um VStack — que teria um único retângulo ao redor de tudo.\n\nUso produtivo: .font(.headline) no Group aplica a mesma fonte a todos os filhos com uma linha."
+      },
+      {
+        "title": "Crie um componente com @ViewBuilder",
+        "prompt": "Implemente um componente CartaoDestaque que:\n1. Aceita um título (String) e conteúdo (@ViewBuilder)\n2. Exibe o título em destaque no topo\n3. Exibe o conteúdo abaixo\n4. Tem fundo arredondado\n\nDeve funcionar com qualquer conteúdo:\nCartaoDestaque(\"Progresso\") {\n    Text(\"3 de 5 tarefas\")\n}\nCartaoDestaque(\"Time\") {\n    Text(\"Ana\")\n    Text(\"Bruno\")\n    Text(\"Carol\")\n}",
+        "hints": [
+          "Use genérico: struct CartaoDestaque<Conteudo: View>",
+          "@ViewBuilder permite múltiplas Views no closure"
+        ],
+        "solution": "struct CartaoDestaque<Conteudo: View>: View {\n    let titulo: String\n    @ViewBuilder let conteudo: Conteudo\n\n    var body: some View {\n        VStack(alignment: .leading, spacing: 8) {\n            Text(titulo)\n                .font(.headline)\n                .foregroundStyle(.primary)\n            \n            Divider()\n            \n            conteudo\n        }\n        .padding(16)\n        .background(.secondarySystemBackground)\n        .clipShape(RoundedRectangle(cornerRadius: 12))\n    }\n}\n\n// Uso com um item:\nCartaoDestaque(\"Progresso\") {\n    Text(\"3 de 5 tarefas\")\n}\n\n// Uso com múltiplos itens:\nCartaoDestaque(\"Time\") {\n    Text(\"Ana\")\n    Text(\"Bruno\")\n    Text(\"Carol\")  // TupleView<(Text, Text, Text)>\n}\n\n// Uso com Views complexas:\nCartaoDestaque(\"Status\") {\n    if concluido {\n        Label(\"Concluído\", systemImage: \"checkmark.circle.fill\").foregroundStyle(.green)\n    } else {\n        ProgressView(value: progresso)\n    }\n}"
+      }
+    ],
+    "m04-layout/layout-algorithm-in-depth": [
+      {
+        "title": "Trace o layout: qual tamanho cada View reporta?",
+        "prompt": "Dado que a proposta inicial é 320×480, trace o fluxo completo de layout:\n\nText(\"Olá\")\n    .padding(8)\n    .background(Color.green)\n\nAssuma que Text('Olá') reporta 28×20.",
+        "hints": [
+          "O fluxo é de baixo para cima: background → padding → Text → padding → background.",
+          "Cada modificador é uma View que envolve a anterior."
+        ],
+        "solution": "Trace completo:\n\n1. Sistema propõe 320×480 ao background.\n\n2. Background propõe 320×480 ao padding (subview primária).\n\n3. Padding subtrai 8pts em cada borda:\n   Propõe 304×464 ao Text.\n\n4. Text reporta 28×20 — o tamanho exato para \"Olá\".\n   (Text IGNORA a altura extra proposta e responde com seu tamanho real)\n\n5. Padding adiciona 8pts em cada borda de volta:\n   Reporta 44×36 ao background.\n\n6. Background propõe 44×36 ao Color (subview secundária).\n   Color aceita e reporta 44×36.\n\n7. Background reporta 44×36 ao sistema.\n\nResultado final: um retângulo verde de 44×36 com 'Olá' centralizado.\n\nKey insight: Text não aceita o espaço todo — reporta exatamente o necessário.\nBackground usa o tamanho do padding (44×36) para a cor — não a proposta original (320×480)."
+      },
+      {
+        "title": "Diagnostique o problema de layout do HStack",
+        "prompt": "O designer quer que o título sempre apareça completo, mas ele quebra linha. Corrija:\n\nHStack(spacing: 8) {\n    Color.blue.frame(height: 60)  // barra colorida\n    Text(\"Notificação importante do sistema\")\n    Color.red.frame(height: 60)   // barra colorida\n}",
+        "hints": [
+          "HStack divide espaço por flexibilidade — o menos flexível recebe primeiro.",
+          "Qual dos 3 filhos é o menos flexível? Qual é o mais flexível?"
+        ],
+        "solution": "Problema: Color é infinitamente flexível (aceita qualquer tamanho), Text tem um tamanho máximo. O HStack vê flexibilidades:\n- Color.blue: infinita\n- Text: limitada (max = tamanho do texto)\n- Color.red: infinita\n\nOrdem de distribuição (do menos para o mais flexível):\n1. Text recebe: espaço_restante ÷ 3 — pode ser insuficiente!\n2. Colors dividem o que sobrar\n\nSolução 1 — layoutPriority: Text recebe espaço antes das Colors:\nHStack(spacing: 8) {\n    Color.blue.frame(height: 60)\n    Text(\"Notificação importante\")\n        .layoutPriority(1)  // processa antes — pega o que precisa\n    Color.red.frame(height: 60)\n}\n\nSolução 2 — fixedSize: Text usa tamanho ideal, ignora proposta:\nText(\"Notificação importante\")\n    .fixedSize(horizontal: true, vertical: false)\n// Pode sair dos bounds se a tela for muito pequena\n\nSolução 3 — limitar a largura das cores com frame fixo se o design permitir."
+      }
+    ],
+    "m05-state-data-flow/state-internals-and-performance": [
+      {
+        "title": "Por que o contador não reinicia?",
+        "prompt": "O desenvolvedor espera que ao mudar 'tema' o contador resete para o valor passado. Por que isso não acontece?\n\nstruct AppView: View {\n    @State private var tema: String = \"claro\"\n    \n    var body: some View {\n        ContadorView(inicial: tema == \"claro\" ? 0 : 100)\n        Button(\"Mudar tema\") { tema = \"escuro\" }\n    }\n}\n\nstruct ContadorView: View {\n    @State private var contador: Int\n    \n    init(inicial: Int) {\n        _contador = State(initialValue: inicial)\n    }\n    \n    var body: some View {\n        Text(\"\\(contador)\")\n    }\n}",
+        "hints": [
+          "No momento que o init é chamado novamente, o nodo de ContadorView já existe.",
+          "initialValue só importa quando o nodo é CRIADO pela primeira vez."
+        ],
+        "solution": "O motivo: quando 'tema' muda, AppView recria a struct ContadorView com um novo initialValue (100). Mas o nodo de ContadorView na Render tree já existe — e o valor real do @State vive no nodo, não no initialValue.\n\nMudar o initialValue não afeta o valor no nodo. O contador continua com o valor que tinha antes.\n\nSoluções:\n\nSolução 1 — usar @Binding (a correta para reagir a mudanças externas):\nstruct ContadorView: View {\n    @Binding var contador: Int  // lê e escreve no @State do pai\n    var body: some View { Text(\"\\(contador)\") }\n}\n\nstruct AppView: View {\n    @State private var tema = \"claro\"\n    @State private var contador = 0\n    \n    var body: some View {\n        ContadorView(contador: $contador)\n        Button(\"Mudar tema\") {\n            tema = \"escuro\"\n            contador = 100  // atualiza diretamente\n        }\n    }\n}\n\nSolução 2 — usar .id() para forçar recriação do nodo:\nContadorView(inicial: tema == \"claro\" ? 0 : 100)\n    .id(tema)  // quando tema muda, nodo é destruído e recriado com novo initialValue"
+      },
+      {
+        "title": "Use Self._printChanges() para diagnosticar",
+        "prompt": "O usuário reporta que a lista de contatos 'parece lenta' ao digitar no campo de busca. Você suspeita de rerenders desnecessários. Como diagnosticar usando Self._printChanges()?\n\nstruct ContatosView: View {\n    @State private var busca = \"\"\n    @State private var contatos = [\"Ana\", \"Bruno\", \"Carol\"]\n    \n    var filtrado: [String] {\n        busca.isEmpty ? contatos : contatos.filter { $0.contains(busca) }\n    }\n    \n    var body: some View {\n        VStack {\n            TextField(\"Buscar\", text: $busca)\n            List(filtrado, id: \\.self) { nome in\n                ContatoRow(nome: nome)\n            }\n        }\n    }\n}",
+        "hints": [
+          "Adicione let _ = Self._printChanges() ao body de ContatosView.",
+          "Adicione também ao body de ContatoRow para ver quais rows rerenderizam."
+        ],
+        "solution": "Diagnóstico passo a passo:\n\n// 1. Adicione _printChanges em ContatosView:\nvar body: some View {\n    let _ = Self._printChanges()  // vai imprimir a cada keystroke\n    // ...\n}\n// Console: 'ContatosView: _busca changed.' a cada tecla digitada\n// Isso é esperado — busca muda, filtrado é recalculado.\n\n// 2. Adicione em ContatoRow:\nstruct ContatoRow: View {\n    let nome: String\n    var body: some View {\n        let _ = Self._printChanges()\n        Text(nome)\n    }\n}\n// Console: '@self changed.' para TODOS os rows a cada tecla\n// Problema encontrado!\n\n// Por quê: filtrado cria novos arrays String a cada render.\n// List usa id: \\.self — identidade baseada no valor do String.\n// Se 'Ana' continua sendo 'Ana', a identidade não muda — mas ContatoRow\n// ainda rerenderiza porque a View struct tem @self diferente.\n\n// Solução — usar identidade estável e componente puro:\nstruct ContatoRow: View {\n    let nome: String\n    var body: some View { Text(nome) }  // sem _printChanges em produção!\n}\n// List com id estável + subviews que não mudam = mínimas rerenders."
+      }
+    ],
+    "m06-navigation/animations-fundamentals": [
+      {
+        "title": "Property animation ou transition?",
+        "prompt": "Para cada trecho, identifique se ocorre property animation (interpolação) ou transition (troca de nodo), e explique por quê:\n\n// Caso 1:\nCircle()\n    .fill(ativo ? Color.green : Color.red)\n    .animation(.default, value: ativo)\n\n// Caso 2:\nif mostrar {\n    Text(\"Apareci!\")\n        .transition(.slide)\n} // withAnimation está no botão que muda 'mostrar'\n\n// Caso 3:\nif grande {\n    Rectangle().frame(width: 200, height: 100)\n} else {\n    Rectangle().frame(width: 50, height: 50)\n}",
+        "hints": [
+          "Property animation: mesma View (nodo), propriedade muda.",
+          "Transition: View entra ou sai da Render tree."
+        ],
+        "solution": "Caso 1 — PROPERTY ANIMATION:\nO Circle é sempre o mesmo nodo. Só a cor muda (de red para green). SwiftUI interpola o valor de cor suavemente.\nVocê vê: a cor do círculo muda gradualmente.\n\nCaso 2 — TRANSITION:\nO Text entra e sai da Render tree quando 'mostrar' muda. O .transition(.slide) especifica como animá-lo ao inserir/remover.\nVocê vê: texto desliza para dentro/fora da tela.\n\nCaso 3 — TRANSITION (não property animation!):\nif/else cria ConditionalContent. Os dois Rectangle são nodos com identidades distintas (ifBranch e elseBranch). Quando 'grande' muda, um é removido e outro inserido.\nVocê NÃO vê: interpolação de 200→50.\nVocê VÊ: fade out do retângulo grande, fade in do pequeno.\nPara interpolação: Rectangle().frame(width: grande ? 200 : 50, height: grande ? 100 : 50)"
+      },
+      {
+        "title": "Corrija a animação quebrada",
+        "prompt": "O desenvolvedor quer que o botão apareça com uma animação de scale quando visivel muda. Mas a animação não acontece. Corrija:\n\nstruct BotaoAnimado: View {\n    @State private var visivel = false\n    \n    var body: some View {\n        VStack {\n            if visivel {\n                Button(\"Confirmar\") { }\n                    .buttonStyle(.borderedProminent)\n                    .transition(.scale)\n            }\n            \n            Button(\"Mostrar/Ocultar\") {\n                visivel.toggle()  // sem withAnimation!\n            }\n        }\n    }\n}",
+        "hints": [
+          "Transitions só animam quando a mudança está dentro de withAnimation.",
+          "Sem withAnimation, a View aparece/desaparece instantaneamente."
+        ],
+        "solution": "Problema: a mudança de estado `visivel.toggle()` não está dentro de withAnimation. Sem isso, o SwiftUI processa a inserção/remoção do Button instantaneamente — sem aplicar a transition .scale.\n\nCorreção:\n\nstruct BotaoAnimado: View {\n    @State private var visivel = false\n    \n    var body: some View {\n        VStack {\n            if visivel {\n                Button(\"Confirmar\") { }\n                    .buttonStyle(.borderedProminent)\n                    .transition(.scale.combined(with: .opacity))  // escala + fade\n            }\n            \n            Button(\"Mostrar/Ocultar\") {\n                withAnimation(.spring(duration: 0.4)) {  // OBRIGATÓRIO\n                    visivel.toggle()\n                }\n            }\n        }\n    }\n}\n\nCom withAnimation:\n- A mudança de estado é processada\n- SwiftUI detecta a inserção/remoção do Button\n- Aplica a transition .scale.combined(with: .opacity) ao nodo que entra/sai\n- O usuário vê o botão crescer do zero com fade-in"
+      }
+    ],
     "m01-swift-essentials/optionals-and-types-for-ui": [
       {
         "title": "Qual técnica usar aqui?",

@@ -629,6 +629,126 @@
         "correctIndex": 1,
         "explanation": "44×44 pontos é a recomendação das HIG baseada no tamanho real de contato do dedo. Ignorar isso resulta em interface que frustra o usuário e gera erros de interação — especialmente em elementos pequenos como ícones de navegação."
       }
+    ],
+    "m02-app-swiftui/view-trees-and-render-trees": [
+      {
+        "question": "Por que modificar `@State` dentro do `init` de uma View via `self.valor = novoValor` geralmente não funciona como esperado após a primeira renderização?",
+        "options": [
+          "O Swift proíbe mutations de @State dentro de inits.",
+          "No momento do init, a View não tem nodo na Render tree ainda — a atribuição muda apenas o initialValue, que é ignorado se o nodo já existe.",
+          "É um bug do SwiftUI documentado e em processo de correção.",
+          "Funciona corretamente — o @State é sempre atualizado quando o init é chamado."
+        ],
+        "correctIndex": 1,
+        "explanation": "A identidade de uma View — e portanto seu nodo na Render tree — não existe durante o init. O @State armazena um initialValue, mas o valor real vive no nodo. Mudar o initialValue não afeta o nodo se ele já foi criado."
+      },
+      {
+        "question": "Qual é a principal diferença entre usar `if/else` com dois Text views diferentes vs um único `Text(condicao ? \"A\" : \"B\")` na View tree?",
+        "options": [
+          "Não há diferença — o SwiftUI otimiza ambos da mesma forma.",
+          "if/else cria um ConditionalContent com dois nodos de identidades distintas; o Text único tem identidade estável. Isso afeta @State, animações e transições.",
+          "if/else é mais eficiente pois o SwiftUI não cria a View que não será exibida.",
+          "O Text único não funciona com strings dinâmicas."
+        ],
+        "correctIndex": 1,
+        "explanation": "if/else cria um ConditionalContent — dois nodos com identidades estruturais diferentes. Quando a condição muda, o nodo é trocado (remove um, insere outro), resetando @State e disparando transições. O Text único mantém o mesmo nodo — apenas o conteúdo muda."
+      }
+    ],
+    "m03-views-composition/viewbuilder-and-group": [
+      {
+        "question": "Você aplica `.border(.blue)` a um Group que contém um Image e um Text. Quantos retângulos azuis aparecem na tela?",
+        "options": [
+          "Um — o Group inteiro recebe uma borda.",
+          "Zero — modificadores não funcionam em Group.",
+          "Dois — o modificador se propaga para cada filho do Group individualmente.",
+          "Depende da plataforma."
+        ],
+        "correctIndex": 2,
+        "explanation": "Group é transparente para layout — modificadores aplicados a ele são propagados para cada filho individualmente. O Group vira um TupleView, e cada elemento da tupla recebe o modificador .border separadamente."
+      },
+      {
+        "question": "Por que o padrão `applyIf` (que usa if/else interno para aplicar condicionalmente um modificador) é considerado um anti-padrão em SwiftUI?",
+        "options": [
+          "Porque consome muito mais memória que o equivalente direto.",
+          "Porque cria um ConditionalContent na View tree, mudando a identidade da View quando a condição muda — causando perda de @State e transições inesperadas.",
+          "Porque o compilador Swift não suporta genéricos em extensions de View.",
+          "Porque só funciona com ViewModifier, não com closures."
+        ],
+        "correctIndex": 1,
+        "explanation": "O applyIf introduz if/else no View tree, criando duas identidades distintas para a mesma View. Quando a condição muda, o SwiftUI trata isso como uma troca de View — não uma mudança de propriedade. O @State associado é resetado e transições são disparadas. Use `.background(condicao ? .yellow : .clear)` no lugar."
+      }
+    ],
+    "m04-layout/layout-algorithm-in-depth": [
+      {
+        "question": "Você tem um HStack com Color.cyan, Text('Importante') e Color.teal. Por que o Text pode quebrar linha mesmo com espaço disponível no HStack?",
+        "options": [
+          "O Text tem uma limitação de caracteres por linha.",
+          "O HStack divide o espaço igualmente entre os 3 filhos. Como Text tem tamanho máximo (não infinito), é o menos flexível — recebe 1/3 do espaço, que pode ser insuficiente.",
+          "Color tem prioridade de layout maior por padrão.",
+          "É um comportamento intencional do SwiftUI para garantir responsividade."
+        ],
+        "correctIndex": 1,
+        "explanation": "O HStack distribui espaço baseado em flexibilidade. Text é o menos flexível (tem tamanho máximo definido pelo conteúdo), então recebe sua fração do espaço disponível antes das Colors. Use .layoutPriority(1) no Text para que ele receba o que precisa antes das Colors."
+      },
+      {
+        "question": "Qual é a diferença de comportamento de layout entre usar `.overlay { Badge() }` e incluir Badge em um ZStack?",
+        "options": [
+          "Não há diferença — ambos posicionam a Badge sobre o conteúdo principal.",
+          ".overlay usa o tamanho da View principal como proposta para Badge e não afeta o layout dos irmãos. ZStack usa a união de todos os filhos — o Badge pode aumentar o tamanho do ZStack e deslocar elementos ao redor.",
+          "ZStack é mais eficiente para overlays simples.",
+          ".overlay só funciona com Views simples, não com componentes complexos."
+        ],
+        "correctIndex": 1,
+        "explanation": ".overlay é decorativo: o tamanho reportado ao pai é sempre o da View principal, independente do tamanho do overlay. ZStack reporta a união de todos os filhos — isso afeta o espaço que ocupa e o posicionamento de Views irmãs."
+      }
+    ],
+    "m05-state-data-flow/state-internals-and-performance": [
+      {
+        "question": "Seu @Observable tem 5 propriedades. Uma View usa apenas 1 delas. Com @Observable (iOS 17+), quantas rerenderizações a View terá quando as outras 4 propriedades mudarem?",
+        "options": [
+          "5 — qualquer mudança no objeto causa rerenderização.",
+          "Nenhuma — @Observable rastreia dependências na propriedade, não no objeto. A View só rerenderiza quando a propriedade que ELA usa muda.",
+          "Depende de se você usa @State ou propriedade comum para o objeto.",
+          "1 — a primeira mudança rerenderiza, depois o SwiftUI otimiza."
+        ],
+        "correctIndex": 1,
+        "explanation": "@Observable usa rastreamento granular por propriedade via withObservationTracking. Quando a View executa seu body, o sistema registra quais propriedades foram acessadas. Só mudanças nessas propriedades específicas disparam rerenderização. Isso é uma melhoria significativa sobre ObservableObject onde qualquer @Published causava rerenderização."
+      },
+      {
+        "question": "Quando você deve usar `@Bindable var modelo: MeuObservable` em vez de `var modelo: MeuObservable`?",
+        "options": [
+          "Quando o objeto é criado nessa View e não passado de fora.",
+          "Quando você precisa criar Bindings ($modelo.propriedade) para passar para componentes como TextField, Toggle ou Slider.",
+          "Quando o objeto tem mais de 10 propriedades.",
+          "@Bindable substitui @Observable — use um ou outro, nunca os dois."
+        ],
+        "correctIndex": 1,
+        "explanation": "@Bindable adiciona o $ (projectedValue) que permite criar Bindings de propriedades de um @Observable. Use apenas quando você precisa de $modelo.algumaPropriedade para passar a componentes que aceitam Binding. Para apenas ler o objeto, uma propriedade comum é suficiente e mais eficiente."
+      }
+    ],
+    "m06-navigation/animations-fundamentals": [
+      {
+        "question": "Você quer que um Rectangle interpole suavemente de 50pts para 200pts de largura. Qual código GARANTE uma property animation (interpolação) e não uma transition?",
+        "options": [
+          "if expandido { Rectangle().frame(width: 200) } else { Rectangle().frame(width: 50) }",
+          "Rectangle().frame(width: expandido ? 200 : 50) com withAnimation",
+          "Qualquer uma das opções acima — o SwiftUI detecta automaticamente.",
+          "ZStack { Rectangle().frame(width: 50); Rectangle().frame(width: 200).opacity(expandido ? 1 : 0) }"
+        ],
+        "correctIndex": 1,
+        "explanation": "Property animation requer que o MESMO nodo exista antes e depois. A opção A cria dois nodos distintos (ConditionalContent) — quando a condição muda, ocorre uma transition (troca de nodos), não interpolação. A opção B mantém o mesmo nodo com propriedade frame variável — SwiftUI interpola o valor."
+      },
+      {
+        "question": "Você declara `.transition(.slide)` em uma View mas ao rodar o app a View aparece e desaparece instantaneamente, sem animação. Qual é a causa mais provável?",
+        "options": [
+          ".transition(.slide) não funciona em iOS 17+.",
+          "A mudança de estado que controla a visibilidade não está dentro de withAnimation.",
+          "Transitions precisam estar dentro de um NavigationStack.",
+          "O modificador .transition deve vir antes do .padding."
+        ],
+        "correctIndex": 1,
+        "explanation": "Transitions só são aplicadas quando a mudança de estado está dentro de um withAnimation. Sem ele, a View entra e sai instantaneamente mesmo com .transition declarado. O withAnimation é obrigatório para qualquer tipo de animação — sem ele, as mudanças são instantâneas."
+      }
     ]
   }
 }

@@ -209,6 +209,160 @@
         { "label": "Apple — Modal presentations", "url": "https://developer.apple.com/documentation/swiftui/modal-presentations" },
         { "label": "Hacking with Swift — Sheets", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-present-a-new-view-using-sheets" }
       ]
+    },
+    {
+      "id": "animations-fundamentals",
+      "title": "Animações em SwiftUI — property animations, transitions e timing",
+      "estimatedMinutes": 55,
+      "objective": "Você vai entender por que animações em SwiftUI são fundamentalmente diferentes de UIKit, a diferença crucial entre property animations (mesma View, propriedade muda) e transitions (View entra ou sai), quando usar withAnimation vs .animation(value:), como timing curves funcionam e como criar transições customizadas.[^animation][^transition][^timing]",
+      "prerequisites": ["m02-app-swiftui/view-trees-and-render-trees", "m05-state-data-flow/state-and-binding"],
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Como animações funcionam em SwiftUI — o modelo mental"
+        },
+        {
+          "type": "text",
+          "text": "Em SwiftUI, **a única forma de disparar uma atualização de UI é mudando estado**. Animações são a forma de tornar essa transição do estado antigo para o novo estado visualmente fluida em vez de instantânea.\n\nO processo é:\n1. Estado muda\n2. SwiftUI gera a nova View tree\n3. SwiftUI compara com a Render tree atual\n4. Para as propriedades que mudaram, SwiftUI interpola os valores ao longo do tempo (se houver animação)\n5. Atualiza a tela a cada frame\n\nA chave é o passo 3: a animação só acontece para propriedades de Views que **existem tanto antes quanto depois da mudança de estado**. Se a View em si entra ou sai da árvore, isso é uma *transition* — não uma property animation."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct ExemploAnimacao: View {\n    @State private var expandido = false\n\n    var body: some View {\n        Rectangle()\n            .frame(width: expandido ? 200 : 50, height: 50)\n            .onTapGesture {\n                withAnimation(.easeInOut(duration: 0.3)) {\n                    expandido.toggle()\n                }\n            }\n    }\n}\n// O Rectangle SEMPRE está na View tree.\n// Quando 'expandido' muda, a largura muda — e SwiftUI anima essa mudança.\n// O Rectangle é o MESMO nodo na Render tree, só a propriedade muda."
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Property animation vs Transition — a distinção que muda tudo"
+        },
+        {
+          "type": "text",
+          "text": "Esse é o ponto onde mais desenvolvedores se confundem. A distinção é simples mas as implicações são profundas:\n\n**Property animation**: a View existe antes e depois da mudança de estado. Só uma **propriedade** mudou (tamanho, cor, opacidade). O SwiftUI interpola essa propriedade ao longo do tempo.\n\n**Transition**: a View **não existia** antes (inserção) ou **não vai existir** depois (remoção) da mudança de estado. O SwiftUI aplica a transição ao nodo que entra ou sai da Render tree.\n\nO erro clássico é usar `if/else` com dois Views diferentes esperando uma property animation — mas como são Views com identidades diferentes (dois nodos distintos), o que acontece é uma transition (fade in/out), não interpolação de propriedades."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// PROPERTY ANIMATION — mesmo nodo, propriedade muda:\n// Você vê uma interpolação suave de 50→200\nvar body: some View {\n    Rectangle()\n        .frame(width: expandido ? 200 : 50, height: 50)\n        .onTapGesture {\n            withAnimation { expandido.toggle() }\n        }\n}\n\n// TRANSITION (não property animation) — dois nodos distintos:\n// Você vê o retângulo menor fazer fade-out e o maior fazer fade-in\nvar body: some View {\n    if expandido {\n        Rectangle().frame(width: 200, height: 50)  // nodo 1: elseBranch\n    } else {\n        Rectangle().frame(width: 50, height: 50)   // nodo 2: ifBranch\n    }\n    // Quando expandido muda: o SwiftUI REMOVE o nodo antigo e INSERE o novo\n    // Não há interpolação de largura — é uma troca de Views!\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "withAnimation — animação explícita"
+        },
+        {
+          "type": "text",
+          "text": "O `withAnimation` é a forma mais direta: você envolve as mudanças de estado numa closure, e o SwiftUI anima tudo que muda como resultado. É chamado de **animação explícita** porque você diz explicitamente quando deve acontecer — no evento que causou a mudança.\n\nVocê pode especificar qualquer timing curve como parâmetro. Se não especificar, usa o `.default` do sistema."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// withAnimation sem parâmetro — usa .default:\nButton(\"Animar\") {\n    withAnimation {\n        expandido.toggle()\n    }\n}\n\n// withAnimation com timing curve:\nButton(\"Animar\") {\n    withAnimation(.spring(duration: 0.5, bounce: 0.4)) {\n        expandido.toggle()\n    }\n}\n\n// Timing curves disponíveis:\nwithAnimation(.linear(duration: 0.3))           // velocidade constante\nwithAnimation(.easeIn(duration: 0.3))           // começa devagar\nwithAnimation(.easeOut(duration: 0.3))          // termina devagar\nwithAnimation(.easeInOut(duration: 0.3))        // começa e termina devagar\nwithAnimation(.spring())                         // mola — física natural\nwithAnimation(.spring(duration: 0.5, bounce: 0.3))  // mola com bounce\nwithAnimation(.bouncy)                           // iOS 17 — preset com bounce\n\n// Animação com completion handler (iOS 17+):\nwithAnimation(.easeOut(duration: 0.5)) {\n    mostrar.toggle()\n} completion: {\n    print(\"Animação concluída\")  // callback quando a animação termina\n}"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": ".animation(value:) — animação implícita"
+        },
+        {
+          "type": "text",
+          "text": "O modificador `.animation(_:value:)` é chamado de **animação implícita** porque você não especifica quando animar — você especifica *o que observar* e a animação acontece automaticamente quando esse valor muda, independente da fonte da mudança.\n\nIsso é útil quando a origem da mudança está fora do seu controle (dados vindos da rede, por exemplo) e você quer que qualquer mudança naquele valor seja animada.\n\nO parâmetro `value` é obrigatório — ele restringe a animação apenas quando aquele valor específico muda. Sem ele (versão antiga deprecated), qualquer mudança na subárvore desencadeia a animação, o que causa comportamentos inesperados."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "// Animação implícita — anima quando 'expandido' muda:\nRectangle()\n    .frame(width: expandido ? 200 : 50, height: 50)\n    .animation(.easeInOut(duration: 0.3), value: expandido)  // CORRETO\n    .onTapGesture { expandido.toggle() }  // sem withAnimation!\n\n// A animação acontece qualquer que seja a origem da mudança:\n// - Toque do usuário\n// - Mudança vinda da rede\n// - Timer\n// Tudo que mudar 'expandido' vai animar\n\n// DEPRECATED (iOS 15+) — sem 'value', anima TUDO:\nRectangle()\n    .animation(.easeInOut)  // ← evite! causa animações inesperadas\n\n// iOS 17 — escopo específico de propriedades:\nText(\"Olá\")\n    .opacity(visivel ? 1 : 0)\n    .animation(.easeOut) {\n        $0.rotationEffect(rotacionado ? .degrees(180) : .zero)  // só rotation anima\n    }"
+        },
+        {
+          "type": "heading",
+          "level": 3,
+          "text": "Transitions — animando entradas e saídas"
+        },
+        {
+          "type": "text",
+          "text": "Quando uma View entra ou sai da Render tree, o SwiftUI aplica uma *transition*. A transition padrão é `.opacity` (fade). Você pode especificar outra com o modificador `.transition()`.\n\nTransitions só funcionam quando a mudança está dentro de um `withAnimation` — sem isso, a View aparece/desaparece instantaneamente mesmo com `.transition()` declarado.\n\nVocê pode combinar transitions com `.combined(with:)` para efeitos mais ricos."
+        },
+        {
+          "type": "code",
+          "language": "swift",
+          "code": "struct TransicoesView: View {\n    @State private var visivel = true\n\n    var body: some View {\n        VStack {\n            if visivel {\n                Text(\"Apareço e sumo\")\n                    .padding()\n                    .background(.blue)\n                    // Transições built-in:\n                    .transition(.slide)            // desliza da esquerda\n                    // .transition(.scale)         // cresce/encolhe do centro\n                    // .transition(.opacity)       // fade (padrão)\n                    // .transition(.move(edge: .bottom))  // entra/sai de baixo\n\n                    // Combinando transições:\n                    // .transition(.scale.combined(with: .opacity))\n\n                    // Assimétricas — entrada ≠ saída:\n                    // .transition(.asymmetric(\n                    //     insertion: .slide,\n                    //     removal: .move(edge: .top)\n                    // ))\n            }\n\n            Button(visivel ? \"Ocultar\" : \"Mostrar\") {\n                withAnimation(.spring(duration: 0.4)) {  // OBRIGATÓRIO para transitions\n                    visivel.toggle()\n                }\n            }\n        }\n    }\n}"
+        },
+        {
+          "type": "trace",
+          "title": "Trace de uma transition: View saindo da tela",
+          "steps": [
+            {
+              "label": "Estado muda: visivel = false",
+              "detail": "withAnimation(.spring) executa a mudança de estado.",
+              "output": "Transação criada com animação .spring"
+            },
+            {
+              "label": "Nova View tree é criada",
+              "detail": "O bloco 'if visivel' agora é false — o Text não existe na nova árvore.",
+              "output": "Nova árvore: Text ausente (elseBranch de ConditionalContent)"
+            },
+            {
+              "label": "SwiftUI detecta remoção",
+              "detail": "Nodo do Text estava na Render tree, agora não está na View tree nova.",
+              "output": "Nodo marcado para remoção com transition .slide"
+            },
+            {
+              "label": "Transition de remoção executa",
+              "detail": "O nodo é mantido na Render tree temporariamente para executar a animação de saída.",
+              "output": "Text desliza para a esquerda ao longo de 0.4s"
+            },
+            {
+              "label": "Nodo removido da Render tree",
+              "detail": "Animação concluída. O nodo (e o @State associado) é destruído.",
+              "output": "Text removido — @State reiniciará na próxima aparição"
+            }
+          ]
+        },
+        {
+          "type": "checklist",
+          "items": [
+            "Sei a diferença entre property animation (mesma View, propriedade muda) e transition (View entra ou sai).",
+            "Uso withAnimation para animações explícitas e .animation(value:) para animações implícitas.",
+            "Sei que transitions precisam de withAnimation para funcionar.",
+            "Conheço as timing curves básicas: linear, easeIn, easeOut, easeInOut, spring, bouncy.",
+            "Entendo por que if/else com dois Views diferentes não produz interpolação de propriedades."
+          ]
+        }
+      ],
+      "commonMistakes": [
+        "Usar if/else esperando interpolação de propriedades — isso são dois nodos distintos, não um com propriedade variável.",
+        "Declarar .transition() sem withAnimation — a View aparece/desaparece instantaneamente.",
+        "Usar .animation(_ :) sem o parâmetro value (deprecated) — anima tudo na subárvore, causando animações inesperadas.",
+        "Animar propriedades como .foregroundStyle sem suporte a interpolação — algumas propriedades não são animáveis."
+      ],
+      "tradeoffs": "Animações explícitas (withAnimation) são mais previsíveis porque você sabe exatamente quando disparam. Animações implícitas (.animation(value:)) são mais convenientes para reagir a qualquer mudança de estado de qualquer origem. Em apps grandes, prefira explicitas para manter controle — use implícitas para itens de lista ou conteúdo que atualiza da rede.",
+      "miniChallenge": "Crie uma View com um botão que anima: (1) uma propriedade de tamanho com interpolação suave usando a mesma View, e (2) a entrada e saída de uma View diferente com transition .scale.combined(with: .opacity). Observe a diferença visual e entenda por que cada comportamento acontece.",
+      "notes": [
+        {
+          "id": "animation",
+          "text": "Animação em SwiftUI é a interpolação de valores animáveis entre dois estados da Render tree. Qualquer propriedade de View ou ViewModifier que conforma ao protocolo Animatable pode ser animada."
+        },
+        {
+          "id": "transition",
+          "text": "Transition é a animação aplicada a um nodo que está entrando ou saindo da Render tree. É diferente de property animation: o nodo em si está sendo criado ou destruído."
+        },
+        {
+          "id": "timing",
+          "text": "Timing curve define a velocidade da animação ao longo do tempo. Spring (.spring) usa física de mola: overshoots (passa do destino e volta). Linear mantém velocidade constante. Ease curves desaceleram no início ou fim."
+        }
+      ],
+      "glossary": [
+        { "term": "withAnimation", "definition": "Função que envolve mudanças de estado e instrui o SwiftUI a animar os resultados dessas mudanças." },
+        { "term": ".animation(value:)", "definition": "Modificador que anima automaticamente quando o valor especificado muda, independente da origem." },
+        { "term": "Transition", "definition": "Animação aplicada quando uma View entra ou sai da Render tree." },
+        { "term": "Timing curve", "definition": "Função que define a velocidade de uma animação ao longo do tempo (linear, spring, ease, etc.)." },
+        { "term": "Animatable", "definition": "Protocolo que Views e ViewModifiers conformam para expor propriedades que o SwiftUI pode interpolar." }
+      ],
+      "sources": [
+        { "label": "Thinking in SwiftUI — Animations (Eidhof & Kugler, 2023)", "url": "https://www.objc.io/books/thinking-in-swiftui/" },
+        { "label": "Apple — Animations", "url": "https://developer.apple.com/documentation/swiftui/animations" },
+        { "label": "Hacking with Swift — Animations", "url": "https://www.hackingwithswift.com/quick-start/swiftui/how-to-create-basic-animations" }
+      ]
     }
   ]
 }
