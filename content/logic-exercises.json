@@ -198,6 +198,15 @@
           "Como fazer a View receber os dados que precisa sem depender de estado global?"
         ],
         "solution": "O problema: PerfilView acessa SessaoAtual.shared — um singleton que não está configurado no contexto do canvas.\n\nA solução é injetar dependências:\n\nstruct PerfilView: View {\n    let usuario: Usuario  // recebe por parâmetro\n\n    var body: some View {\n        Text(usuario.nome)\n    }\n}\n\nextension Usuario {\n    static let preview = Usuario(nome: \"Jessica\", email: \"j@email.com\")\n}\n\n#Preview {\n    PerfilView(usuario: .preview)  // funciona no canvas\n}\n\nBônus: essa mudança também facilita testes unitários — sem dependência de singleton."
+      },
+      {
+        "title": "Organize em Feature-first: onde fica cada arquivo?",
+        "prompt": "Você tem os seguintes arquivos para uma feature de lista de tarefas. Organize-os na estrutura feature-first correta e explique por que:\n\n- TaskListView.swift\n- TaskRowView.swift\n- TaskViewModel.swift\n- TaskModel.swift\n- TaskListPreview.swift\n- TaskRepository.swift",
+        "hints": [
+          "Feature-first agrupa por funcionalidade, não por tipo de arquivo.",
+          "Preview pode ficar no mesmo arquivo ou em pasta separada de Previews."
+        ],
+        "solution": "Estrutura feature-first:\n\nFeatures/\n  Tasks/\n    TaskListView.swift      ← View principal\n    TaskRowView.swift       ← Subview (pertence à feature)\n    TaskViewModel.swift     ← ViewModel da feature\n    TaskModel.swift         ← Model (ou em Models/ compartilhado)\n    TaskRepository.swift    ← Repositório da feature\n    Previews/\n      TaskListPreview.swift ← Isolado para não poluir produção\n\nVantagens:\n1. Tudo relacionado a Tasks em um lugar — fácil de navegar\n2. Deletar a feature = deletar uma pasta\n3. Previews separadas não compilam em produção (se usar build settings)\n\nContraste com layer-first:\n  Views/ TaskListView.swift, TaskRowView.swift\n  ViewModels/ TaskViewModel.swift\n  Models/ TaskModel.swift\n  → Dificulta encontrar tudo de uma feature; dependências cruzam pastas."
       }
     ],
     "m03-views-composition/building-views-with-primitives": [
@@ -229,6 +238,15 @@
           "A parte das notas também não tem @State próprio — pode ser outra propriedade computada."
         ],
         "solution": "O HStack do cabeçalho e a seção de notas são bons candidatos para extração.\n\nComo não precisam de @State próprio, propriedades computadas são suficientes:\n\nstruct TarefaView: View {\n    let tarefa: Tarefa\n    @State private var expandida = false\n\n    // Propriedade computada — sem estado próprio:\n    private var cabecalho: some View {\n        HStack {\n            Image(systemName: tarefa.concluida ? \"checkmark.circle.fill\" : \"circle\")\n                .foregroundStyle(tarefa.concluida ? .green : .gray)\n            Text(tarefa.titulo).font(.headline)\n            Spacer()\n        }\n    }\n\n    private var notas: some View {\n        Text(tarefa.notas ?? \"Sem notas\")\n            .font(.body)\n            .foregroundStyle(.secondary)\n            .padding(.top, 4)\n    }\n\n    var body: some View {\n        VStack(alignment: .leading) {\n            cabecalho\n            if expandida { notas }\n        }\n        .onTapGesture { expandida.toggle() }\n    }\n}"
+      },
+      {
+        "title": "Composição ou subview? Identifique o padrão correto",
+        "prompt": "Dado este código, identifique os dois problemas de composição e corrija:\n\nstruct ProdutoView: View {\n    let produto: Produto\n    @State private var favoritado = false\n\n    var body: some View {\n        VStack {\n            AsyncImage(url: produto.imagemURL) { img in\n                img.resizable().scaledToFill()\n            } placeholder: {\n                ProgressView()\n            }\n            .frame(width: 200, height: 200)\n            .clipped()\n\n            // 40 linhas de código de badge/tag aqui...\n            HStack {\n                ForEach(produto.tags) { tag in\n                    Text(tag.nome)\n                        .font(.caption)\n                        .padding(.horizontal, 6)\n                        .padding(.vertical, 2)\n                        .background(tag.cor.opacity(0.2))\n                        .foregroundStyle(tag.cor)\n                        .clipShape(Capsule())\n                }\n            }\n\n            Text(produto.nome).font(.headline)\n            Button(action: { favoritado.toggle() }) {\n                Image(systemName: favoritado ? \"heart.fill\" : \"heart\")\n                    .foregroundStyle(favoritado ? .red : .secondary)\n            }\n        }\n    }\n}",
+        "hints": [
+          "O bloco de tags é autocontido — não acessa @State de ProdutoView.",
+          "A imagem também é reutilizável — deveria ser um componente próprio."
+        ],
+        "solution": "Problemas:\n1. O HStack de tags mistura lógica de apresentação com o body principal (dificulta reutilizar badges em outras telas).\n2. O AsyncImage com frame/clipped é genérico — pode ser extraído para uso em qualquer lugar.\n\nCorreção:\n\n// Componente reutilizável de imagem:\nstruct ImagemProdutoView: View {\n    let url: URL?\n    var size: CGFloat = 200\n    var body: some View {\n        AsyncImage(url: url) { img in\n            img.resizable().scaledToFill()\n        } placeholder: { ProgressView() }\n        .frame(width: size, height: size)\n        .clipped()\n    }\n}\n\n// Componente de tag:\nstruct TagView: View {\n    let tag: Tag\n    var body: some View {\n        Text(tag.nome)\n            .font(.caption)\n            .padding(.horizontal, 6).padding(.vertical, 2)\n            .background(tag.cor.opacity(0.2))\n            .foregroundStyle(tag.cor)\n            .clipShape(Capsule())\n    }\n}\n\n// ProdutoView limpa:\nstruct ProdutoView: View {\n    let produto: Produto\n    @State private var favoritado = false\n    var body: some View {\n        VStack {\n            ImagemProdutoView(url: produto.imagemURL)\n            HStack { ForEach(produto.tags) { TagView(tag: $0) } }\n            Text(produto.nome).font(.headline)\n            Button { favoritado.toggle() } label: {\n                Image(systemName: favoritado ? \"heart.fill\" : \"heart\")\n                    .foregroundStyle(favoritado ? .red : .secondary)\n            }\n        }\n    }\n}"
       }
     ],
     "m04-layout/stacks-and-spacer": [
@@ -260,6 +278,15 @@
           "Qual é o equivalente 'lazy' que cria Views sob demanda?"
         ],
         "solution": "Problema: VStack cria todos os 500 PostCards imediatamente ao aparecer — mesmo os que não estão visíveis. Isso usa memória e tempo de inicialização desnecessários.\n\nCorreção com LazyVStack:\n\nScrollView {\n    LazyVStack(spacing: 8) {  // apenas troque VStack por LazyVStack\n        ForEach(posts) { post in\n            PostCard(post: post)\n        }\n    }\n    .padding()\n}\n\nLazyVStack cria PostCards apenas quando estão próximos da área visível. Ao rolar para baixo, novos são criados; os que saíram da tela são liberados da memória."
+      },
+      {
+        "title": "Grid adaptativa com número de colunas dinâmico",
+        "prompt": "Implemente uma grid de produtos que:\n1. Mostra 2 colunas em iPhone portrait\n2. Mostra 3 colunas em iPhone landscape e iPad portrait\n3. Mostra 4 colunas em iPad landscape\n\nUse GeometryReader + LazyVGrid.",
+        "hints": [
+          "GeometryReader.size.width muda com orientação/tamanho de tela.",
+          "LazyVGrid com GridItem(.adaptive(minimum:)) distribui automaticamente."
+        ],
+        "solution": "struct GradeProdutosView: View {\n    let produtos: [Produto]\n\n    var body: some View {\n        GeometryReader { geo in\n            let largura = geo.size.width\n            let colunas = max(2, Int(largura / 180))\n            // 180pt por coluna: 360pt→2cols, 540pt→3cols, 720pt→4cols\n\n            ScrollView {\n                LazyVGrid(\n                    columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: colunas),\n                    spacing: 12\n                ) {\n                    ForEach(produtos) { produto in\n                        CardProdutoView(produto: produto)\n                    }\n                }\n                .padding(16)\n            }\n        }\n    }\n}\n\n// Alternativa com .adaptive (SwiftUI escolhe o número):\nLazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 220))]) {\n    ForEach(produtos) { CardProdutoView(produto: $0) }\n}\n// Vantagem: zero código manual de cálculo de colunas.\n// Desvantagem: menos controle sobre o número exato."
       }
     ],
     "m05-state-data-flow/state-and-binding": [
@@ -291,6 +318,15 @@
           "O que acontece com o objeto SessaoUsuario a cada recálculo?"
         ],
         "solution": "Problema: SessaoUsuario() é criado a cada vez que body é recalculado. Cada recálculo cria um objeto NOVO, perdendo todo o estado anterior (usuário logado, configurações, etc.).\n\nCorreção — instancie em @State:\n\nstruct AppView: View {\n    @State private var sessao = SessaoUsuario()  // criado UMA vez, persistido pelo SwiftUI\n\n    var body: some View {\n        ContentView()\n            .environment(sessao)\n    }\n}\n\n@State garante que o objeto é criado uma vez e sobrevive a recálculos do body."
+      },
+      {
+        "title": "Propague @Observable pelo ambiente",
+        "prompt": "Você tem um AppState global com dados do usuário logado. Implemente a passagem pelo ambiente para que qualquer subview acesse sem prop drilling:\n\n@Observable\nclass AppState {\n    var usuarioLogado: Usuario?\n    var temaCor: Color = .blue\n}\n\n// Deve funcionar:\nstruct PerfilView: View {\n    // Como acessar AppState sem receber como parâmetro?\n}",
+        "hints": [
+          "Use .environment() no App/WindowGroup para injetar.",
+          "Nas subviews, use @Environment(AppState.self) para consumir."
+        ],
+        "solution": "@main\nstruct MeuApp: App {\n    @State private var appState = AppState()\n\n    var body: some Scene {\n        WindowGroup {\n            ContentView()\n                .environment(appState)\n        }\n    }\n}\n\n// Qualquer subview acessa:\nstruct PerfilView: View {\n    @Environment(AppState.self) private var appState\n\n    var body: some View {\n        if let usuario = appState.usuarioLogado {\n            Text(\"Olá, \\(usuario.nome)\")\n                .foregroundStyle(appState.temaCor)\n        }\n    }\n}\n\n// Para modificar a partir de uma subview:\nstruct ConfiguracaoView: View {\n    @Environment(AppState.self) private var appState\n\n    var body: some View {\n        @Bindable var state = appState\n        ColorPicker(\"Tema\", selection: $state.temaCor)\n    }\n}\n\nAtenção: .environment(appState) só funciona com @Observable.\nPara tipos antigos (@ObservableObject), use .environmentObject()."
       }
     ],
     "m06-navigation/navigation-stack-and-link": [
@@ -322,6 +358,15 @@
           "@Environment(\\.dismiss) não precisa de @Binding externo."
         ],
         "solution": "Funciona, mas o padrão idiomático é usar @Environment(\\.dismiss):\n\nstruct FormularioSheet: View {\n    @Environment(\\.dismiss) private var fechar\n\n    var body: some View {\n        Button(\"Fechar\") {\n            fechar()  // fecha sem precisar de @Binding\n        }\n    }\n}\n\nVantagem: a View não precisa mais do @Binding var mostrar — reduz o acoplamento. Funciona para sheet, fullScreenCover e qualquer modal."
+      },
+      {
+        "title": "Coordenação de múltiplas sheets",
+        "prompt": "Este código tem um bug sutil quando duas sheets são necessárias. Identifique e corrija:\n\nstruct ContentView: View {\n    @State private var mostrarPerfil = false\n    @State private var mostrarConfig = false\n\n    var body: some View {\n        VStack {\n            Button(\"Perfil\") { mostrarPerfil = true }\n            Button(\"Config\") { mostrarConfig = true }\n        }\n        .sheet(isPresented: $mostrarPerfil) { PerfilView() }\n        .sheet(isPresented: $mostrarConfig) { ConfigView() }\n    }\n}",
+        "hints": [
+          "SwiftUI só apresenta uma sheet por vez por View — a segunda pode ser ignorada.",
+          "A solução idiomática usa um enum com item opcional."
+        ],
+        "solution": "Bug: dois modificadores .sheet() no mesmo View são problemáticos — dependendo da versão do SwiftUI, apenas o último pode funcionar, ou o comportamento é imprevisível.\n\nSolução — enum de destino + sheet(item:):\n\nenum SheetDestino: Identifiable {\n    case perfil\n    case configuracoes\n    var id: Self { self }\n}\n\nstruct ContentView: View {\n    @State private var sheetAtiva: SheetDestino?\n\n    var body: some View {\n        VStack {\n            Button(\"Perfil\") { sheetAtiva = .perfil }\n            Button(\"Config\") { sheetAtiva = .configuracoes }\n        }\n        .sheet(item: $sheetAtiva) { destino in\n            switch destino {\n            case .perfil:         PerfilView()\n            case .configuracoes:  ConfigView()\n            }\n        }\n    }\n}\n\nVantagens:\n- Um único .sheet() — sem ambiguidade\n- Estado centralizado — fica claro qual sheet está ativa\n- Adicionar novos destinos = adicionar case ao enum\n- sheet(item:) fecha automaticamente quando sheetAtiva = nil"
       }
     ],
     "m07-architecture/separation-of-concerns": [
@@ -333,6 +378,15 @@
           "O ViewModel deve receber a implementação pelo init."
         ],
         "solution": "// Protocolo de dependência:\nprotocol TarefaRepositorio {\n    func buscarTodas() async throws -> [Tarefa]\n}\n\n// Implementação de produção:\nstruct TarefaAPI: TarefaRepositorio {\n    func buscarTodas() async throws -> [Tarefa] {\n        let url = URL(string: \"https://api.app.com/tarefas\")!\n        let (data, _) = try await URLSession.shared.data(from: url)\n        return try JSONDecoder().decode([Tarefa].self, from: data)\n    }\n}\n\n// ViewModel desacoplado:\n@Observable\nclass TarefasViewModel {\n    var tarefas: [Tarefa] = []\n    private let repositorio: TarefaRepositorio\n\n    init(repositorio: TarefaRepositorio = TarefaAPI()) {\n        self.repositorio = repositorio\n    }\n\n    func carregar() async throws {\n        tarefas = try await repositorio.buscarTodas()\n    }\n}\n\nAgora você pode testar com TarefaFake() sem rede."
+      },
+      {
+        "title": "Dependency Injection na prática",
+        "prompt": "Implemente Dependency Injection via init para tornar este ViewModel testável. Crie também um FakeRepository para os testes:\n\n@Observable\nclass NotificacoesViewModel {\n    var notificacoes: [Notificacao] = []\n    \n    func carregar() async {\n        // Como injetar a fonte de dados?\n    }\n}",
+        "hints": [
+          "Crie um protocol que define o contrato do repositório.",
+          "O FakeRepository implementa o protocol retornando dados fixos."
+        ],
+        "solution": "// 1. Protocol (contrato):\nprotocol NotificacaoRepositoryProtocol {\n    func buscar() async throws -> [Notificacao]\n}\n\n// 2. Implementação real:\nstruct NotificacaoRepository: NotificacaoRepositoryProtocol {\n    func buscar() async throws -> [Notificacao] {\n        let url = URL(string: \"https://api.app.com/notificacoes\")!\n        let (data, _) = try await URLSession.shared.data(from: url)\n        return try JSONDecoder().decode([Notificacao].self, from: data)\n    }\n}\n\n// 3. Fake para testes:\nstruct FakeNotificacaoRepository: NotificacaoRepositoryProtocol {\n    var resultado: [Notificacao] = [\n        Notificacao(id: \"1\", titulo: \"Teste\", lida: false)\n    ]\n    var deveJogarErro = false\n\n    func buscar() async throws -> [Notificacao] {\n        if deveJogarErro { throw URLError(.notConnectedToInternet) }\n        return resultado\n    }\n}\n\n// 4. ViewModel com DI:\n@Observable\nclass NotificacoesViewModel {\n    var notificacoes: [Notificacao] = []\n    var erro: String?\n    private let repository: NotificacaoRepositoryProtocol\n\n    init(repository: NotificacaoRepositoryProtocol = NotificacaoRepository()) {\n        self.repository = repository\n    }\n\n    func carregar() async {\n        do { notificacoes = try await repository.buscar() }\n        catch { erro = error.localizedDescription }\n    }\n}\n\n// 5. Teste:\nfunc testCarregarNotificacoes() async {\n    let vm = NotificacoesViewModel(repository: FakeNotificacaoRepository())\n    await vm.carregar()\n    XCTAssertEqual(vm.notificacoes.count, 1)\n    XCTAssertNil(vm.erro)\n}"
       }
     ],
     "m07-architecture/project-organization": [
@@ -344,6 +398,15 @@
           "Código compartilhado por múltiplas features vai em Core/"
         ],
         "solution": "// Feature-first:\nFeatures/\n  Tarefas/\n    TarefaModel.swift\n    TarefasViewModel.swift\n    TarefaService.swift\n    Views/\n      TarefaListaView.swift\n      TarefaDetalheView.swift\n\n  Perfil/\n    UsuarioModel.swift\n    PerfilViewModel.swift\n    PerfilView.swift\n\nCore/\n  Auth/\n    AuthService.swift\n  Extensions/\n  Components/\n\nVantagem: ao trabalhar em Tarefas, tudo que você precisa está em Features/Tarefas/. Não precisa pular entre Models/, Views/ e Services/."
+      },
+      {
+        "title": "Identifique o antipadrão e refatore",
+        "prompt": "Este ViewModel viola separação de responsabilidades. Identifique os problemas e proponha a estrutura correta:\n\nclass ProdutoViewModel: ObservableObject {\n    @Published var produtos: [Produto] = []\n    @Published var carregando = false\n    @Published var erro: String?\n    \n    func carregarProdutos() async {\n        carregando = true\n        do {\n            let url = URL(string: \"https://api.loja.com/produtos\")!\n            let (data, _) = try await URLSession.shared.data(from: url)\n            produtos = try JSONDecoder().decode([Produto].self, from: data)\n        } catch {\n            self.erro = error.localizedDescription\n        }\n        carregando = false\n    }\n    \n    func formatarPreco(_ produto: Produto) -> String {\n        let fmt = NumberFormatter()\n        fmt.numberStyle = .currency\n        fmt.locale = .current\n        return fmt.string(from: NSNumber(value: produto.preco)) ?? \"\"\n    }\n}",
+        "hints": [
+          "Chamada de rede deve ficar no Repository/Service — não no ViewModel.",
+          "Formatação de texto para UI pode ir numa extension de Produto."
+        ],
+        "solution": "Problemas:\n1. Chamada de rede direta → ViewModel não testável sem rede real\n2. Formatação de preço → responsabilidade da View/Extension, não do ViewModel\n\nRefatoração:\n\n// 1. Protocol para inversão de dependência:\nprotocol ProdutoRepositoryProtocol {\n    func buscarTodos() async throws -> [Produto]\n}\n\n// 2. Repository concreto:\nstruct ProdutoRepository: ProdutoRepositoryProtocol {\n    func buscarTodos() async throws -> [Produto] {\n        let url = URL(string: \"https://api.loja.com/produtos\")!\n        let (data, _) = try await URLSession.shared.data(from: url)\n        return try JSONDecoder().decode([Produto].self, from: data)\n    }\n}\n\n// 3. ViewModel limpo (testável):\n@Observable\nclass ProdutoViewModel {\n    var produtos: [Produto] = []\n    var carregando = false\n    var erro: String?\n    private let repository: ProdutoRepositoryProtocol\n\n    init(repository: ProdutoRepositoryProtocol = ProdutoRepository()) {\n        self.repository = repository\n    }\n\n    func carregarProdutos() async {\n        carregando = true\n        do { produtos = try await repository.buscarTodos() }\n        catch { self.erro = error.localizedDescription }\n        carregando = false\n    }\n}\n\n// 4. Formatação como extension:\nextension Produto {\n    var precoFormatado: String {\n        preco.formatted(.currency(code: \"BRL\"))\n    }\n}"
       }
     ],
     "m08-swiftdata/swiftdata-model-and-container": [
@@ -395,6 +458,15 @@
           "@MainActor garante execução na thread principal."
         ],
         "solution": "O problema: APIService.buscar executa em background. Quando retorna, a atribuição perfil = resultado ainda está em background thread, mas @Published precisa ser atualizado na main thread.\n\nSolução 1 — @MainActor na classe:\n@MainActor\nclass PerfilViewModel: ObservableObject {\n    @Published var perfil: Perfil?\n\n    func carregar(id: UUID) {\n        Task {\n            // await libera a main thread durante a busca\n            perfil = try? await APIService.buscar(id: id)\n            // retoma na main thread — seguro!\n        }\n    }\n}\n\nSolução 2 — @Observable (moderno, sem @Published):\n@MainActor\n@Observable\nclass PerfilViewModel {\n    var perfil: Perfil?\n    // @Observable + @MainActor resolve sem @Published\n}"
+      },
+      {
+        "title": "Proteja dados compartilhados com actor",
+        "prompt": "Este código tem uma data race. Identifique e corrija usando actor:\n\nclass ContadorRequests {\n    private var total = 0\n    \n    func incrementar() {\n        total += 1  // data race!\n    }\n    \n    func obterTotal() -> Int {\n        return total\n    }\n}\n\n// Usado concorrentemente:\nlet contador = ContadorRequests()\nawait withTaskGroup(of: Void.self) { grupo in\n    for _ in 0..<100 {\n        grupo.addTask { contador.incrementar() }\n    }\n}",
+        "hints": [
+          "actor garante acesso serializado — uma operação por vez.",
+          "Métodos de actor são automaticamente async quando chamados de fora."
+        ],
+        "solution": "Data race: múltiplas Tasks lendo/escrevendo `total` simultaneamente sem sincronização.\n\nSolução com actor:\n\nactor ContadorRequests {\n    private var total = 0\n\n    func incrementar() {\n        total += 1  // actor garante: apenas uma Task executa por vez\n    }\n\n    func obterTotal() -> Int {\n        return total\n    }\n}\n\n// Uso com await obrigatório fora do actor:\nlet contador = ContadorRequests()\nawait withTaskGroup(of: Void.self) { grupo in\n    for _ in 0..<100 {\n        grupo.addTask {\n            await contador.incrementar()\n        }\n    }\n}\nlet resultado = await contador.obterTotal()  // sempre 100\n\nComo o actor funciona:\n- Internamente é como uma fila serial\n- await antes de métodos = esperar vez na fila\n- Sem locks manuais, sem DispatchQueue, sem race conditions\n- nonisolated: funções que não acessam estado podem ser chamadas sem await"
       }
     ],
     "m10-combine/combine-fundamentals": [
@@ -406,6 +478,15 @@
           "debounce aguarda silêncio. removeDuplicates ignora repetições."
         ],
         "solution": "init() {\n    $textoBusca\n        .debounce(for: .milliseconds(300), scheduler: RunLoop.main)\n        .removeDuplicates()\n        .sink { [weak self] texto in\n            guard let self else { return }\n            Task {\n                await self.buscar(query: texto)\n            }\n        }\n        .store(in: &cancelaveis)  // guarda o token!\n}\n\nprivate func buscar(query: String) async {\n    resultados = await BuscaService.buscar(query: query)\n}\n\nObserve: [weak self] evita retain cycle, .store(in: &cancelaveis) mantém o subscription vivo."
+      },
+      {
+        "title": "Transforme e combine publishers",
+        "prompt": "Implemente um buscador que combina texto digitado e filtro de categoria usando Combine. Os resultados devem atualizar apenas 300ms após o usuário parar de digitar:\n\n@Observable\nclass BuscaViewModel {\n    var textoBusca = \"\"\n    var categoriaSelecionada: Categoria = .todas\n    var resultados: [Item] = []\n    private var cancellables = Set<AnyCancellable>()\n    \n    func configurarBusca(repositorio: ItemRepositorio) {\n        // implemente aqui\n    }\n}",
+        "hints": [
+          "Combine textoBusca e categoriaSelecionada com combineLatest.",
+          "debounce espera 300ms de silêncio antes de emitir."
+        ],
+        "solution": "func configurarBusca(repositorio: ItemRepositorio) {\n    let textoPub = publisher(for: \\.textoBusca)\n        .debounce(for: .milliseconds(300), scheduler: RunLoop.main)\n        .removeDuplicates()\n\n    let categoriaPub = publisher(for: \\.categoriaSelecionada)\n        .removeDuplicates()\n\n    textoPub.combineLatest(categoriaPub)\n        .map { texto, categoria in\n            repositorio.buscar(texto: texto, categoria: categoria)\n        }\n        .receive(on: RunLoop.main)\n        .assign(to: \\.resultados, on: self)\n        .store(in: &cancellables)\n}\n\n// Cadeia de operadores:\n// textoBusca  ──debounce(300ms)──removeDuplicates──┐\n//                                                   combineLatest──map──assign\n// categoriaSelecionada──removeDuplicates────────────┘\n\n// Alternativa com CurrentValueSubject (se @Observable não expor publisher):\n// private let _textoBusca = CurrentValueSubject<String, Never>(\"\")\n// var textoBusca: String {\n//     get { _textoBusca.value }\n//     set { _textoBusca.send(newValue) }\n// }"
       }
     ],
     "m11-testing/unit-testing-with-xctest": [
@@ -417,6 +498,15 @@
           "XCTAssertEqual compara valores iguais."
         ],
         "solution": "final class TarefasViewModelTests: XCTestCase {\n    func test_adicionar_incrementaLista() {\n        // Arrange:\n        let vm = TarefasViewModel()\n        XCTAssertEqual(vm.tarefas.count, 0)  // estado inicial\n\n        // Act:\n        vm.adicionar(titulo: \"Nova Tarefa\")\n\n        // Assert:\n        XCTAssertEqual(vm.tarefas.count, 1)\n        XCTAssertEqual(vm.tarefas[0].titulo, \"Nova Tarefa\")\n        XCTAssertFalse(vm.tarefas[0].concluida)  // deve iniciar não concluída\n    }\n\n    func test_adicionar_duasTarefas_incrementaDuasVezes() {\n        let vm = TarefasViewModel()\n        vm.adicionar(titulo: \"A\")\n        vm.adicionar(titulo: \"B\")\n        XCTAssertEqual(vm.tarefas.count, 2)\n    }\n}"
+      },
+      {
+        "title": "Teste com Test Double (Spy)",
+        "prompt": "Implemente um Spy para verificar se o ViewModel chama o método correto ao confirmar pedido:\n\nprotocol AnalyticsProtocol {\n    func rastrear(evento: String, parametros: [String: String])\n}\n\n@Observable\nclass PedidoViewModel {\n    private let analytics: AnalyticsProtocol\n    init(analytics: AnalyticsProtocol) { self.analytics = analytics }\n\n    func confirmarPedido(id: String) {\n        analytics.rastrear(evento: \"pedido_confirmado\", parametros: [\"id\": id])\n    }\n}",
+        "hints": [
+          "Spy grava as chamadas recebidas para verificar depois.",
+          "Verifique tanto o evento quanto os parâmetros."
+        ],
+        "solution": "// Spy — registra as chamadas:\nclass AnalyticsSpy: AnalyticsProtocol {\n    struct Chamada {\n        let evento: String\n        let parametros: [String: String]\n    }\n    private(set) var chamadas: [Chamada] = []\n\n    func rastrear(evento: String, parametros: [String: String]) {\n        chamadas.append(Chamada(evento: evento, parametros: parametros))\n    }\n}\n\n// Testes:\nclass PedidoViewModelTests: XCTestCase {\n\n    func testConfirmarPedidoRastreiaEvento() {\n        let spy = AnalyticsSpy()\n        let sut = PedidoViewModel(analytics: spy)\n\n        sut.confirmarPedido(id: \"ABC-123\")\n\n        XCTAssertEqual(spy.chamadas.count, 1)\n        XCTAssertEqual(spy.chamadas[0].evento, \"pedido_confirmado\")\n        XCTAssertEqual(spy.chamadas[0].parametros[\"id\"], \"ABC-123\")\n    }\n}"
       }
     ],
     "m11-testing/ui-testing-with-xcuitest": [
@@ -428,6 +518,15 @@
           "Existe um identificador estável não visível ao usuário."
         ],
         "solution": "Problema: o teste busca pelo texto visível 'OK'. Quando o designer muda para 'Confirmar', o teste não encontra mais o elemento.\n\nPrevenção com accessibilityIdentifier:\n\n// Na View SwiftUI:\nButton(\"Confirmar\") { confirmar() }\n    .accessibilityIdentifier(\"botao-confirmar\")  // estável, não visível\n\n// No teste:\nfunc test_botaoConfirmar() {\n    let botao = app.buttons[\"botao-confirmar\"]  // busca pelo identifier\n    XCTAssertTrue(botao.exists)\n    botao.tap()\n}\n\naccessibilityIdentifier não muda com localização, redesign ou copy changes — é um contrato técnico estável."
+      },
+      {
+        "title": "Escreva um teste de navegação com XCUITest",
+        "prompt": "Escreva um teste que verifica o fluxo completo: tap em item da lista → detalhe aparece → botão Voltar retorna à lista.\n\nRequisitos:\n- A lista usa .accessibilityIdentifier(\"listaItens\")\n- A tela de detalhe tem navigationTitle(\"Detalhe\")",
+        "hints": [
+          "app.tables[\"listaItens\"].cells contém as células da lista.",
+          "app.navigationBars[\"Detalhe\"].buttons.firstMatch acessa o botão voltar."
+        ],
+        "solution": "func testNavegacaoListaParaDetalhe() throws {\n    let app = XCUIApplication()\n    app.launch()\n\n    // 1. Confirma que a lista existe:\n    let lista = app.tables[\"listaItens\"]\n    XCTAssertTrue(lista.waitForExistence(timeout: 3), \"Lista não apareceu\")\n\n    // 2. Pega a primeira célula:\n    let primeiraCelula = lista.cells.firstMatch\n    XCTAssertTrue(primeiraCelula.exists, \"Nenhuma célula na lista\")\n\n    // 3. Tap na célula — navega para detalhe:\n    primeiraCelula.tap()\n\n    // 4. Verifica que a nav bar de detalhe apareceu:\n    let navBarDetalhe = app.navigationBars[\"Detalhe\"]\n    XCTAssertTrue(navBarDetalhe.waitForExistence(timeout: 3),\n                  \"Tela de Detalhe não apareceu\")\n\n    // 5. Volta para a lista:\n    navBarDetalhe.buttons.firstMatch.tap()  // botão Back\n\n    // 6. Confirma retorno à lista:\n    XCTAssertTrue(lista.waitForExistence(timeout: 3),\n                  \"Lista não reapareceu após voltar\")\n}"
       }
     ],
     "m12-accessibility/voiceover-and-semantic-labels": [
@@ -439,6 +538,15 @@
           "accessibilityLabel sobrescreve o texto anunciado."
         ],
         "solution": "Button {\n    favoritar(tarefa)\n} label: {\n    Image(systemName: favorita ? \"heart.fill\" : \"heart\")\n}\n.accessibilityLabel(favorita ? \"Remover dos favoritos\" : \"Adicionar aos favoritos\")\n// VoiceOver anuncia: \"Adicionar aos favoritos, button\"\n\n// Dica extra — valor muda dinamicamente:\n.accessibilityValue(favorita ? \"ativo\" : \"inativo\")\n\n// Se o estado importa:\n.accessibilityAddTraits(favorita ? [.isSelected] : [])"
+      },
+      {
+        "title": "Corrija a acessibilidade de uma card interativa",
+        "prompt": "Esta card tem vários problemas de acessibilidade. Identifique e corrija:\n\nstruct CardNoticia: View {\n    let noticia: Noticia\n    var onFavoritar: () -> Void\n\n    var body: some View {\n        VStack(alignment: .leading) {\n            Image(\"thumb_\\(noticia.id)\")\n                .resizable().scaledToFill().frame(height: 120)\n\n            Text(noticia.titulo).font(.headline)\n            Text(noticia.data, style: .date).font(.caption)\n\n            Button(action: onFavoritar) {\n                Image(systemName: \"heart\")\n            }\n        }\n        .padding()\n    }\n}",
+        "hints": [
+          "Imagem decorativa deve ter .accessibilityHidden(true).",
+          "O botão de coração precisa de label descritivo — não apenas o ícone."
+        ],
+        "solution": "Problemas encontrados:\n1. Imagem sem accessibilityLabel — VoiceOver vai ler nome técnico do arquivo.\n2. Botão sem label descritivo — VoiceOver lê 'heart' em vez de ação significativa.\n3. Múltiplos elementos separados — VoiceOver faz swipe em cada um individualmente.\n\nSolução:\n\nstruct CardNoticia: View {\n    let noticia: Noticia\n    var onFavoritar: () -> Void\n\n    var body: some View {\n        VStack(alignment: .leading) {\n            Image(\"thumb_\\(noticia.id)\")\n                .resizable().scaledToFill().frame(height: 120)\n                .accessibilityHidden(true)  // decorativa\n\n            Text(noticia.titulo).font(.headline)\n            Text(noticia.data, style: .date).font(.caption)\n\n            Button(action: onFavoritar) {\n                Image(systemName: \"heart\")\n            }\n            .accessibilityLabel(\"Favoritar \\(noticia.titulo)\")\n        }\n        .padding()\n        .accessibilityElement(children: .combine)  // 1 swipe para toda a card\n    }\n}\n\nCom .accessibilityElement(children: .combine):\n- VoiceOver lê: '[título], [data]'\n- O botão de favoritar ainda funciona como ação separada\n- Muito melhor para navegação por gestos"
       }
     ],
     "m13-debug-performance/xcode-shortcuts": [
@@ -450,6 +558,15 @@
           "Para atalhos de navegação, pense em Cmd + algo."
         ],
         "solution": "1. Ir para definição → Cmd + Click no símbolo\n   (ou Ctrl + Cmd + J)\n\n2. Abrir arquivo por nome → Cmd + Shift + O\n   (Quick Open — busca fuzzy por nome de arquivo ou símbolo)\n\n3. Adicionar breakpoint na linha → Cmd + \\\n   (também pode clicar na calha à esquerda do número de linha)\n\n4. Reindentação → Selecione o código + Ctrl + I\n   (selecione o arquivo inteiro com Cmd + A, depois Ctrl + I para formatar tudo)"
+      },
+      {
+        "title": "Navegação eficiente — qual atalho usar?",
+        "prompt": "Para cada situação, escreva o atalho correto (Mac) e explique quando usar:\n\n1. Você está em OrderView.swift e quer abrir PaymentService.swift sem mouse\n2. Você quer ver todos os lugares onde `calcularTotal` é chamado no projeto\n3. Você editou 5 arquivos e quer voltar ao arquivo anterior rapidamente\n4. Você quer renomear a variável `tot` para `totalPedido` em todo o projeto\n5. Você quer ver a documentação de URLSession.data(from:) sem sair do código",
+        "hints": [
+          "⌘⇧O abre qualquer arquivo pelo nome.",
+          "Refactor → Rename é seguro e analisa o código, não faz busca cega."
+        ],
+        "solution": "1. Abrir arquivo pelo nome:\n   ⌘⇧O (Open Quickly)\n   → Digite parte do nome: 'PayService' → Enter\n   → Funciona com arquivos, tipos, funções\n\n2. Ver todos os callers de calcularTotal:\n   Clique direito → Find → Find Call Hierarchy\n   ou: ⌃1 (Show Related Items) → Callers\n   → Mostra árvore de quem chama quem\n\n3. Voltar ao arquivo anterior:\n   ⌃⌘← (Navigate Back) / ⌃⌘→ (Navigate Forward)\n   → Funciona como histórico de browser para arquivos\n\n4. Renomear variável em todo o projeto:\n   ⌃⌘E (Edit All in Scope) — na mesma função/escopo\n   ou: Clique direito → Refactor → Rename... — em todo o projeto\n   → Rename analisa o código — não faz busca/substituição cega\n\n5. Ver documentação inline:\n   ⌥+Clique no símbolo (Quick Help)\n   ou: ⌘⇧0 abre Documentation window completa\n   → ⌥+Clique mostra popup sem sair do código atual\n\nBônus:\n   ⌘L → ir para linha específica\n   ⌘/ → comentar/descomentar linha\n   ⌘] / ⌘[ → indentar / desindentar"
       }
     ],
     "m13-debug-performance/xcode-debug-workflow": [
@@ -481,6 +598,15 @@
           "Qual ferramenta mostra onde o CPU está gastando tempo?"
         ],
         "solution": "Problema: otimização sem evidência.\n\nA lista pode estar lenta por razões completamente diferentes:\n- Parsing JSON pesado no body de cada célula\n- Busca de dados fazendo múltiplos fetches desnecessários\n- Imagens bloqueando o rendering (correto)\n- LazyVStack seria a solução certa (correto)\n- Algo completamente diferente\n\nMudar LazyVStack e adicionar cache pode resolver, não resolver, ou até piorar se a causa for outra.\n\nFluxo correto:\n1. Cmd + I → abre Instruments\n2. Escolha Time Profiler\n3. Reproduza o scroll lento\n4. Veja onde o CPU está gastando tempo (Invert Call Tree)\n5. AGORA você sabe o que otimizar\n6. Meça novamente para confirmar melhora\n\nOtimização sem medição é chute."
+      },
+      {
+        "title": "Identifique o gargalo com Instruments",
+        "prompt": "O app congela por ~2 segundos ao abrir a tela de lista. Você suspeita de um problema de performance. Descreva o processo completo de investigação usando Instruments: qual template usar, o que procurar e como agir com os resultados.",
+        "hints": [
+          "Time Profiler mostra onde a CPU passa mais tempo.",
+          "Procure por operações síncronas na main thread (disco, rede, JSON decode)."
+        ],
+        "solution": "Processo de investigação com Instruments:\n\n1. INICIAR: Product → Profile (⌘I) → Time Profiler\n   Rode no dispositivo físico (simulador distorce resultados)\n\n2. REPRODUÇÃO:\n   Navegue até a tela problemática e observe o congelamento de ~2s.\n   O Instruments grava tudo durante esse período.\n\n3. O QUE PROCURAR:\n   - Selecione o período de congelamento na timeline\n   - Call Tree (Heavy) → expanda até funções do seu código\n   - Procure: decodificação JSON síncrona, ordenação de arrays grandes,\n     operações de disco/rede bloqueantes na main thread\n\n4. CENÁRIO TÍPICO — decode síncrono:\n   func carregarDados() {\n       let dados = try! Data(contentsOf: url)  // bloqueia main thread!\n       itens = try! JSONDecoder().decode(...)\n   }\n\n5. CORREÇÃO:\n   func carregarDados() async {\n       let dados = try await URLSession.shared.data(from: url).0\n       let itens = try JSONDecoder().decode([Item].self, from: dados)\n       await MainActor.run { self.itens = itens }\n   }\n\n6. VERIFICAÇÃO:\n   Profile novamente → congelamento desapareceu.\n   A main thread agora fica livre durante o carregamento.\n\nRegra: Time Profiler → identifica ONDE está o tempo.\nAllocations → identifica VAZAMENTOS e crescimento de memória."
       }
     ],
     "m14-career/portfolio-and-github": [
@@ -492,6 +618,15 @@
           "Onde está o tratamento de erros? E o threading?"
         ],
         "solution": "Red flags identificados:\n\n1. URL(string:)! — force unwrap de URL. Crasha se a string for inválida.\n\n2. url! — url já não é Optional (é URL, não URL?). Esse ! é redundante mas indica descuido.\n\n3. try! JSONDecoder().decode — crasha se o JSON for diferente do esperado. Sem tratamento de erro.\n\n4. data! — force unwrap de Data. Crasha se a rede falhou e data é nil.\n\n5. self.tableView.reloadData() em callback de URLSession — atualiza UI de thread de background. Warning + comportamento imprevisível.\n\n6. Lógica de rede dentro de ViewController — sem separação de responsabilidades.\n\nUm portfólio pleno teria: async/await, try/catch, @MainActor, e ViewModel separado."
+      },
+      {
+        "title": "Escreva um README eficaz para projeto de portfólio",
+        "prompt": "Crie a estrutura de um README.md para um app SwiftUI de portfólio chamado 'TaskFlow'. O README deve convencer um recrutador técnico a clonar e rodar o projeto. Inclua todas as seções essenciais.",
+        "hints": [
+          "Screenshot ou GIF do app em funcionamento é o elemento mais eficaz.",
+          "Destaque as tecnologias usadas — recrutadores procuram por palavras-chave."
+        ],
+        "solution": "# TaskFlow — Gerenciador de Tarefas\n\n> App de produtividade iOS construído com SwiftUI + SwiftData, demonstrando arquitetura MVVM, concorrência moderna e boas práticas de acessibilidade.\n\n![Demo do app](docs/screenshots/demo.gif)\n\n## Funcionalidades\n- Criar, editar e organizar tarefas com categorias\n- Notificações locais para lembretes\n- Modo escuro / claro automático\n- Totalmente acessível (VoiceOver, Dynamic Type)\n\n## Stack técnica\n| Camada | Tecnologia |\n|--------|------------|\n| UI | SwiftUI 5 |\n| Persistência | SwiftData |\n| Concorrência | Swift Concurrency (async/await) |\n| Testes | XCTest + XCUITest |\n\n## Arquitetura\nMVVM com Separation of Concerns. Cada feature em pasta própria (feature-first).\n\nFeatures/Tasks/, Features/Categories/, Core/Models/, Core/Services/\n\n## Como rodar\n```\ngit clone https://github.com/seuuser/taskflow\nopen TaskFlow.xcodeproj\n```\nRequisitos: Xcode 15+, iOS 17+\n\n## Testes\nCoberta: 72% (Services e ViewModels). Rode com ⌘U no Xcode.\n\n## Licença\nMIT — use como referência."
       }
     ],
     "m14-career/code-review-and-collaboration": [
@@ -503,6 +638,15 @@
           "Evite julgamentos de valor ('completamente errado')."
         ],
         "solution": "Versão melhorada:\n\n'Com if let aninhados em 3 níveis o código fica difícil de seguir. Que tal usar guard let no início da função para tratar os casos nil cedo e manter o restante do código linear? Algo como:\n\nguard let usuario else { return }\nguard let email = usuario.email else { return }\n\nIsso reduziria a indentação e deixaria o 'happy path' mais claro. Faz sentido para este caso?'\n\nDiferenças:\n- Explica o PROBLEMA concreto (indentação, legibilidade)\n- Sugere uma solução específica com código\n- Faz uma pergunta — abre espaço para contexto\n- Sem julgamento de valor ('completamente errado')"
+      },
+      {
+        "title": "Escreva uma ADR (Architecture Decision Record)",
+        "prompt": "Escreva uma ADR curta para a decisão de usar SwiftData em vez de Core Data em um novo projeto. Inclua: contexto, decisão, consequências positivas e negativas.",
+        "hints": [
+          "ADR documenta o PORQUÊ de uma decisão, não apenas o QUE.",
+          "Inclua as alternativas consideradas e por que foram descartadas."
+        ],
+        "solution": "# ADR-001: Persistência com SwiftData em vez de Core Data\n\n## Status\nAceita — 2024-03\n\n## Contexto\nO app TaskManager precisa persistir tarefas localmente. O time considerou:\n- Core Data: solução madura, 20 anos de ecossistema\n- SwiftData: lançado no iOS 17, API moderna em Swift\n\nRestrições: iOS 17+, time pequeno (2 devs), prazo apertado.\n\n## Decisão\nUsamos SwiftData.\n\nMotivos:\n1. API declarativa com @Model — menos boilerplate que NSManagedObject\n2. Integração nativa com SwiftUI (@Query funciona melhor que @FetchRequest)\n3. Não precisamos de .xcdatamodeld — o modelo é o próprio código Swift\n4. Migração automática para mudanças simples de schema\n\n## Alternativas descartadas\n- Core Data: NSPersistentContainer + NSManagedObjectContext + NSPredicate —\n  mais robusto mas muito mais verboso para um time pequeno.\n- SQLite direto: máximo controle mas zero abstração — inviável no prazo.\n- Realm: SDK terceiro com custo de licença para equipes.\n\n## Consequências\n+ Código mais limpo e legível\n+ Menos código = menos bugs\n+ Curva de aprendizado menor\n- Requer iOS 17+ (já é requisito do projeto)\n- Ecossistema menor que Core Data (menos recursos online)\n- Migração complexa de schema ainda requer atenção manual"
       }
     ],
     "m15-design-system/design-tokens-and-components": [
@@ -514,6 +658,15 @@
           "O nome deve descrever o PROPÓSITO, não a cor: primaryAction, destructiveAction."
         ],
         "solution": "// Tokens semânticos em extensão de Color:\nextension Color {\n    static let primaryAction = Color(red: 0, green: 0.478, blue: 1.0)\n    static let primaryActionSoft = primaryAction.opacity(0.15)\n    static let destructiveAction = Color(red: 1.0, green: 0.231, blue: 0.188)\n}\n\n// Views refatoradas:\nstruct BotaoSalvar: View {\n    var body: some View {\n        Button(\"Salvar\") { salvar() }\n            .foregroundStyle(.primaryAction)\n            .background(.primaryActionSoft)\n    }\n}\n\nstruct BotaoCancelar: View {\n    var body: some View {\n        Button(\"Cancelar\") { cancelar() }\n            .foregroundStyle(.destructiveAction)\n    }\n}\n\nAgora se a cor mudar, muda em um único lugar. E o nome 'primaryAction' comunica propósito."
+      },
+      {
+        "title": "Migre hardcoded values para tokens",
+        "prompt": "Este código tem valores mágicos espalhados. Extraia para tokens semânticos:\n\nstruct BotaoPrimario: View {\n    let titulo: String\n    var body: some View {\n        Text(titulo)\n            .font(.system(size: 16, weight: .semibold))\n            .foregroundStyle(Color(red: 1, green: 1, blue: 1))\n            .padding(.horizontal, 24)\n            .padding(.vertical, 12)\n            .background(Color(red: 0.2, green: 0.47, blue: 0.96))\n            .clipShape(RoundedRectangle(cornerRadius: 10))\n    }\n}",
+        "hints": [
+          "Crie extensões de Color e Font com static lets semânticos.",
+          "Tokens semânticos: .acaoPrimaria, .textoBotao — não .azulRGB."
+        ],
+        "solution": "// Tokens de cor (semânticos):\nextension Color {\n    static let tokenAcaoPrimaria = Color(red: 0.2, green: 0.47, blue: 0.96)\n    static let tokenTextoBotao   = Color.white\n}\n\n// Tokens de tipografia:\nextension Font {\n    static let tokenBotao = Font.system(size: 16, weight: .semibold)\n}\n\n// Tokens de espaçamento:\nenum Espacamento {\n    static let sm: CGFloat = 8\n    static let md: CGFloat = 16\n    static let lg: CGFloat = 24\n}\n\n// Token de forma:\nenum Raio {\n    static let botao: CGFloat = 10\n}\n\n// Componente refatorado:\nstruct BotaoPrimario: View {\n    let titulo: String\n    var body: some View {\n        Text(titulo)\n            .font(.tokenBotao)\n            .foregroundStyle(Color.tokenTextoBotao)\n            .padding(.horizontal, Espacamento.lg)\n            .padding(.vertical, Espacamento.sm + 4)  // 12pt\n            .background(Color.tokenAcaoPrimaria)\n            .clipShape(RoundedRectangle(cornerRadius: Raio.botao))\n    }\n}\n\n// Vantagem: mudar a cor primária do app = 1 linha, não 50."
       }
     ],
     "m15-design-system/hig-principles": [
@@ -525,6 +678,15 @@
           ".frame() pode expandir a área sem mudar o tamanho visual do ícone."
         ],
         "solution": "Button {\n    fechar()\n} label: {\n    Image(systemName: \"xmark\")\n        .font(.system(size: 12))  // tamanho visual mantido\n        .frame(width: 44, height: 44)  // área de toque mínima das HIG\n        .contentShape(Rectangle())  // garante que toda a área é tocável\n}\n\nAlternativa com padding:\nImage(systemName: \"xmark\")\n    .font(.system(size: 12))\n    .padding(16)  // 12 + 16*2 = 44 de área total\n\nMotivo: dedos têm área de contato de ~44pts. Alvos menores causam erros de toque frequentes — o usuário toca na área errada."
+      },
+      {
+        "title": "Avalie o design contra as HIG",
+        "prompt": "Esta tela tem 4 violações das Human Interface Guidelines da Apple. Identifique cada uma e proponha a correção:\n\nstruct TelaLogin: View {\n    @State private var email = \"\"\n    @State private var senha = \"\"\n\n    var body: some View {\n        VStack(spacing: 8) {\n            Text(\"LOGIN\").font(.system(size: 11))\n\n            TextField(\"E-mail\", text: $email)\n            SecureField(\"Senha\", text: $senha)\n\n            Button(\"OK\") {\n                fazerLogin()\n            }\n            .frame(width: 44, height: 22)\n        }\n    }\n}",
+        "hints": [
+          "HIG: área de toque mínima é 44×44pt.",
+          "HIG: botão de ação principal deve comunicar sua função claramente."
+        ],
+        "solution": "4 violações HIG:\n\n1. Título 'LOGIN' em caixa alta com fonte 11pt\n   HIG: não use all-caps em títulos; fonte mínima legível ~15pt\n   Correção: Text(\"Entrar na conta\").font(.title2)\n\n2. Botão 'OK' não descreve a ação\n   HIG: botões devem nomear a ação (Entrar, Sign In, Continuar)\n   Correção: Button(\"Entrar\")\n\n3. Botão com frame 44×22 — altura abaixo do mínimo de 44pt\n   HIG: área de toque mínima = 44×44pt\n   Correção: .frame(maxWidth: .infinity, minHeight: 44)\n\n4. Sem textContentType nos campos\n   HIG: campos devem ter contentType para AutoFill/Keychain funcionar\n   Correção: .textContentType(.emailAddress) e .textContentType(.password)\n\nVersão corrigida:\n\nVStack(spacing: 16) {\n    Text(\"Entrar na conta\").font(.title2.bold())\n\n    TextField(\"E-mail\", text: $email)\n        .textContentType(.emailAddress)\n        .keyboardType(.emailAddress)\n        .autocapitalization(.none)\n\n    SecureField(\"Senha\", text: $senha)\n        .textContentType(.password)\n\n    Button(\"Entrar\", action: fazerLogin)\n        .frame(maxWidth: .infinity, minHeight: 44)\n        .buttonStyle(.borderedProminent)\n}"
       }
     ]
   }
